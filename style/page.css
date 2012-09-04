@@ -1,0 +1,151 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    font-family: 'Helevtica Neue',Helvetica,Arial,sans-serif;
+    color: #555;
+}
+
+xml3d {
+    width: 320px;
+    height: 240px;
+}
+
+a{
+    color: #365DA0;
+}
+a:hover{
+    color: #466DE0;
+}
+
+
+#header {
+    background: #eee;
+    color: #888;
+    border-left: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    padding: 4px 16px;
+    height: 35px;
+    margin-left: 230px;
+    border-radius: 0 0 0 16px;
+}
+
+#header h1, #header h2, #header h3{
+    font-size: 20pt;
+    float: left;
+    padding: 0 16px 0 0;
+}
+#header h2, #header h3{
+    font-weight: normal
+}
+#header h1 a{
+    text-decoration: none;
+}
+#header h2:before, #header h3:before{
+    content: "> ";
+}
+
+
+#navigation {
+    position: absolute;
+    top: 0px;
+    height: 500px;
+    width: 200px;
+    border-right: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    background: #eee;
+    border-radius: 0 0 16px 0;
+    -webkit-transition: all 0.3s ease;
+    -moz-transition: all 0.3s ease;
+}
+
+#navigation.hidden{
+    bottom: auto;
+    height: 43px;
+}
+
+#navigation.hidden .inner{
+    opacity: 0;
+    overflow: hidden;
+}
+
+#navigation h4{
+    font-size: 20pt;
+    padding: 4px 8px;
+    font-weight: normal;
+    cursor: pointer;
+}
+#navigation ul{
+    list-style: none;
+}
+
+#navigation .inner{
+    position: absolute;
+    left: 0; right: 0;
+    top: 45px;
+    bottom: 20px;
+    border-top: 1px solid #ccc;
+    overflow: auto;
+    -webkit-transition: all 0.3s ease;
+    -moz-transition: all 0.3s ease;
+}
+
+#navigation ul h5{
+    font-size: medium;
+    font-weight: normal;
+    border-bottom: 1px solid #ccc;
+    padding: 2px 4px;
+}
+
+#navigation a{
+    display: block;
+    border-bottom: 1px solid #ccc;
+    padding: 2px 12px;
+    text-decoration: none;
+    background: #fff;
+    font-size: small;
+}
+#navigation span.info{
+    display: none;
+}
+
+#navigation a:hover{
+    background-image: -webkit-linear-gradient(right,#eef,white, white, white);
+    text-decoration: underline;
+}
+
+#content {
+    width: 1024px;
+    min-height: 200px;
+    margin: 8px auto;
+    border: 1px solid #ccc;
+    padding: 16px;
+}
+
+#start ul{
+    list-style: none;
+}
+#start ul.sub li{
+    padding-left: 16px;
+    padding-bottom: 8px;
+}
+
+#start h5{
+    font-size: large;
+    font-weight: normal;
+    border-bottom: 1px solid #ccc;
+    margin: 8px 0;
+}
+
+#start a{
+    font-size: large;
+    display: block;
+}
+
+
+
+#footer {
+
+}
