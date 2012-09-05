@@ -31,6 +31,8 @@ a:hover{
     margin-left: 0;
 }
 
+/* HEADER */
+
 #header {
     position: fixed;
     top: 0;
@@ -44,6 +46,7 @@ a:hover{
     height: 35px;
     border-radius: 0 0 0 16px;
     overflow: hidden;
+    z-index: 1;
 }
 
 #header h1, #header h2, #header h3{
@@ -62,6 +65,7 @@ a:hover{
     content: "> ";
 }
 
+/* NAVIGATION */
 
 #navigation {
     position: fixed;
@@ -74,6 +78,7 @@ a:hover{
     border-radius: 0 0 16px 0;
     -webkit-transition: all 0.3s ease;
     -moz-transition: all 0.3s ease;
+    z-index: 1;
 }
 
 .navi_hidden #navigation{
@@ -131,13 +136,49 @@ a:hover{
     text-decoration: underline;
 }
 
+/* CONTENT */
+
 #content {
+    position: relative;
     width: 1024px;
     min-height: 200px;
     margin: 8px auto;
     border: 1px solid #ccc;
-    padding: 16px;
+    padding: 16px 24px;
 }
+
+#content h1{
+    text-align: center;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ccc;
+    font-weight: normal;
+}
+
+#content p{
+    padding-bottom: 8px;
+}
+#content ul{
+    padding-left: 20px;
+}
+#content li{
+    padding-bottom: 4px;
+}
+
+#content div.description{
+    border: 1px solid #ccc;
+    background: #eee;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+#content .xml3d{
+    display: block;
+    border: 1px solid #aaa;
+    margin: 16px auto;
+
+}
+
+/* INDEX CONTENT */
 
 #start ul{
     list-style: none;

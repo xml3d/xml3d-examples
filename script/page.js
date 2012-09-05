@@ -1,17 +1,19 @@
 
 var CATEGORY_LIST = {
     unknown : { name : "???" },
-    base : { name: "Basic Functionality" },
+    external : { name: "External References" },
     shader : { name: "Shaders" }
 
 }
 
 var EXAMPLE_LIST = [
-    {cat: "base", name: "Simple Mesh", href: "simple-mesh.xhtml", info: "Very basic test showing a simple rectangular mesh"},
-    {cat: "base", name: "Simple Mesh2", href: "simple-mesh.xhtml", info: "Very basic test showing a simple rectangular mesh"},
-    {cat: "base", name: "Simple Mesh3", href: "simple-mesh.xhtml", info: "Very basic test showing a simple rectangular mesh"},
-    {cat: "shader", name: "Flat Shader", href: "simple-mesh.xhtml", info: "Very basic test showing a simple rectangular mesh"},
-    {cat: "shader", name: "Phong Shader", href: "simple-mesh.xhtml", info: "Very basic test showing a simple rectangular mesh"}
+    {cat: "external", name: "Suzanne", href: "examples/suzanne/suzanne.xhtml",
+        info: "Demonstrates the usage of external mesh data with a JSON format."},
+
+    {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.xhtml",
+        info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
+    {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
+        info: "Demonstrates the usage of custom shaders to implement an eyelight shader."}
 ]
 
 var CURRENT = null;
@@ -28,12 +30,22 @@ function initPage(){
     if(CURRENT)
         CURRENT_CAT = CATEGORY_LIST[CURRENT.cat] || CATEGORY_LIST.unknown;
 
-    if(window.PAGE_INDEX)
+    window.LINK_PREFIX = "";
+    if(CURRENT){
+        var idx = 0
+        while( (idx = CURRENT.href.indexOf("/", idx)) != -1){
+            idx++; window.LINK_PREFIX += "../";
+        }
+    }
+
+    if(window.PAGE_INDEX){
         buildIndex();
+    }
+
 
     buildNavigation();
 
-    var header = $('<div id="header" ><h1><a href="index.xhtml" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
+    var header = $('<div id="header" ><h1><a href="'+ LINK_PREFIX + 'index.xhtml" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
     $(document.body).prepend(header);
     var footer = $('<div id="footer" ></div>')
     $(document.body).append(footer);
@@ -77,7 +89,7 @@ function buildNavigation(){
     var naviList = buildTestList();
     inner.append(naviList);
 
-    naviList.prepend($('<li><a href="index.xhtml">Index</a></li>'))
+    naviList.prepend($('<li><a href="' + LINK_PREFIX + 'index.xhtml">Index</a></li>'));
 
     $(document.body).prepend(navi);
 }
@@ -100,7 +112,7 @@ function buildTestList(){
         var list = $('<ul class="sub" ></ul>');
         for(var i in cat.examples){
             var entry = cat.examples[i];
-            list.append($('<li><a href="' + entry.href + '">' + entry.name + '</a><span class="info">' +
+            list.append($('<li><a href="' + LINK_PREFIX + entry.href + '">' + entry.name + '</a><span class="info">' +
                 ( entry.info || "" ) + '</span></li>'))
 
         }
