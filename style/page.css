@@ -20,22 +20,37 @@ a:hover{
     color: #466DE0;
 }
 
+#overall{
+    margin-left: 200px;
+    margin-top: 50px;
+    -webkit-transition: all 0.3s ease;
+    -moz-transition: all 0.3s ease;
+}
+
+.navi_hidden #overall{
+    margin-left: 0;
+}
 
 #header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 230px;
     background: #eee;
     color: #888;
     border-left: 1px solid #ccc;
     border-bottom: 1px solid #ccc;
     padding: 4px 16px;
     height: 35px;
-    margin-left: 230px;
     border-radius: 0 0 0 16px;
+    overflow: hidden;
 }
 
 #header h1, #header h2, #header h3{
     font-size: 20pt;
-    float: left;
+    display: inline;
     padding: 0 16px 0 0;
+    white-space: nowrap;
 }
 #header h2, #header h3{
     font-weight: normal
@@ -49,7 +64,7 @@ a:hover{
 
 
 #navigation {
-    position: absolute;
+    position: fixed;
     top: 0px;
     height: 500px;
     width: 200px;
@@ -61,12 +76,12 @@ a:hover{
     -moz-transition: all 0.3s ease;
 }
 
-#navigation.hidden{
+.navi_hidden #navigation{
     bottom: auto;
     height: 43px;
 }
 
-#navigation.hidden .inner{
+.navi_hidden #navigation .inner{
     opacity: 0;
     overflow: hidden;
 }

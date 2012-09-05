@@ -62,11 +62,11 @@ function buildNavigation(){
     navi.append($("<h4>Navigation</h4>"));
 
     function adjustNavi(){
-        navi.height(navi.hasClass("hidden") ? 43 : $(window).height() - 8);
+        navi.height($(document.body).hasClass("navi_hidden") ? 43 : $(window).height() - 8);
     }
 
     navi.find("h4").click(function(){
-        navi.toggleClass("hidden");
+        $(document.body).toggleClass("navi_hidden");
         adjustNavi();
     });
     $(window).bind('resize', adjustNavi);
