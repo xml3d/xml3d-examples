@@ -21,14 +21,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (04.09.2012 14:46:02 MESZ)
+@version: DEVELOPMENT SNAPSHOT (05.09.2012 13:28:56 MESZ)
 **/
 					
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (04.09.2012 14:46:02 MESZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (05.09.2012 13:28:56 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -3508,7 +3508,19 @@ quat4.str = function(quat) {
     window.XML3DRay = XML3DRay;
 
 }(XML3D._native));
-var Xflow = {};(function(){
+var Xflow = {};
+
+
+/**
+ * Type of Modification, used internally only
+ * @private
+ * @enum
+ */
+var XflowModification = {
+    NONE: 0,
+    DATA_CHANGED: 1,
+    STRUCTURE_CHANGED: 2
+};(function(){
 
 /**
  * The Xflow graph includes the whole dataflow graph
@@ -3519,16 +3531,7 @@ var Graph = function(){
 };
 Xflow.Graph = Graph;
 
-/**
- * Type of Modification, used internally only
- * @private
- * @enum
- */
-XflowModification = {
-    NONE: 0,
-    DATA_CHANGED: 1,
-    STRUCTURE_CHANGED: 2
-};
+
 
 /**
  * @return {Xflow.InputNode}
@@ -4793,7 +4796,6 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
      * @param {string} url
      */
     function loadDocument(url) {
-        console.log("Start request: " + url);
         var xmlHttp = null;
         try {
             xmlHttp = new XMLHttpRequest();
@@ -8685,7 +8687,6 @@ XML3D.webgl.stopEvent = function(ev) {
         }
 
         // Tally shader uniforms and samplers
-        var texCount = 0;
         var numUniforms = gl.getProgramParameter(prg, gl.ACTIVE_UNIFORMS);
         for ( var i = 0; i < numUniforms; i++) {
             var uni = gl.getActiveUniform(prg, i);
@@ -8698,9 +8699,7 @@ XML3D.webgl.stopEvent = function(ev) {
             uniInfo.location = gl.getUniformLocation(prg, uni.name);
 
             if (uni.type == gl.SAMPLER_2D || uni.type == gl.SAMPLER_CUBE) {
-                uniInfo.texUnit = texCount;
                 programObject.samplers[uni.name] = uniInfo;
-                texCount++;
             } else
                 programObject.uniforms[uni.name] = uniInfo;
         }
@@ -8967,7 +8966,7 @@ XML3D.webgl.stopEvent = function(ev) {
                 onload : function() {
                     renderer.requestRedraw.call(renderer, "Texture loaded");
                 },
-                texUnit : texUnit,
+                unit : texUnit,
                 image : img,
                 config : texEntry.getSamplerConfig()
             });
@@ -9076,6 +9075,10 @@ XML3D.webgl.stopEvent = function(ev) {
         return info;
     };
 
+    /**
+     *
+     * @param {WebGLSampler} tex
+     */
     XML3DShaderManager.prototype.bindTexture = function(tex) {
         var info = tex.info;
         var gl = this.gl;
@@ -9094,9 +9097,9 @@ XML3D.webgl.stopEvent = function(ev) {
             this.bindTexture(tex);
             break;
         case TEXTURE_STATE.UNLOADED:
-            gl.activeTexture(gl.TEXTURE0);
+            gl.activeTexture(gl.TEXTURE0 + info.unit + 1);
             gl.bindTexture(gl.TEXTURE_2D, null);
-            this.setUniform(tex, 0);
+            this.setUniform(tex, info.unit + 1);
         }
         ;
     };
@@ -9792,7 +9795,7 @@ Renderer.prototype.render = function() {
     return [stats.objCount, stats.triCount];
 };
 
-Renderer.prototype.sortObjects = function(sourceObjectArray, opaque, transparent, xform, backToFront) {
+Renderer.prototype.sortObjects = function(sourceObjectArray, opaque, transparent, xform) {
     var tempArray = [];
     for (var i = 0, l = sourceObjectArray.length; i < l; i++) {
         var obj = sourceObjectArray[i];
@@ -9800,8 +9803,6 @@ Renderer.prototype.sortObjects = function(sourceObjectArray, opaque, transparent
         var shader = this.shaderManager.getShaderById(shaderName);
 
         if (shader.hasTransparency) {
-            //Transparent objects will be drawn front to back so there's no sense in sorting them
-            //by shader
             tempArray.push(obj);
         } else {
             opaque[shaderName] = opaque[shaderName] || [];
@@ -9809,7 +9810,7 @@ Renderer.prototype.sortObjects = function(sourceObjectArray, opaque, transparent
         }
     }
 
-    //Sort transparent objects from front to back
+    //Sort transparent objects from back to front
     var tlength = tempArray.length;
     if (tlength > 1) {
         for (i = 0; i < tlength; i++) {
@@ -9818,19 +9819,13 @@ Renderer.prototype.sortObjects = function(sourceObjectArray, opaque, transparent
             var center = obj.mesh.bbox.center()._data;
             center = mat4.multiplyVec4(trafo, quat4.create([center[0], center[1], center[2], 1.0]));
             center = mat4.multiplyVec4(xform.view, quat4.create([center[0], center[1], center[2], 1.0]));
-            tempArray[i] = [ obj, center[3] ];
+            tempArray[i] = [ obj, center[2] ];
         }
 
-        if (backToFront) {
-            tempArray.sort(function(a, b) {
-                return a[1] - b[1];
-            });
-        } else {
-            tempArray.sort(function(a, b) {
-                return b[1] - a[1];
-            });
-        }
-        //TODO: Can we do this better?
+        tempArray.sort(function(a, b) {
+            return a[1] - b[1];
+        });
+
         for (var i=0; i < tlength; i++) {
             transparent[i] = tempArray[i][0];
         }
@@ -10426,6 +10421,16 @@ Renderer.prototype.notifyDataChanged = function() {
         }
     };
 
+    /* Interface methods */
+    XML3DCanvasRenderAdapter.prototype.getBoundingBox = function() {
+        var bbox = new window.XML3DBox();
+        Array.prototype.forEach.call(this.node.childNodes, function(c) {
+            if(c.getBoundingBox)
+                bbox.extend(c.getBoundingBox());
+        });
+        return bbox;
+    };
+
     XML3DCanvasRenderAdapter.prototype.getElementByPoint = function(x, y, hitPoint, hitNormal) {
         var handler = this.factory.handler;
         var object = handler.updatePickObjectByPoint(x, y);
@@ -10704,7 +10709,6 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     p.notifyDataChanged = function(request, changeType) {
-        console.log("Shader data changed: ", request, changeType);
         this.renderer.shaderManager.shaderDataChanged(this, request, changeType);
     };
 
@@ -11319,7 +11323,6 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         XML3D.webgl.RenderAdapter.call(this, factory, node);
 
         this.visible = true;
-        this.position = null;
         this.transform = null;
         this.lightShader = null;
         this.renderer = factory.renderer;
@@ -11349,11 +11352,14 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             else
                 return;
 
-            this.renderer.changeLightData(this.lightType, "visibility", this.offset, [lsIntensity[0]*i, lsIntensity[1]*i, lsIntensity[2]*i]);
+            this.renderer.changeLightData(this.lightType, "intensity", this.offset, [lsIntensity[0]*i, lsIntensity[1]*i, lsIntensity[2]*i]);
 
             break;
         case "parenttransform":
             this.transform = evt.newValue;
+            if (this.lightType != "directional")
+                this.renderer.changeLightData(this.lightType, "position", this.offset, this.getPosition());
+
             break;
         }
 
@@ -11362,6 +11368,16 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     /** @const */
 	var XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION = vec3.create([0,0,-1]), tmpDirection = vec3.create();
+
+
+	XML3DLightRenderAdapter.prototype.getPosition = function() {
+	    if (this.transform) {
+            var t = this.transform;
+            var pos = mat4.multiplyVec4(t, quat4.create([0,0,0,1]));
+            return [pos[0]/pos[3], pos[1]/pos[3], pos[2]/pos[3]];
+	    }
+	    return [0,0,0];
+	};
 
 	/**
 	 *
@@ -11385,13 +11401,8 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                     this.offset = lo.length * 3;
                     this.lightType = "point";
 
-                    if (this.transform) {
-                        var t = this.transform;
-                        var pos = mat4.multiplyVec4(t, quat4.create([0,0,0,1]));
-                        Array.set(lo.position, this.offset, [pos[0]/pos[3], pos[1]/pos[3], pos[2]/pos[3]]);
-                    } else {
-                        Array.set(lo.position, this.offset, [0,0,0]);
-                    }
+                    Array.set(lo.position, this.offset, this.getPosition());
+
                     Array.set(lo.visibility, this.offset, this.visible ? [1,1,1] : [0,0,0]);
                     shader.fillPointLight(lo, this.node.intensity, this.offset);
                     lo.length++;
@@ -11454,7 +11465,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @return
      */
     XML3DLightRenderAdapter.prototype.dataChanged = function(field, newValue) {
-        this.renderer.changeLightData(this.lightType, field, this.offset, value);
+        this.renderer.changeLightData(this.lightType, field, this.offset, newValue);
     };
 
     // Export to XML3D.webgl namespace
@@ -11790,6 +11801,10 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "  #else",
         "    vec3 color = emissiveColor + (ambientIntensity * objDiffuse);",
         "  #endif",
+        "  vec3 objSpecular = specularColor;",
+        "  #if HAS_SPECULARTEXTURE",
+        "    objSpecular = objSpecular * texture2D(specularTexture, fragTexCoord).rgb;",
+        "  #endif",
 
         "  #if MAX_POINTLIGHTS > 0",
         "    for (int i=0; i<MAX_POINTLIGHTS; i++) {",
@@ -11800,12 +11815,7 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "      vec3 R = normalize(reflect(L,fragNormal));",
         "      float atten = 1.0 / (pointLightAttenuation[i].x + pointLightAttenuation[i].y * dist + pointLightAttenuation[i].z * dist * dist);",
         "      vec3 Idiff = pointLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
-        "      #if HAS_SPECULARTEXTURE",
-        "        vec3 Ispec = pointLightIntensity[i] * specularColor * texture2D(specularTexture, fragTexCoord).rgb " +
-        "              * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
-        "      #else",
-        "         vec3 Ispec = pointLightIntensity[i] * specularColor * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
-        "      #endif",
+        "      vec3 Ispec = pointLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
         "      color = color + (atten*(Idiff + Ispec)) * pointLightVisibility[i];",
         "    }",
         "  #endif",
@@ -11816,7 +11826,7 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "    vec3 L =  normalize(-lDirection.xyz);",
         "    vec3 R = normalize(reflect(L,fragNormal));",
         "    vec3 Idiff = directionalLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
-        "    vec3 Ispec = directionalLightIntensity[i] * specularColor * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
+        "    vec3 Ispec = directionalLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
         "    color = color + ((Idiff + Ispec)) * directionalLightVisibility[i];",
         "  }",
         "#endif",
@@ -11840,9 +11850,9 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
     uniforms: {
         diffuseColor    : [1.0, 1.0, 1.0],
         emissiveColor   : [0.0, 0.0, 0.0],
-        specularColor   : [1.0, 1.0, 1.0],
+        specularColor   : [0.0, 0.0, 0.0],
         transparency    : 0.0,
-        shininess       : 0.5,
+        shininess       : 0.2,
         ambientIntensity: 0.0,
         useVertexColor : false
     },
