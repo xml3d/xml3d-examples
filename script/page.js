@@ -8,7 +8,9 @@ var CATEGORY_LIST = {
 
 var EXAMPLE_LIST = [
     {cat: "external", name: "Suzanne", href: "examples/suzanne/suzanne.xhtml",
-        info: "Demonstrates the usage of external mesh data with a JSON format."},
+        info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
+    {cat: "external", name: "MeshLab", href: "examples/meshlab/meshlab.xhtml",
+        info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
 
     {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.xhtml",
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
