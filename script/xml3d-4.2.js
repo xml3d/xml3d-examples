@@ -21,14 +21,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (05.09.2012 13:28:56 MESZ)
+@version: DEVELOPMENT SNAPSHOT (11.09.2012 15:42:01 MESZ)
 **/
 					
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (05.09.2012 13:28:56 MESZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (11.09.2012 15:42:01 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -446,24 +446,28 @@ XML3D.URIResolver = function() {
  * @param {Document=} document Base document to use
  * @return {Element} The resolved element or null if it could not be resolved
  */
-XML3D.URIResolver.resolve = function(uri, document) {
+XML3D.URIResolver.resolveLocal = function(uri, document) {
     if (typeof uri == 'string')
         uri = new XML3D.URI(uri);
     document = document || window.document;
 
     if (uri.scheme == 'urn')
     {
-        XML3D.debug.logInfo("++ Found URN." + uri);
         return null;
     }
 
     if (!uri.path && uri.fragment) { // local uri
         return document.getElementById(uri.fragment);
     }
-
-    XML3D.debug.logWarning("++ Can't resolve URI: " + uri.toString());
-    // TODO Resolve intra-document references
     return null;
+};
+
+/**
+ * @deprecated
+ */
+XML3D.URIResolver.resolve = function(uri, document) {
+    XML3D.debug.logWarning("You are using deprecated XML3D.URIResolver.resolve. Use XML3D.URIResolver.resolveLocal instead.");
+    return XML3D.URIResolver.resolveLocal(uri, document);
 };/*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
 
 /**
@@ -4279,11 +4283,11 @@ DataChangeNotifier.removeListener = function(callback){
  * @param {number, Xflow.DataNotifications} notification
  */
 function notifyListeners(dataEntry, notification){
-    for(var i = 0; i < dataEntry._listeners.length; ++i){
-        dataEntry._listeners[i].notify(dataEntry, notification);
-    }
     for(var i = 0; i < DataChangeNotifier._listeners.length; ++i){
         DataChangeNotifier._listeners[i](dataEntry, notification);
+    }
+    for(var i = 0; i < dataEntry._listeners.length; ++i){
+        dataEntry._listeners[i].notify(dataEntry, notification);
     }
 };
 })();(function(){
@@ -4807,11 +4811,12 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
             xmlHttp.open('GET', url, true);
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4) {
-                    if(xmlHttp.status == 404){
-                        showError(xmlHttp);
+                    if(xmlHttp.status == 200){
+                        XML3D.debug.logDebug("Loaded: " + url);
+                        processResponse(xmlHttp);
                     }
                     else
-                        processResponse(xmlHttp);
+                        showError(xmlHttp);
                 }
             };
             xmlHttp.send(null);
@@ -4971,8 +4976,9 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
           if(uri.scheme == 'urn') {
               this.type = events.VALID_REFERENCE;
           } else {
-              this.value = XML3D.URIResolver.resolve(uri);
-              XML3D.debug.logDebug("Resolved node: #" + uri.fragment);
+              this.value = XML3D.URIResolver.resolveLocal(uri);
+              if (this.value)
+                  XML3D.debug.logDebug("Resolved local node: #" + uri.fragment);
               this.type = this.value ? events.VALID_REFERENCE : events.DANGLING_REFERENCE;
           }
       } else {
@@ -5025,37 +5031,43 @@ XML3D.config.element = function(element, selfmonitoring) {
 };
 
 XML3D.config.configure = function(element, selfmonitoring) {
-    if (Array.isArray(element))
-    {
+    if (Array.isArray(element)) {
         Array.forEach(element, XML3D.config.element);
+    } else {
+        XML3D.config.element(element, selfmonitoring);
     }
-    XML3D.config.element(element, selfmonitoring);
 };
 // dom.js
 
 (function($) {
-    if($) return;
-        var doc = {};
-        var nativeGetElementById = document.getElementById;
-        doc.getElementById = function(id) {
-            var elem = nativeGetElementById.call(this, id);
-            if(elem) {
-                return elem;
-            } else {
-                var elems = this.querySelectorAll("*[id="+id+"]");
-                return elems.length ? elems[0] : null;
+    if ($)
+        return;
+    var doc = {};
+    var nativeGetElementById = document.getElementById;
+    doc.getElementById = function(id) {
+        var elem = nativeGetElementById.call(this, id);
+        if (elem) {
+            return elem;
+        } else {
+            var elems = this.getElementsByTagName("*");
+            for ( var i = 0; i < elems.length; i++) {
+                var node = elems[i];
+                if (node.getAttribute("id") === id) {
+                    return node;
+                }
             }
-            return null;
-        };
-        var nativeCreateElementNS = document.createElementNS;
-        doc.createElementNS = function(ns, name) {
-            var r = nativeCreateElementNS.call(this,ns,name);
-            if(ns == XML3D.xml3dNS) {
-                XML3D.config.element(r, true);
-            }
-            return r;
-        };
-        XML3D.extend(window.document,doc);
+        }
+        return null;
+    };
+    var nativeCreateElementNS = document.createElementNS;
+    doc.createElementNS = function(ns, name) {
+        var r = nativeCreateElementNS.call(this, ns, name);
+        if (ns == XML3D.xml3dNS) {
+            XML3D.config.element(r, true);
+        }
+        return r;
+    };
+    XML3D.extend(window.document, doc);
 
 }(XML3D._native));
 
@@ -5063,57 +5075,38 @@ XML3D.config.configure = function(element, selfmonitoring) {
  * Workaround for DOMAttrModified issues in WebKit based browsers:
  * https://bugs.webkit.org/show_bug.cgi?id=8191
  */
-if(navigator.userAgent.indexOf("WebKit") != -1)
-{
+if (navigator.userAgent.indexOf("WebKit") != -1) {
     var attrModifiedWorks = false;
-    var listener = function(){ attrModifiedWorks = true; };
+    var listener = function() {
+        attrModifiedWorks = true;
+    };
     document.documentElement.addEventListener("DOMAttrModified", listener, false);
     document.documentElement.setAttribute("___TEST___", true);
     document.documentElement.removeAttribute("___TEST___");
     document.documentElement.removeEventListener("DOMAttrModified", listener, false);
 
-    if (!attrModifiedWorks)
-    {
+    if (!attrModifiedWorks) {
         Element.prototype.__setAttribute = HTMLElement.prototype.setAttribute;
 
-        Element.prototype.setAttribute = function(attrName, newVal)
-        {
+        Element.prototype.setAttribute = function(attrName, newVal) {
             var prevVal = this.getAttribute(attrName);
             this.__setAttribute(attrName, newVal);
             newVal = this.getAttribute(attrName);
-            //if (newVal != prevVal)
+            // if (newVal != prevVal)
             {
                 var evt = document.createEvent("MutationEvent");
-                evt.initMutationEvent(
-                        "DOMAttrModified",
-                        true,
-                        false,
-                        this,
-                        prevVal || "",
-                        newVal || "",
-                        attrName,
-                        (prevVal == null) ? MutationEvent.ADDITION : MutationEvent.MODIFICATION
-                );
+                evt.initMutationEvent("DOMAttrModified", true, false, this, prevVal || "", newVal || "", attrName, (prevVal == null) ? MutationEvent.ADDITION
+                        : MutationEvent.MODIFICATION);
                 this.dispatchEvent(evt);
             }
         };
 
         Element.prototype.__removeAttribute = HTMLElement.prototype.removeAttribute;
-        Element.prototype.removeAttribute = function(attrName)
-        {
+        Element.prototype.removeAttribute = function(attrName) {
             var prevVal = this.getAttribute(attrName);
             this.__removeAttribute(attrName);
             var evt = document.createEvent("MutationEvent");
-            evt.initMutationEvent(
-                    "DOMAttrModified",
-                    true,
-                    false,
-                    this,
-                    prevVal,
-                    "",
-                    attrName,
-                    MutationEvent.REMOVAL
-            );
+            evt.initMutationEvent("DOMAttrModified", true, false, this, prevVal, "", attrName, MutationEvent.REMOVAL);
             this.dispatchEvent(evt);
         };
     }
@@ -5323,7 +5316,7 @@ if(navigator.userAgent.indexOf("WebKit") != -1)
     handler.ElementHandler.prototype.resolve = function(attrName) {
         var uri = new XML3D.URI(this.element[attrName]);
         if (uri.valid && uri.fragment) {
-            return XML3D.URIResolver.resolve(uri);
+            return XML3D.URIResolver.resolveLocal(uri);
         }
         return null;
     };
@@ -6772,7 +6765,7 @@ XML3D.data.DataAdapter.prototype.resolveScript = function() {
                     this.xflow = null;
                 }
             } else {
-                var sn = XML3D.URIResolver.resolve(script, this.node.ownerDocument);
+                var sn = XML3D.URIResolver.resolveLocal(script, this.node.ownerDocument);
                 if (sn && sn.textContent) {
                     pos = sn.textContent.indexOf("urn:xml3d:xflow:");
                     if (pos === 0) {
@@ -7228,6 +7221,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
 
     /**
      * Creates a new image object
+     *
      * @param {string} url
      */
     ImgDataAdapter.prototype.createImageFromURL = function(url) {
@@ -7248,7 +7242,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
      */
     ImgDataAdapter.prototype.setTextureEntry = function(entry) {
         this.textureEntry = entry;
-        if (this.image && this.image.complete) {
+        if (this.image) {
             this.textureEntry.setImage(this.image);
         }
     };
@@ -7355,7 +7349,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
             return new XML3D.base.AdapterHandle();
         }
         uri = new XML3D.URI(uri);
-        var element = XML3D.URIResolver.resolve(uri);
+        var element = XML3D.URIResolver.resolveLocal(uri);
         if (element){
             var handle = new XML3D.base.AdapterHandle();
             handle.setAdapter(XML3D.base.AdapterFactory.prototype.getAdapter.call(this, element, XML3D.data.XML3DDataAdapterFactory.prototype));
@@ -8598,7 +8592,6 @@ XML3D.webgl.stopEvent = function(ev) {
 
         this.setUniformsFromComputeResult(program, dataTable);
         this.createTexturesFromComputeResult(program, dataTable);
-        XML3D.webgl.checkError(this.gl, "setSamplers");
         return shaderId;
     };
 
@@ -8750,28 +8743,11 @@ XML3D.webgl.stopEvent = function(ev) {
         this.bindShader(program);
         this.setUniformsFromComputeResult(program, result);
         this.createTexturesFromComputeResult(program, result);
+        if(program.material) {
+            program.material.parametersChanged(result.getOutputMap());
+            program.hasTransparency = program.material.isTransparent;
+        }
         this.renderer.requestRedraw("Shader data changed");
-        // Store the change, it will be applied the next time the shader is
-        // bound
-        /*if (attrName == "src") {
-            // A texture source was changed
-            if (textureName) {
-                var sampler = shader.samplers[textureName];
-                if (sampler)
-                    shader.samplers[textureName] = this.replaceTexture(adapter, sampler);
-            } else
-                XML3D.debug.logError("Couldn't apply change because of a missing texture name");
-
-        } else {
-            if (attrName == "transparency")
-                shader.hasTransparency = newValue > 0;
-
-            shader.changes.push({
-                type : "uniform",
-                name : attrName,
-                newValue : newValue
-            });
-        }*/
 
     };
 
@@ -9169,6 +9145,7 @@ XML3D.webgl.stopEvent = function(ev) {
             this.parametersChanged(data.getOutputMap());
         }
         programObject.hasTransparency = this.isTransparent;
+        programObject.material = this;
         return programObject;
     };
 
@@ -9518,7 +9495,7 @@ Renderer.prototype.initCamera = function() {
     var avLink = this.xml3dNode.activeView;
     var av = null;
     if (avLink != "")
-        av = XML3D.URIResolver.resolve(avLink);
+        av = XML3D.URIResolver.resolveLocal(avLink);
 
     if (av == null)
     {
@@ -9912,7 +9889,7 @@ Renderer.prototype.drawObject = function(shader, meshInfo) {
             var vbo;
 
             if (!vbos[name]) {
-                XML3D.debug.logWarning("Missing required mesh data [ "+name+" ], the object may not render correctly.");
+                //XML3D.debug.logWarning("Missing required mesh data [ "+name+" ], the object may not render correctly.");
                 continue;
             }
 
@@ -10000,7 +9977,7 @@ Renderer.prototype.renderSceneToPickingBuffer = function() {
         var transform = obj.transform;
         var mesh = obj.mesh;
 
-        if (!mesh.valid)// || !obj.pickable)
+        if (!mesh.valid  || !obj.visible)
             continue;
 
         var parameters = {};
@@ -10300,8 +10277,9 @@ Renderer.prototype.notifyDataChanged = function() {
     XML3D.webgl.XML3DLightShaderRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.dataAdapter = factory.renderer.dataFactory.getAdapter(this.node);
-        this.computeRequest = this.dataAdapter.getComputeRequest(staticAttributes, this.dataChanged);
+        this.computeRequest = this.dataAdapter.getComputeRequest(staticAttributes, this.dataChanged.bind(this));
         this.offsets = [];
+        this.listeners = [];
     };
     XML3D.webgl.XML3DLightShaderRenderAdapter.prototype = new XML3D.webgl.RenderAdapter();
     XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.constructor = XML3D.webgl.XML3DLightShaderRenderAdapter;
@@ -10350,14 +10328,14 @@ Renderer.prototype.notifyDataChanged = function() {
      * @param {Xflow.RequestNotification} notification
      */
     XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.dataChanged = function(request, notification) {
-        var dataTable = this.computeRequest.getResult();
+        var dataTable = request.getResult();
 
         for (var i=0; i<staticAttributes.length; i++) {
             var attr = dataTable.getOutputData(staticAttributes[i]);
             if (attr && attr.userData.webglDataChanged) {
                 var value = attr.getValue();
-                for(var j=0; j<this.listeners; j++)
-                    this.listeners[i](staticAttributes[i], value);
+                for(var j=0; j<this.listeners.length; j++)
+                    this.listeners[j](staticAttributes[i], value);
             }
         }
     };
@@ -10938,7 +10916,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         var dataResult =  this.computeRequest.getResult();
 
         if (!(dataResult.getOutputData("position"))) {
-            XML3D.debug.logError("Mesh " + this.node.id + " has no data for required attribute 'position'.");
+            XML3D.debug.logInfo("Mesh " + this.node.id + " has no data for required attribute 'position'.");
             obj.mesh.valid = false;
             return;
         }
@@ -11091,7 +11069,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         this.transformAdapter = null;
         var tNode = this.node.transform;
         if (tNode) {
-            tNode = XML3D.URIResolver.resolve(tNode);
+            tNode = XML3D.URIResolver.resolveLocal(tNode);
             if (tNode)
                 this.transformAdapter = this.factory.getAdapter(tNode);
         }
@@ -11257,10 +11235,10 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 var pattern    = /shader\s*:\s*url\s*\(\s*(\S+)\s*\)/i;
                 var result = pattern.exec(styleValue);
                 if (result)
-                    shader = XML3D.URIResolver.resolve(result[1]);
+                    shader = XML3D.URIResolver.resolveLocal(result[1]);
             }
         } else {
-            shader = XML3D.URIResolver.resolve(shader);
+            shader = XML3D.URIResolver.resolveLocal(shader);
         }
         
         shader = this.factory.getAdapter(shader);
@@ -11357,8 +11335,10 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             break;
         case "parenttransform":
             this.transform = evt.newValue;
-            if (this.lightType != "directional")
-                this.renderer.changeLightData(this.lightType, "position", this.offset, this.getPosition());
+            if (this.lightType == "directional")
+                this.renderer.changeLightData(this.lightType, "direction", this.offset, this.applyTransform(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION));
+            else
+                this.renderer.changeLightData(this.lightType, "position", this.offset, this.applyTransform([0,0,0]));
 
             break;
         }
@@ -11370,15 +11350,15 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 	var XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION = vec3.create([0,0,-1]), tmpDirection = vec3.create();
 
 
-	XML3DLightRenderAdapter.prototype.getPosition = function() {
+	XML3DLightRenderAdapter.prototype.applyTransform = function(vec) {
 	    if (this.transform) {
             var t = this.transform;
-            var pos = mat4.multiplyVec4(t, quat4.create([0,0,0,1]));
-            return [pos[0]/pos[3], pos[1]/pos[3], pos[2]/pos[3]];
+            var newVec = mat4.multiplyVec4(t, quat4.create([vec[0], vec[1], vec[2], 1]));
+            return [newVec[0]/newVec[3], newVec[1]/newVec[3], newVec[2]/newVec[3]];
 	    }
-	    return [0,0,0];
+	    return vec;
 	};
-
+	
 	/**
 	 *
 	 * @param {Object} lights
@@ -11390,7 +11370,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             return;
 
         var lo;
-
+        shader.registerLightListener(this.dataChanged.bind(this));
         var script = shader.node.script;
         var pos = script.indexOf("urn:xml3d:lightshader:");
         if(pos === 0) {
@@ -11401,8 +11381,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                     this.offset = lo.length * 3;
                     this.lightType = "point";
 
-                    Array.set(lo.position, this.offset, this.getPosition());
-
+                    Array.set(lo.position, this.offset, this.applyTransform([0,0,0]));
                     Array.set(lo.visibility, this.offset, this.visible ? [1,1,1] : [0,0,0]);
                     shader.fillPointLight(lo, this.node.intensity, this.offset);
                     lo.length++;
@@ -11412,14 +11391,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                     this.offset = lo.length * 3;
                     this.lightType = "directional";
 
-                    if (this.transform) {
-                        var t = this.transform;
-                        mat4.multiplyVec3(t, XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION, tmpDirection);
-                        Array.set(lo.direction, this.offset, [tmpDirection[0], tmpDirection[1], tmpDirection[2]]);
-                    } else {
-                        Array.set(lo.direction, this.offset, XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION);
-                    }
-
+                    Array.set(lo.direction, this.offset, this.applyTransform(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION));
                     Array.set(lo.visibility, this.offset, this.visible ? [1,1,1] : [0,0,0]);
                     shader.fillDirectionalLight(lo, this.node.intensity, this.offset);
                     lo.length++;
@@ -11438,7 +11410,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             var shaderLink = this.node.shader;
             var shader = null;
             if (shaderLink != "")
-                shader = XML3D.URIResolver.resolve(shaderLink);
+                shader = XML3D.URIResolver.resolveLocal(shaderLink);
             // if no shader attribute is specified, try to get a shader from the style attribute
             if(shader == null)
             {
