@@ -21,14 +21,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (11.09.2012 15:42:01 MESZ)
+@version: 4.2
 **/
 					
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (11.09.2012 15:42:01 MESZ)';
+XML3D.version = '4.2';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -4813,6 +4813,7 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
                 if (xmlHttp.readyState == 4) {
                     if(xmlHttp.status == 200){
                         XML3D.debug.logDebug("Loaded: " + url);
+                        XML3D.xmlHttpCallback && XML3D.xmlHttpCallback();
                         processResponse(xmlHttp);
                     }
                     else
@@ -8592,6 +8593,7 @@ XML3D.webgl.stopEvent = function(ev) {
 
         this.setUniformsFromComputeResult(program, dataTable);
         this.createTexturesFromComputeResult(program, dataTable);
+        XML3D.webgl.checkError(this.gl, "setSamplers");
         return shaderId;
     };
 
@@ -8844,7 +8846,13 @@ XML3D.webgl.stopEvent = function(ev) {
 
     var rc = window.WebGLRenderingContext;
 
-    XML3DShaderManager.prototype.setUniform = function(u, value) {
+    /**
+     * Set uniforms for active program
+     * @param u
+     * @param value
+     * @param {boolean=} transposed
+     */
+    XML3DShaderManager.prototype.setUniform = function(u, value, transposed) {
         var gl = this.gl;
         switch (u.glType) {
         case rc.BOOL:
@@ -8882,13 +8890,13 @@ XML3D.webgl.stopEvent = function(ev) {
             break; // gl.FLOAT_VEC4
 
         case 35674:
-            gl.uniformMatrix2fv(u.location, gl.FALSE, value);
+            gl.uniformMatrix2fv(u.location, transposed || false, value);
             break;// gl.FLOAT_MAT2
         case 35675:
-            gl.uniformMatrix3fv(u.location, gl.FALSE, value);
+            gl.uniformMatrix3fv(u.location, transposed || false, value);
             break;// gl.FLOAT_MAT3
         case 35676:
-            gl.uniformMatrix4fv(u.location, gl.FALSE, value);
+            gl.uniformMatrix4fv(u.location, transposed || false, value);
             break;// gl.FLOAT_MAT4
 
         default:
