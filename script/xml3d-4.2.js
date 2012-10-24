@@ -21,14 +21,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: 4.2
+@version: DEVELOPMENT SNAPSHOT (26.10.2012 14:06:21 MESZ)
 **/
 					
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = '4.2';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (26.10.2012 14:06:21 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -38,6 +38,10 @@ XML3D.webglNS = 'http://www.xml3d.org/2009/xml3d/webgl';
 XML3D._xml3d = document.createElementNS(XML3D.xml3dNS, "xml3d");
 XML3D._native = !!XML3D._xml3d.style;
 XML3D._parallel = XML3D._parallel != undefined ? XML3D._parallel : false;
+
+XML3D.createElement = function(tagName) {
+    return document.createElementNS(XML3D.xml3dNS, tagName);
+};
 
 XML3D.extend = function(a, b) {
     for ( var prop in b) {
@@ -74,6 +78,8 @@ XML3D.createClass = function(ctor, parent, methods) {
 };
 (function() {
     var onload = function() {
+
+        XML3D.css.init();
 
         var debug = XML3D.debug.setup();
         debug && XML3D.debug.logInfo("xml3d.js version: " + XML3D.version);
@@ -170,7 +176,7 @@ XML3D.createClass = function(ctor, parent, methods) {
         if (XML3D.document)
             XML3D.document.onunload();
     };
-    window.addEventListener('load', onload, false);
+    window.addEventListener('DOMContentLoaded', onload, false);
     window.addEventListener('unload', onunload, false);
     window.addEventListener('reload', onunload, false);
 
@@ -394,6 +400,42 @@ XML3D.URI = function(str) {
     this.fragment = result[5] || null;
 };
 
+/**
+ * @return {boolean} true if URI is relative to current document
+ */
+XML3D.URI.prototype.isLocal = function(){
+    return !this.authority && !this.path;
+}
+
+/**
+ * Get absolute URI relative to the provided document uri
+ * @param {string} docUri uri of document from which this uri originates
+ * @returns {XML3D.URI}
+ */
+XML3D.URI.prototype.getAbsoluteURI = function(docUri){
+    if(!this.valid || this.authority){
+        return this;
+    }
+
+    var docUriObj = new XML3D.URI(docUri);
+
+    if(this.path){
+        if(this.path.indexOf("/") == 0){
+            docUriObj.path = this.path;
+        }
+        else {
+            docUriObj.path = docUriObj.path.substr(0,docUriObj.path.lastIndexOf("/")+1) + this.path;
+        }
+        docUriObj.query = this.query;
+    }
+    else if(this.query){
+        docUriObj.query = this.query;
+    }
+    docUriObj.fragment = this.fragment;
+
+    return docUriObj;
+}
+
 // Restore the URI to it's stringy glory.
 XML3D.URI.prototype.toString = function() {
     var str = "";
@@ -415,7 +457,7 @@ XML3D.URI.prototype.toString = function() {
     return str;
 };
 
-// Restore the URI to it's stringy glory.
+// Restore the URI to it's stringy glory minus the fragment
 XML3D.URI.prototype.toStringWithoutFragment = function() {
     var str = "";
     if (this.scheme) {
@@ -462,13 +504,924 @@ XML3D.URIResolver.resolveLocal = function(uri, document) {
     return null;
 };
 
+
+
 /**
  * @deprecated
  */
 XML3D.URIResolver.resolve = function(uri, document) {
     XML3D.debug.logWarning("You are using deprecated XML3D.URIResolver.resolve. Use XML3D.URIResolver.resolveLocal instead.");
     return XML3D.URIResolver.resolveLocal(uri, document);
-};/*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
+};(function(){
+
+
+XML3D.css = {};
+
+XML3D.css.TRANSFORM_PROPERTY = null;
+
+XML3D.css.init = function(){
+    if('transform' in document.body.style)
+        XML3D.css.TRANSFORM_PROPERTY = 'transform'
+    else if('WebkitTransform' in document.body.style)
+        XML3D.css.TRANSFORM_PROPERTY = '-webkit-transform'
+    else if('MozTransform' in document.body.style)
+        XML3D.css.TRANSFORM_PROPERTY = '-moz-transform'
+    else
+        XML3D.debug.logWarning("No supported transform css property found");
+
+}
+
+XML3D.css.getInlinePropertyValue = function(node, property)
+{
+    var styleValue = node.getAttribute('style');
+    if(styleValue) {
+        var pattern    = new RegExp( property + "\s*:([^;]+)", "i");
+        var result = pattern.exec(styleValue);
+        if(result)
+            return result[1].trim();
+    }
+    return null;
+}
+
+XML3D.css.getPropertyValue = function(node, property)
+{
+    var value = this.getInlinePropertyValue(node, property);
+    if(value)
+        return value;
+
+    var style = window.getComputedStyle(node);
+    return style.getPropertyValue(property);
+}
+
+XML3D.css.getCSSMatrix = function(node){
+    if(!XML3D.css.TRANSFORM_PROPERTY || !XML3D.css.CSSMatrix)
+        return null;
+
+    var style = null;
+
+    if(XML3D.css.TRANSFORM_PROPERTY != "transform")
+        style = XML3D.css.getInlinePropertyValue(node, "transform");
+
+    if(!style)
+        style = XML3D.css.getPropertyValue(node, XML3D.css.TRANSFORM_PROPERTY);
+
+    if(!style || style == "none")
+        return null;
+
+    var result = null;
+    try{
+        result = new XML3D.css.CSSMatrix(style);
+    }
+    catch(e){
+        XML3D.debug.logError("Error parsing transform property: " + style)
+    }
+    return result;
+
+}
+
+
+
+
+}());
+/**
+ *  class FirminCSSMatrix
+ *
+ *  The [[FirminCSSMatrix]] class is a concrete implementation of the
+ *  `CSSMatrix` interface defined in the [CSS 2D Transforms][2d] and
+ *  [CSS 3D Transforms][3d] Module specifications.
+ *
+ *  [2d]: http://www.w3.org/TR/css3-2d-transforms/
+ *  [3d]: http://www.w3.org/TR/css3-3d-transforms/
+ *
+ *  The implementation was largely copied from the `WebKitCSSMatrix` class, and
+ *  the supparting maths libraries in the [WebKit][webkit] project. This is one
+ *  reason why much of the code looks more like C++ than JavaScript.
+ *
+ *  [webkit]: http://webkit.org/
+ *
+ *  Its API is a superset of that provided by `WebKitCSSMatrix`, largely
+ *  because various pieces of supporting code have been added as instance
+ *  methods rather than pollute the global namespace. Examples of these include
+ *  [[FirminCSSMatrix#isAffine]], [[FirminCSSMatrix#isIdentityOrTranslation]]
+ *  and [[FirminCSSMatrix#adjoint]].
+ **/
+
+/**
+ *  new FirminCSSMatrix(domstr)
+ *  - domstr (String): a string representation of a 2D or 3D transform matrix
+ *    in the form given by the CSS transform property, i.e. just like the
+ *    output from [[FirminCSSMatrix#toString]].
+ **/
+FirminCSSMatrix = function(domstr) {
+    this.m11 = this.m22 = this.m33 = this.m44 = 1;
+
+    this.m12 = this.m13 = this.m14 =
+    this.m21 =            this.m23 = this.m24 =
+    this.m31 = this.m32 =            this.m34 =
+    this.m41 = this.m42 = this.m43            = 0;
+
+    if (typeof domstr == "string") {
+        this.setMatrixValue(domstr);
+    }
+};
+
+/**
+ *  FirminCSSMatrix.displayName = "FirminCSSMatrix"
+ **/
+FirminCSSMatrix.displayName = "FirminCSSMatrix";
+
+/**
+ *  FirminCSSMatrix.degreesToRadians(angle) -> Number
+ *  - angle (Number): an angle in degrees.
+ *
+ *  Converts angles in degrees, which are used by the external API, to angles
+ *  in radians used in internal calculations.
+ **/
+FirminCSSMatrix.degreesToRadians = function(angle) {
+    return angle * Math.PI / 180;
+};
+
+/**
+ *  FirminCSSMatrix.determinant2x2(a, b, c, d) -> Number
+ *  - a (Number): top-left value of the matrix.
+ *  - b (Number): top-right value of the matrix.
+ *  - c (Number): bottom-left value of the matrix.
+ *  - d (Number): bottom-right value of the matrix.
+ *
+ *  Calculates the determinant of a 2x2 matrix.
+ **/
+FirminCSSMatrix.determinant2x2 = function(a, b, c, d) {
+    return a * d - b * c;
+};
+
+/**
+ *  FirminCSSMatrix.determinant3x3(matrix) -> Number
+ *  - a1 (Number): matrix value in position [1, 1].
+ *  - a2 (Number): matrix value in position [1, 2].
+ *  - a3 (Number): matrix value in position [1, 3].
+ *  - b1 (Number): matrix value in position [2, 1].
+ *  - b2 (Number): matrix value in position [2, 2].
+ *  - b3 (Number): matrix value in position [2, 3].
+ *  - c1 (Number): matrix value in position [3, 1].
+ *  - c2 (Number): matrix value in position [3, 2].
+ *  - c3 (Number): matrix value in position [3, 3].
+ *
+ *  Calculates the determinant of a 3x3 matrix.
+ **/
+FirminCSSMatrix.determinant3x3 = function(a1, a2, a3, b1, b2, b3, c1, c2, c3) {
+    var determinant2x2 = FirminCSSMatrix.determinant2x2;
+    return a1 * determinant2x2(b2, b3, c2, c3) -
+    b1 * determinant2x2(a2, a3, c2, c3) +
+    c1 * determinant2x2(a2, a3, b2, b3);
+};
+
+/**
+ *  FirminCSSMatrix.determinant4x4(matrix) -> Number
+ *  - matrix (FirminCSSMatrix): the matrix to calculate the determinant of.
+ *
+ *  Calculates the determinant of a 4x4 matrix.
+ **/
+FirminCSSMatrix.determinant4x4 = function(m) {
+    var determinant3x3 = FirminCSSMatrix.determinant3x3,
+
+        // Assign to individual variable names to aid selecting correct elements
+    a1 = m.m11, b1 = m.m21, c1 = m.m31, d1 = m.m41,
+    a2 = m.m12, b2 = m.m22, c2 = m.m32, d2 = m.m42,
+    a3 = m.m13, b3 = m.m23, c3 = m.m33, d3 = m.m43,
+    a4 = m.m14, b4 = m.m24, c4 = m.m34, d4 = m.m44;
+
+    return a1 * determinant3x3(b2, b3, b4, c2, c3, c4, d2, d3, d4) -
+    b1 * determinant3x3(a2, a3, a4, c2, c3, c4, d2, d3, d4) +
+    c1 * determinant3x3(a2, a3, a4, b2, b3, b4, d2, d3, d4) -
+    d1 * determinant3x3(a2, a3, a4, b2, b3, b4, c2, c3, c4);
+};
+
+/**
+ * FirminCSSMatrix.toMatrixString(transformValue) -> String
+ * - transformValue (String): `el.style.WebkitTransform`-style string (like `rotate(18rad) translate3d(50px, 100px, 10px)`)
+ *
+ * Tranforms a `el.style.WebkitTransform`-style string
+ * (like `rotate(18rad) translate3d(50px, 100px, 10px)`)
+ * into a `getComputedStyle(el)`-style matrix string
+ * (like `matrix3d(0.6603167082440828, -0.7509872467716737, 0, 0, 0.7509872467716737, 0.6603167082440828, 0, 0, 0, 0, 1, 0, 108.11456008937151, 28.482308485824596, 10, 1)`)
+ **/
+FirminCSSMatrix.toMatrixString = function (transformValue) {
+    var rgx = {
+        functionSignature: /(\w+)\([^\)]+\)/ig,
+        nameAndArguments: /(\w+)\(([^\)]+)\)/i,
+        units: /([-\+]?[0-9]+[\.0-9]*)(deg|rad|grad|px|%)*/
+    };
+    var transformStatements = transformValue.match(/(\w+)\([^\)]+\)/ig);
+    var onlyMatrices = transformStatements && transformStatements.every(function (t) { return (/^matrix/).test(t) });
+    if (!transformStatements || onlyMatrices) return transformValue;
+
+    var values = function (o) { return o.value };
+    var cssFunctionToJsFunction = {
+        matrix: function (m, o) {
+            var m2 = new FirminCSSMatrix(o.unparsed);
+
+            return m.multiply(m2)
+        },
+        matrix3d: function (m, o) {
+            var m2 = new FirminCSSMatrix(o.unparsed);
+
+            return m.multiply(m2)
+        },
+
+        perspective: function (m, o) {
+            var m2 = new FirminCSSMatrix();
+            m2.m34 -= 1 / o.value[0].value;
+
+            return m.multiply(m2);
+        },
+
+        rotate: function (m, o) {
+            return m.rotate.apply(m, o.value.map(values))
+        },
+        rotate3d: function (m, o) {
+            return m.rotateAxisAngle.apply(m, o.value.map(values))
+        },
+        rotateX: function (m, o) {
+            return m.rotate.apply(m, [o.value[0].value, 0, 0]);
+        },
+        rotateY: function (m, o) {
+            return m.rotate.apply(m, [0, o.value[0].value, 0]);
+        },
+        rotateZ: function (m, o) {
+            return m.rotate.apply(m, [0, 0, o.value[0].value]);
+        },
+
+        scale: function (m, o) {
+            return m.scale.apply(m, o.value.map(values));
+        },
+        scale3d: function (m, o) {
+            return m.scale.apply(m, o.value.map(values));
+        },
+        scaleX: function (m, o) {
+            return m.scale.apply(m, o.value.map(values));
+        },
+        scaleY: function (m, o) {
+            return m.scale.apply(m, [0, o.value[0].value, 0]);
+        },
+        scaleZ: function (m, o) {
+            return m.scale.apply(m, [0, 0, o.value[0].value]);
+        },
+
+        skew: function (m, o) {
+            var mX = new FirminCSSMatrix('skewX(' + o.value[0].unparsed + ')');
+            var mY = new FirminCSSMatrix('skewY(' + o.value[1].unparsed + ')');
+            var sM = 'matrix(1.00000, '+ mY.b +', '+ mX.c +', 1.000000, 0.000000, 0.000000)';
+            var m2 = new FirminCSSMatrix(sM);
+
+            return m.multiply(m2);
+        },
+        skewX: function (m, o) {
+            return m.skewX.apply(m, [o.value[0].value]);
+        },
+        skewY: function (m, o) {
+            return m.skewY.apply(m, [o.value[0].value]);
+        },
+
+        translate: function (m, o) {
+            return m.translate.apply(m, o.value.map(values));
+        },
+        translate3d: function (m, o) {
+            return m.translate.apply(m, o.value.map(values));
+        },
+        translateX: function (m, o) {
+            return m.translate.apply(m, [o.value[0].value, 0, 0]);
+        },
+        translateY: function (m, o) {
+            return m.translate.apply(m, [0, o.value[0].value, 0]);
+        },
+        translateZ: function (m, o) {
+            return m.translate.apply(m, [0, 0, o.value[0].value]);
+        }
+    };
+    var parseTransformStatement = function (str) {
+        var pair = str.match(rgx.nameAndArguments).slice(1);
+
+        return {
+            key: pair[0],
+            value: pair[1].split(/, ?/).map(function (value) {
+                var parts = value.match(/([-\+]?[0-9]+[\.0-9]*)(deg|rad|grad|px|%)*/) || [];
+
+                return {
+                    value: parseFloat(parts[1]),
+                    units: parts[2],
+                    unparsed: value
+                };
+            }),
+            unparsed: str
+        };
+
+        return o;
+    };
+
+    var transformOperations = transformStatements.map(parseTransformStatement);
+    var startingMatrix = new FirminCSSMatrix();
+    var transformedMatrix = transformOperations.reduce(function (matrix, operation) {
+        // convert to degrees b/c all CSSMatrix methods expect degrees
+        operation.value = operation.value.map(function (operation) {
+            if (operation.units == 'rad') {
+                operation.value = operation.value * (180 / Math.PI);
+                operation.units = 'deg';
+            }
+            else if (operation.units == 'grad') {
+                operation.value = operation.value / (400 / 360); // 400 gradians in 360 degrees
+                operation.units = 'deg'
+            }
+
+            return operation;
+        });
+
+        var jsFunction = cssFunctionToJsFunction[operation.key];
+        var result = jsFunction(matrix, operation);
+
+        return result || matrix;
+    }, startingMatrix);
+
+    return transformedMatrix.toString();
+};
+
+/**
+ *  FirminCSSMatrix#a -> Number
+ *  The first 2D vector value.
+ **/
+
+/**
+ *  FirminCSSMatrix#b -> Number
+ *  The second 2D vector value.
+ **/
+
+/**
+ *  FirminCSSMatrix#c -> Number
+ *  The third 2D vector value.
+ **/
+
+/**
+ *  FirminCSSMatrix#d -> Number
+ *  The fourth 2D vector value.
+ **/
+
+/**
+ *  FirminCSSMatrix#e -> Number
+ *  The fifth 2D vector value.
+ **/
+
+/**
+ *  FirminCSSMatrix#f -> Number
+ *  The sixth 2D vector value.
+ **/
+
+/**
+ *  FirminCSSMatrix#m11 -> Number
+ *  The 3D matrix value in the first row and first column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m12 -> Number
+ *  The 3D matrix value in the first row and second column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m13 -> Number
+ *  The 3D matrix value in the first row and third column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m14 -> Number
+ *  The 3D matrix value in the first row and fourth column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m21 -> Number
+ *  The 3D matrix value in the second row and first column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m22 -> Number
+ *  The 3D matrix value in the second row and second column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m23 -> Number
+ *  The 3D matrix value in the second row and third column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m24 -> Number
+ *  The 3D matrix value in the second row and fourth column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m31 -> Number
+ *  The 3D matrix value in the third row and first column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m32 -> Number
+ *  The 3D matrix value in the third row and second column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m33 -> Number
+ *  The 3D matrix value in the third row and third column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m34 -> Number
+ *  The 3D matrix value in the third row and fourth column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m41 -> Number
+ *  The 3D matrix value in the fourth row and first column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m42 -> Number
+ *  The 3D matrix value in the fourth row and second column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m43 -> Number
+ *  The 3D matrix value in the fourth row and third column.
+ **/
+
+/**
+ *  FirminCSSMatrix#m44 -> Number
+ *  The 3D matrix value in the fourth row and fourth column.
+ **/
+
+[["m11", "a"],
+    ["m12", "b"],
+    ["m21", "c"],
+    ["m22", "d"],
+    ["m41", "e"],
+    ["m42", "f"]].forEach(function(pair) {
+    var key3d = pair[0], key2d = pair[1];
+
+    Object.defineProperty(FirminCSSMatrix.prototype, key2d, {
+        set: function(val) {
+            this[key3d] = val;
+        },
+
+        get: function() {
+            return this[key3d];
+        },
+        enumerable : true,
+        configurable : true
+    });
+});
+
+/**
+ *  FirminCSSMatrix#isAffine() -> Boolean
+ *
+ *  Determines whether the matrix is affine.
+ **/
+FirminCSSMatrix.prototype.isAffine = function() {
+    return this.m13 === 0 && this.m14 === 0 &&
+    this.m23 === 0 && this.m24 === 0 &&
+    this.m31 === 0 && this.m32 === 0 &&
+    this.m33 === 1 && this.m34 === 0 &&
+    this.m43 === 0 && this.m44 === 1;
+};
+
+/**
+ *  FirminCSSMatrix#multiply(otherMatrix) -> FirminCSSMatrix
+ *  - otherMatrix (FirminCSSMatrix): the matrix to multiply this one by.
+ *
+ *  Multiplies the matrix by a given matrix and returns the result.
+ **/
+FirminCSSMatrix.prototype.multiply = function(otherMatrix) {
+    if (!otherMatrix) return null;
+
+    var a = otherMatrix,
+    b = this,
+    c = new FirminCSSMatrix();
+
+    c.m11 = a.m11 * b.m11 + a.m12 * b.m21 + a.m13 * b.m31 + a.m14 * b.m41;
+    c.m12 = a.m11 * b.m12 + a.m12 * b.m22 + a.m13 * b.m32 + a.m14 * b.m42;
+    c.m13 = a.m11 * b.m13 + a.m12 * b.m23 + a.m13 * b.m33 + a.m14 * b.m43;
+    c.m14 = a.m11 * b.m14 + a.m12 * b.m24 + a.m13 * b.m34 + a.m14 * b.m44;
+
+    c.m21 = a.m21 * b.m11 + a.m22 * b.m21 + a.m23 * b.m31 + a.m24 * b.m41;
+    c.m22 = a.m21 * b.m12 + a.m22 * b.m22 + a.m23 * b.m32 + a.m24 * b.m42;
+    c.m23 = a.m21 * b.m13 + a.m22 * b.m23 + a.m23 * b.m33 + a.m24 * b.m43;
+    c.m24 = a.m21 * b.m14 + a.m22 * b.m24 + a.m23 * b.m34 + a.m24 * b.m44;
+
+    c.m31 = a.m31 * b.m11 + a.m32 * b.m21 + a.m33 * b.m31 + a.m34 * b.m41;
+    c.m32 = a.m31 * b.m12 + a.m32 * b.m22 + a.m33 * b.m32 + a.m34 * b.m42;
+    c.m33 = a.m31 * b.m13 + a.m32 * b.m23 + a.m33 * b.m33 + a.m34 * b.m43;
+    c.m34 = a.m31 * b.m14 + a.m32 * b.m24 + a.m33 * b.m34 + a.m34 * b.m44;
+
+    c.m41 = a.m41 * b.m11 + a.m42 * b.m21 + a.m43 * b.m31 + a.m44 * b.m41;
+    c.m42 = a.m41 * b.m12 + a.m42 * b.m22 + a.m43 * b.m32 + a.m44 * b.m42;
+    c.m43 = a.m41 * b.m13 + a.m42 * b.m23 + a.m43 * b.m33 + a.m44 * b.m43;
+    c.m44 = a.m41 * b.m14 + a.m42 * b.m24 + a.m43 * b.m34 + a.m44 * b.m44;
+
+    return c;
+};
+
+/**
+ *  FirminCSSMatrix#isIdentityOrTranslation() -> Boolean
+ *
+ *  Returns whether the matrix is the identity matrix or a translation matrix.
+ **/
+FirminCSSMatrix.prototype.isIdentityOrTranslation = function() {
+    var t = this;
+    return t.m11 === 1 && t.m12 === 0 && t.m13 === 0 && t.m14 === 0 &&
+    t.m21 === 0 && t.m22 === 1 && t.m23 === 0 && t.m24 === 0 &&
+    t.m31 === 0 && t.m31 === 0 && t.m33 === 1 && t.m34 === 0 &&
+        /* m41, m42 and m43 are the translation points */   t.m44 === 1;
+};
+
+/**
+ *  FirminCSSMatrix#adjoint() -> FirminCSSMatrix
+ *
+ *  Returns the adjoint matrix.
+ **/
+FirminCSSMatrix.prototype.adjoint = function() {
+    var result = new FirminCSSMatrix(), t = this,
+    determinant3x3 = FirminCSSMatrix.determinant3x3,
+
+    a1 = t.m11, b1 = t.m12, c1 = t.m13, d1 = t.m14,
+    a2 = t.m21, b2 = t.m22, c2 = t.m23, d2 = t.m24,
+    a3 = t.m31, b3 = t.m32, c3 = t.m33, d3 = t.m34,
+    a4 = t.m41, b4 = t.m42, c4 = t.m43, d4 = t.m44;
+
+    // Row column labeling reversed since we transpose rows & columns
+    result.m11 =  determinant3x3(b2, b3, b4, c2, c3, c4, d2, d3, d4);
+    result.m21 = -determinant3x3(a2, a3, a4, c2, c3, c4, d2, d3, d4);
+    result.m31 =  determinant3x3(a2, a3, a4, b2, b3, b4, d2, d3, d4);
+    result.m41 = -determinant3x3(a2, a3, a4, b2, b3, b4, c2, c3, c4);
+
+    result.m12 = -determinant3x3(b1, b3, b4, c1, c3, c4, d1, d3, d4);
+    result.m22 =  determinant3x3(a1, a3, a4, c1, c3, c4, d1, d3, d4);
+    result.m32 = -determinant3x3(a1, a3, a4, b1, b3, b4, d1, d3, d4);
+    result.m42 =  determinant3x3(a1, a3, a4, b1, b3, b4, c1, c3, c4);
+
+    result.m13 =  determinant3x3(b1, b2, b4, c1, c2, c4, d1, d2, d4);
+    result.m23 = -determinant3x3(a1, a2, a4, c1, c2, c4, d1, d2, d4);
+    result.m33 =  determinant3x3(a1, a2, a4, b1, b2, b4, d1, d2, d4);
+    result.m43 = -determinant3x3(a1, a2, a4, b1, b2, b4, c1, c2, c4);
+
+    result.m14 = -determinant3x3(b1, b2, b3, c1, c2, c3, d1, d2, d3);
+    result.m24 =  determinant3x3(a1, a2, a3, c1, c2, c3, d1, d2, d3);
+    result.m34 = -determinant3x3(a1, a2, a3, b1, b2, b3, d1, d2, d3);
+    result.m44 =  determinant3x3(a1, a2, a3, b1, b2, b3, c1, c2, c3);
+
+    return result;
+};
+
+/**
+ *  FirminCSSMatrix#inverse() -> FirminCSSMatrix | null
+ *
+ *  If the matrix is invertible, returns its inverse, otherwise returns null.
+ **/
+FirminCSSMatrix.prototype.inverse = function() {
+    var inv, det, result, i, j;
+
+    if (this.isIdentityOrTranslation()) {
+        inv = new FirminCSSMatrix();
+
+        if (!(this.m41 === 0 && this.m42 === 0 && this.m43 === 0)) {
+            inv.m41 = -this.m41;
+            inv.m42 = -this.m42;
+            inv.m43 = -this.m43;
+        }
+
+        return inv;
+    }
+
+    // Calculate the adjoint matrix
+    result = this.adjoint();
+
+    // Calculate the 4x4 determinant
+    det = FirminCSSMatrix.determinant4x4(this);
+
+    // If the determinant is zero, then the inverse matrix is not unique
+    if (Math.abs(det) < 1e-8) return null;
+
+    // Scale the adjoint matrix to get the inverse
+    for (i = 1; i < 5; i++) {
+        for (j = 1; j < 5; j++) {
+            result[("m" + i) + j] /= det;
+        }
+    }
+
+    return result;
+};
+
+/**
+ *  FirminCSSMatrix#rotate(rotX, rotY, rotZ) -> FirminCSSMatrix
+ *  - rotX (Number): the rotation around the x axis.
+ *  - rotY (Number): the rotation around the y axis. If undefined, the x
+ *    component is used.
+ *  - rotZ (Number): the rotation around the z axis. If undefined, the x
+ *    component is used.
+ *
+ *  Returns the result of rotating the matrix by a given vector.
+ *
+ *  If only the first argument is provided, the matrix is only rotated about
+ *  the z axis.
+ **/
+FirminCSSMatrix.prototype.rotate = function(rx, ry, rz) {
+    var degreesToRadians = FirminCSSMatrix.degreesToRadians;
+
+    if (typeof rx != "number" || isNaN(rx)) rx = 0;
+
+    if ((typeof ry != "number" || isNaN(ry)) &&
+    (typeof rz != "number" || isNaN(rz))) {
+        rz = rx;
+        rx = 0;
+        ry = 0;
+    }
+
+    if (typeof ry != "number" || isNaN(ry)) ry = 0;
+    if (typeof rz != "number" || isNaN(rz)) rz = 0;
+
+    rx = degreesToRadians(rx);
+    ry = degreesToRadians(ry);
+    rz = degreesToRadians(rz);
+
+    var tx = new FirminCSSMatrix(),
+    ty = new FirminCSSMatrix(),
+    tz = new FirminCSSMatrix(),
+    sinA, cosA, sinA2;
+
+    rz /= 2;
+    sinA = Math.sin(rz);
+    cosA = Math.cos(rz);
+    sinA2 = sinA * sinA;
+
+    // Matrices are identity outside the assigned values
+    tz.m11 = tz.m22 = 1 - 2 * sinA2;
+    tz.m12 = tz.m21 = 2 * sinA * cosA;
+    tz.m21 *= -1;
+
+    ry /= 2;
+    sinA  = Math.sin(ry);
+    cosA  = Math.cos(ry);
+    sinA2 = sinA * sinA;
+
+    ty.m11 = ty.m33 = 1 - 2 * sinA2;
+    ty.m13 = ty.m31 = 2 * sinA * cosA;
+    ty.m13 *= -1;
+
+    rx /= 2;
+    sinA = Math.sin(rx);
+    cosA = Math.cos(rx);
+    sinA2 = sinA * sinA;
+
+    tx.m22 = tx.m33 = 1 - 2 * sinA2;
+    tx.m23 = tx.m32 = 2 * sinA * cosA;
+    tx.m32 *= -1;
+
+    var isIdentity = (this.toString() === (new FirminCSSMatrix).toString());
+
+    return (isIdentity)
+    ? tz.multiply(ty).multiply(tx)
+    : this.multiply(tx).multiply(ty).multiply(tz);
+};
+
+/**
+ *  FirminCSSMatrix#rotateAxisAngle(rotX, rotY, rotZ, angle) -> FirminCSSMatrix
+ *  - rotX (Number): the rotation around the x axis.
+ *  - rotY (Number): the rotation around the y axis. If undefined, the x
+ *    component is used.
+ *  - rotZ (Number): the rotation around the z axis. If undefined, the x
+ *    component is used.
+ *  - angle (Number): the angle of rotation about the axis vector, in degrees.
+ *
+ *  Returns the result of rotating the matrix around a given vector by a given
+ *  angle.
+ *
+ *  If the given vector is the origin vector then the matrix is rotated by the
+ *  given angle around the z axis.
+ **/
+FirminCSSMatrix.prototype.rotateAxisAngle = function(x, y, z, a) {
+    if (typeof x != "number" || isNaN(x)) x = 0;
+    if (typeof y != "number" || isNaN(y)) y = 0;
+    if (typeof z != "number" || isNaN(z)) z = 0;
+    if (typeof a != "number" || isNaN(a)) a = 0;
+    if (x === 0 && y === 0 && z === 0) z = 1;
+
+    var t   = new FirminCSSMatrix(),
+    len = Math.sqrt(x * x + y * y + z * z),
+    cosA, sinA, sinA2, csA, x2, y2, z2;
+
+    a     = (FirminCSSMatrix.degreesToRadians(a) || 0) / 2;
+    cosA  = Math.cos(a);
+    sinA  = Math.sin(a);
+    sinA2 = sinA * sinA;
+
+    // Bad vector, use something sensible
+    if (len === 0) {
+        x = 0;
+        y = 0;
+        z = 1;
+    } else if (len !== 1) {
+        x /= len;
+        y /= len;
+        z /= len;
+    }
+
+    // Optimise cases where axis is along major axis
+    if (x === 1 && y === 0 && z === 0) {
+        t.m22 = t.m33 = 1 - 2 * sinA2;
+        t.m23 = t.m32 = 2 * cosA * sinA;
+        t.m32 *= -1;
+    } else if (x === 0 && y === 1 && z === 0) {
+        t.m11 = t.m33 = 1 - 2 * sinA2;
+        t.m13 = t.m31 = 2 * cosA * sinA;
+        t.m13 *= -1;
+    } else if (x === 0 && y === 0 && z === 1) {
+        t.m11 = t.m22 = 1 - 2 * sinA2;
+        t.m12 = t.m21 = 2 * cosA * sinA;
+        t.m21 *= -1;
+    } else {
+        csA = sinA * cosA;
+        x2  = x * x;
+        y2  = y * y;
+        z2  = z * z;
+
+        t.m11 = 1 - 2 * (y2 + z2) * sinA2;
+        t.m12 = 2 * (x * y * sinA2 + z * csA);
+        t.m13 = 2 * (x * z * sinA2 - y * csA);
+        t.m21 = 2 * (y * x * sinA2 - z * csA);
+        t.m22 = 1 - 2 * (z2 + x2) * sinA2;
+        t.m23 = 2 * (y * z * sinA2 + x * csA);
+        t.m31 = 2 * (z * x * sinA2 + y * csA);
+        t.m32 = 2 * (z * y * sinA2 - x * csA);
+        t.m33 = 1 - 2 * (x2 + y2) * sinA2;
+    }
+
+    return this.multiply(t);
+};
+
+/**
+ *  FirminCSSMatrix#scale(scaleX, scaleY, scaleZ) -> FirminCSSMatrix
+ *  - scaleX (Number): the scaling factor in the x axis.
+ *  - scaleY (Number): the scaling factor in the y axis. If undefined, the x
+ *    component is used.
+ *  - scaleZ (Number): the scaling factor in the z axis. If undefined, 1 is
+ *    used.
+ *
+ *  Returns the result of scaling the matrix by a given vector.
+ **/
+FirminCSSMatrix.prototype.scale = function(scaleX, scaleY, scaleZ) {
+    var transform = new FirminCSSMatrix();
+
+    if (typeof scaleX != "number" || isNaN(scaleX)) scaleX = 1;
+    if (typeof scaleY != "number" || isNaN(scaleY)) scaleY = scaleX;
+    if (typeof scaleZ != "number" || isNaN(scaleZ)) scaleZ = 1;
+
+    transform.m11 = scaleX;
+    transform.m22 = scaleY;
+    transform.m33 = scaleZ;
+
+    return this.multiply(transform);
+};
+
+/**
+ *  FirminCSSMatrix#skewX(skewX) -> FirminCSSMatrix
+ *  - skewX (Number): the scaling factor in the x axis.
+ *
+ *  Returns the result of skewing the matrix by a given vector.
+ **/
+FirminCSSMatrix.prototype.skewX = function(degrees) {
+    var radians = FirminCSSMatrix.degreesToRadians(degrees);
+    var transform = new FirminCSSMatrix();
+
+    transform.c = Math.tan(radians);
+
+    return this.multiply(transform);
+};
+
+/**
+ *  FirminCSSMatrix#skewY(skewY) -> FirminCSSMatrix
+ *  - skewY (Number): the scaling factor in the x axis.
+ *
+ *  Returns the result of skewing the matrix by a given vector.
+ **/
+FirminCSSMatrix.prototype.skewY = function(degrees) {
+    var radians = FirminCSSMatrix.degreesToRadians(degrees);
+    var transform = new FirminCSSMatrix();
+
+    transform.b = Math.tan(radians);
+
+    return this.multiply(transform);
+};
+
+/**
+ *  FirminCSSMatrix#translate(x, y, z) -> FirminCSSMatrix
+ *  - x (Number): the x component of the vector.
+ *  - y (Number): the y component of the vector.
+ *  - z (Number): the z component of the vector. If undefined, 0 is used.
+ *
+ *  Returns the result of translating the matrix by a given vector.
+ **/
+FirminCSSMatrix.prototype.translate = function(x, y, z) {
+    var t = new FirminCSSMatrix();
+
+    if (typeof x != "number" || isNaN(x)) x = 0;
+    if (typeof y != "number" || isNaN(y)) y = 0;
+    if (typeof z != "number" || isNaN(z)) z = 0;
+
+    t.m41 = x;
+    t.m42 = y;
+    t.m43 = z;
+
+    return this.multiply(t);
+};
+
+/**
+ *  FirminCSSMatrix#setMatrixValue(domstr) -> undefined
+ *  - domstr (String): a string representation of a 2D or 3D transform matrix
+ *    in the form given by the CSS transform property, i.e. just like the
+ *    output from [[FirminCSSMatrix#toString]].
+ *
+ *  Sets the matrix values using a string representation, such as that produced
+ *  by the [[FirminCSSMatrix#toString]] method.
+ **/
+FirminCSSMatrix.prototype.setMatrixValue = function(domstr) {
+    domstr = FirminCSSMatrix.toMatrixString(domstr.trim());
+    var mstr   = domstr.match(/^matrix(3d)?\(\s*(.+)\s*\)$/),
+    is3d, chunks, len, points, i, chunk;
+
+    if (!mstr) return;
+
+    is3d   = !!mstr[1];
+    chunks = mstr[2].split(/\s*,\s*/);
+    len    = chunks.length;
+    points = new Array(len);
+
+    if ((is3d && len !== 16) || !(is3d || len === 6)) return;
+
+    for (i = 0; i < len; i++) {
+        chunk = chunks[i];
+        if (chunk.match(/^-?\d+(\.\d+)?$/)) {
+            points[i] = parseFloat(chunk);
+        } else return;
+    }
+
+    for (i = 0; i < len; i++) {
+        point = is3d ?
+        ("m" + (Math.floor(i / 4) + 1)) + (i % 4 + 1) :
+        String.fromCharCode(i + 97); // ASCII char 97 == 'a'
+        this[point] = points[i];
+    }
+};
+
+/**
+ *  FirminCSSMatrix#toString() -> String
+ *
+ *  Returns a string representation of the matrix.
+ **/
+FirminCSSMatrix.prototype.toString = function() {
+    var self = this, points, prefix;
+
+    if (this.isAffine()) {
+        prefix = "matrix(";
+        points = ["a", "b", "c", "d", "e", "f"];
+    } else {
+        prefix = "matrix3d(";
+        points = ["m11", "m12", "m13", "m14",
+            "m21", "m22", "m23", "m24",
+            "m31", "m32", "m33", "m34",
+            "m41", "m42", "m43", "m44"];
+    }
+
+    return prefix + points.map(function(p) {
+        return self[p].toFixed(6);
+    }).join(", ") + ")";
+};
+
+XML3D.css.CSSMatrix = FirminCSSMatrix;
+
+
+XML3D.css.convertCssToMat4 = function(cssMatrix, m){
+    var matrix = m || mat4.create();
+    matrix[0] = cssMatrix.m11;
+    matrix[1] = cssMatrix.m12;
+    matrix[2] = cssMatrix.m13;
+    matrix[3] = cssMatrix.m14;
+    matrix[4] = cssMatrix.m21;
+    matrix[5] = cssMatrix.m22;
+    matrix[6] = cssMatrix.m23;
+    matrix[7] = cssMatrix.m24;
+    matrix[8] = cssMatrix.m31;
+    matrix[9] = cssMatrix.m32;
+    matrix[10] = cssMatrix.m33;
+    matrix[11] = cssMatrix.m34;
+    matrix[12] = cssMatrix.m41;
+    matrix[13] = cssMatrix.m42;
+    matrix[14] = cssMatrix.m43;
+    matrix[15] = cssMatrix.m44;
+    return matrix;
+}/*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
 
 /**
 * This file contains code that may be under the following license:
@@ -3949,8 +4902,11 @@ DataNode.prototype._updateComputeCache = function(state){
 
 DataNode.prototype._getComputeResult = function(filter){
     var forwardNode = getForwardNode(this);
-    if(forwardNode)
+    if(forwardNode){
+        this._state = XflowModification.NONE;
         return forwardNode._getComputeResult(filter);
+    }
+
 
     var key = filter ? filter.join(";") : "[null]";
     if(this._results[key])
@@ -4647,6 +5603,9 @@ Xflow.ComputeResult = ComputeResult;
         return "data";
     }
 };
+(function() {
+
+
 //-----------------------------------------------------------------------------
 // Adapter and Adapter factory
 //-----------------------------------------------------------------------------
@@ -4657,116 +5616,265 @@ XML3D.base = {
 };
 
 /**
+ * A normal adapter that doesn't need to be connected to a DOM node
  * @constructor
- * @param {XML3D.base.IFactory=} factory
- * @param {Object=} node
+ * @param {XML3D.base.AdapterFactory} factory - the factory this adapter was created from
  */
-XML3D.base.Adapter = function(factory, node) {
-    this.factory = factory; // optional
-    this.node = node; // optional
+XML3D.base.Adapter = function(factory) {
+    this.factory = factory;
 };
 
-XML3D.base.Adapter.prototype.init = function() {
-// Init is called by the factory after adding the adapter to the node
+/**
+ * Connect an adapterHandle to a certain key.
+ * This will enable the ConnectedAdapterNotifcations for notifyChanged.
+ * @param {string} key - the key that will also be provided in connectAdapterChanged callback
+ * @param {XML3D.base.AdapterHandle} adapterHandle handle of adapter to be added
+ */
+XML3D.base.Adapter.prototype.connectAdapterHandle = function(key, adapterHandle){
+    if(!this.connectedAdapterHandles){
+        this.connectedAdapterHandles = {};
+        this._bindedAdapterHandleCallback = adapterHandleCallback.bind(this);
+    }
+    for(var i in this.connectedAdapterHandles){
+        this.connectedAdapterHandles[i].removeListener(this._bindedAdapterHandleCallback);
+    }
+    if(adapterHandle)
+        this.connectedAdapterHandles[key] = adapterHandle;
+    else
+        delete this.connectedAdapterHandles[key];
+    for(var i in this.connectedAdapterHandles){
+        this.connectedAdapterHandles[i].addListener(this._bindedAdapterHandleCallback);
+    }
+}
+
+/**
+* Get the connected AdapterHandle of a certain key.
+* This will only return AdapterHandles previously added via connectAdapterHandle
+* @param {string} key
+* @return {XML3D.base.AdapterHandle=} the adapter of that key, or null if not available
+*/
+XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key){
+    return this.connectedAdapterHandles && this.connectedAdapterHandles[key];
+}
+
+/**
+ * Get the connected adapter of a certain key.
+ * This will only return adapters of AdapterHandles previously added via connectAdapter
+ * @param {string} key
+ * @return {XML3D.base.Adapter=} the adapter of that key, or null if not available
+ */
+XML3D.base.Adapter.prototype.getConnectedAdapter = function(key){
+    var handle = this.getConnectedAdapterHandle(key);
+    return handle && handle.getAdapter();
+}
+
+
+/**
+ * Internal function that converts an AdapterHandleNotification to a ConnectedAdapterNotification
+ * @private
+ * @param {XML3D.events.AdapterHandleNotification} evt
+ */
+function adapterHandleCallback(evt){
+    for(var key in this.connectedAdapterHandles){
+        if(this.connectedAdapterHandles[key] == evt.adapterHandle){
+            var subEvent = new XML3D.events.ConnectedAdapterNotification(evt, key)
+            this.notifyChanged(subEvent);
+        }
+    }
+}
+
+
+
+/**
+ * An Adapter connected to a DOMNode (possibly of an external document)
+ * @constructor
+ * @param {XML3D.base.AdapterFactory} factory the AdapterFactory this adapter was created from
+ * @param {Object} node - DOM node of this Adapter
+ */
+XML3D.base.NodeAdapter = function(factory, node) {
+    XML3D.base.Adapter.call(this, factory)
+    this.node = node;
+};
+XML3D.createClass(XML3D.base.NodeAdapter, XML3D.base.Adapter);
+
+/**
+ * called by the factory after adding the adapter to the node
+ */
+XML3D.base.NodeAdapter.prototype.init = function() {
 };
 
-XML3D.base.Adapter.prototype.notifyChanged = function(e) {
-// Notification from the data structure. e is of type
-// XML3D.Notification.
+/**
+ * Notifiction due to a change in DOM, related adapters and so on.
+ * @param {XML3D.events.Notification} e
+ */
+XML3D.base.NodeAdapter.prototype.notifyChanged = function(e) {
+
 };
-XML3D.base.Adapter.prototype.isAdapterFor = function(aType) {
-    return false; // Needs to be overwritten
-};
+
+/**
+ * @param {string,XML3D.URI} uri Uri to referred adapterHandle
+ * @returns an AdapterHandle to the referred Adapter of the same aspect and canvasId
+ */
+XML3D.base.NodeAdapter.prototype.getAdapterHandle = function(uri){
+    return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
+        this.factory.aspect, this.factory.canvasId);
+}
+/**
+ * notifies all adapter that refer to this adapter through AdapterHandles.
+ * @param {number,string} hint with type of change
+ */
+XML3D.base.NodeAdapter.prototype.notifyOppositeAdapters = function(type){
+    type = type || XML3D.events.ADAPTER_HANDLE_CHANGED;
+    return XML3D.base.resourceManager.notifyNodeAdapterChange(this.node,
+        this.factory.aspect, this.factory.canvasId, type);
+}
+
 
 /**
  * @interface
  */
 XML3D.base.IFactory = function() {};
-/**
- * @param {Object} obj
- * @returns {boolean}
- */
-XML3D.base.IFactory.prototype.isFactoryFor = function(obj) {};
+
 /** @type {string} */
-XML3D.base.IFactory.prototype.type;
+XML3D.base.IFactory.prototype.aspect;
+XML3D.base.IFactory.prototype.canvasId;
+
 
 /**
+ * An adapter factory is responsible for creating adapter from a certain data source.
+ * Note that any AdapterFactory is registered with XML3D.base.resourceManager
  * @constructor
  * @implements {XML3D.base.IFactory}
+ * @param {Object} aspect The aspect this factory serves (e.g. XML3D.data or XML3D.webgl)
+ * @param {string} mimetype The mimetype this factory is compatible to
+ * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
  */
-XML3D.base.AdapterFactory = function() {
-    this.type = "";
+XML3D.base.AdapterFactory = function(aspect, mimetype, canvasId) {
+    this.aspect = aspect;
+    this.canvasId = canvasId || 0;
+    this.mimetype = mimetype;
+
+    XML3D.base.registerFactory(this);
 };
 
-XML3D.base.AdapterFactory.prototype.isFactoryFor = function(obj) {
-    return false;
+/**
+ * Implemented by subclass
+ * Create adapter from an object (node in case of an xml, and object in case of json)
+ * @param {object} obj
+ * @returns {XML3D.base.Adapter=} created adapter or null if no adapter can be created
+ */
+XML3D.base.AdapterFactory.prototype.createAdapter = function(obj) {
+    return null;
 };
 
-XML3D.base.AdapterFactory.prototype.getAdapter = function(node, atype) {
+/**
+ * A NodeAdaperFactory is a AdapterFactory, that works specifically for DOM nodes / elements.
+ * @constructor
+ * @implements {XML3D.base.AdapterFactory}
+ * @param {Object} aspect The aspect this factory serves (e.g. XML3D.data or XML3D.webgl)
+ * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
+ */
+XML3D.base.NodeAdapterFactory = function(aspect, canvasId) {
+    XML3D.base.AdapterFactory.call(this, aspect, "application/xml", canvasId);
+};
+XML3D.createClass(XML3D.base.NodeAdapterFactory, XML3D.base.AdapterFactory);
+
+/**
+ * This function first checks, if an adapter has been already created for the corresponding node
+ * If yes, this adapter is returned, otherwise, a new adapter is created and returned.
+ * @param {Object} node
+ * @returns {XML3D.base.Adapter} The adapter of the node
+ */
+XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
     if (!node || node._configured === undefined)
         return null;
     var elemHandler = node._configured;
-    var realType = atype || this.type;
-    var adapter = elemHandler.adapters[realType];
+    var key = this.aspect + "_" + this.canvasId;
+    var adapter = elemHandler.adapters[key];
     if (adapter !== undefined)
         return adapter;
 
     // No adapter found, try to create one
     adapter = this.createAdapter(node);
     if (adapter) {
-        elemHandler.adapters[realType] = adapter;
+        elemHandler.adapters[key] = adapter;
         adapter.init();
     }
     return adapter;
 };
 
-XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
-    return null;
-};
+}());
 (function() {
 
     /**
+     * An adapter handle is a connection piece for an adapter that is referred through a uri (e.g. id reference)
+     * AdapterHandles are always fetched from the XML3D.base.resourceManager
      * @constructor
      */
-    var AdapterHandle = function() {
+    var AdapterHandle = function(url) {
+        this.url = url;
         this.adapter = null;
         this.listeners = [];
+        this.status = 0; // STATUS.LOADING
+    };
+
+    AdapterHandle.STATUS = {
+        LOADING: 0,
+        NOT_FOUND: 1,
+        READY: 2
     };
 
     /**
-     * @returns {Boolean}
+     * @returns {Boolean} true iff an adapter is available
      */
     AdapterHandle.prototype.hasAdapter = function() {
         return this.adapter != null;
     };
 
     /**
-     * @returns {XML3D.base.Adapter}
+     * @returns {XML3D.base.Adapter=} the adapter connected to the handle. Can be null
      */
     AdapterHandle.prototype.getAdapter = function() {
         return this.adapter;
     };
 
     /**
-     * @param {XML3D.base.Adapter}
+     * Note: this function should only be called by XML3D.base.resourceManager
+     * @param {XML3D.base.Adapter} adapter The adapter connected to the AdapterHandler
+     * @param {number,XML3D.base.AdapterHandle.STATUS}
      */
-    AdapterHandle.prototype.setAdapter = function(adapter) {
+    AdapterHandle.prototype.setAdapter = function(adapter, status) {
         this.adapter = adapter;
+        this.status = status;
+        this.notifyListeners(XML3D.events.ADAPTER_HANDLE_CHANGED);
+    };
+
+    /**
+     * This function is called to notify all listeners of this AdapterHandle about some change.
+     * @param {number} type A type number with the type of change (usually XML3D.events.ADAPTER_HANDLE_CHANGED)
+     */
+    AdapterHandle.prototype.notifyListeners = function(type){
+        var event = new XML3D.events.AdapterHandleNotification(this, type);
         var i = this.listeners.length;
         while (i--) {
-            this.listeners[i].referredAdapterChanged(this);
+            this.listeners[i](event);
         }
-    };
+    }
 
     /**
-     * @param {Object} listener
+     * Add a listener to the AdapterHandle that is notified about changes.
+     * Listeners cannot be inserted twice.
+     * @param {Function} listener - Function to be called when something concering the adapter changes
      */
     AdapterHandle.prototype.addListener = function(listener) {
-        this.listeners.push(listener);
+        var idx = this.listeners.indexOf(listener);
+        if (idx == -1)
+            this.listeners.push(listener);
     };
 
     /**
-     * @param {Object} listener
+     * Remove a listener from the AdapterHandle
+     * @param {Function} listener
      */
     AdapterHandle.prototype.removeListener = function(listener) {
         var idx = this.listeners.indexOf(listener);
@@ -4784,10 +5892,18 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
     var c_factories = {};
     var c_cachedAdapterHandles = {};
 
-    XML3D.base.registerFactory = function(minetype, factory) {
-        if (!c_factories[minetype])
-            c_factories[minetype] = [];
-        c_factories[minetype].push(factory);
+    /**
+     * Register a factory with the resource manager
+     * @param {XML3D.base.AdapterFactory} factory - the factory to be registered
+     */
+    XML3D.base.registerFactory = function(factory) {
+        var canvasId = factory.canvasId;
+        var mimetype = factory.mimetype;
+        if(!c_factories[canvasId])
+            c_factories[canvasId] = {};
+        if (!c_factories[canvasId][mimetype])
+            c_factories[canvasId][mimetype] = [];
+        c_factories[canvasId][mimetype].push(factory);
     };
 
     /**
@@ -4796,8 +5912,9 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
     var ResourceManager = function() {};
 
     /**
+     * Load a document via XMLHttpRequest
      * @private
-     * @param {string} url
+     * @param {string} url URL of the document
      */
     function loadDocument(url) {
         var xmlHttp = null;
@@ -4825,27 +5942,34 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
     };
 
     /**
+     * Process response of ajax request from loadDocument()
+     * @private
      * @param {XMLHttpRequest} req
      */
     function processResponse(req) {
         var mimetype = req.getResponseHeader("content-type");
-        updateAdapterHandles(req, req._url, mimetype);
+        setDocumentData(req, req._url, mimetype);
+        updateDocumentHandles(req._url);
     };
 
     /**
+     * Show errors of ajax request from loadDocument()
      * @param {XMLHttpRequest} req
      */
     function showError(req) {
         XML3D.debug.logError("Could not load external document '" + req._url +
             "': " + req.status + " - " + req.statusText);
+        invalidateDocumentHandles(req._url);
     };
 
     /**
-     * @param {XMLHttpRequest} req
-     * @param {string} url
-     * @param {string} mimetype
+     * Initialize data of a received document
+     * @private
+     * @param {XMLHttpRequest} req The XMLHttpRequest of the loaded document
+     * @param {string} url URL of the loaded document
+     * @param {string} mimetype The mimetype of the loaded document
      */
-    function updateAdapterHandles(req, url, mimetype) {
+    function setDocumentData(req, url, mimetype) {
         var docCache = c_cachedDocuments[url];
         docCache.mimetype = mimetype;
 
@@ -4853,97 +5977,263 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
             docCache.response = JSON.parse(req.responseText);
         } else if (mimetype == "application/xml" || mimetype == "text/xml") {
             docCache.response = req.responseXML;
-        }
 
-        var fragments = docCache.fragments;
-        docCache.fragments = [];
-        for ( var i = 0; i < fragments.length; ++i) {
-            updateAdapterHandlesForFragment(url, fragments[i]);
+            if(!docCache.response){
+                XML3D.debug.logError("Invalid external XML document '" + req._url +
+                "': XML Syntax error");
+                return;
+            }
+
+            // Configure all xml3d elements:
+            var xml3dElements = docCache.response.querySelectorAll("xml3d");
+            for(var i = 0; i < xml3dElements.length; ++i){
+                XML3D.config.element(xml3dElements[i]);
+            }
         }
     }
 
     /**
-     * @param {string} url
-     * @param {string} fragment Fragment without pound key
+     * Update all existing handles of a received document
+     * @param {string} url The URL of the document
      */
-    function updateAdapterHandlesForFragment(url, fragment) {
+    function updateDocumentHandles(url){
+        var docCache = c_cachedDocuments[url];
+        var fragments = docCache.fragments;
+        docCache.fragments = [];
+        for ( var i = 0; i < fragments.length; ++i) {
+            updateExternalHandles(url, fragments[i]);
+        }
+    }
+
+    /**
+     * Invalidate all handles of a document, that could not be loaded.
+     * @param {string} url The URL of the document
+     */
+    function invalidateDocumentHandles(url){
+        var docCache = c_cachedDocuments[url];
+        var fragments = docCache.fragments;
+        docCache.fragments = [];
+        for ( var i = 0; i < fragments.length; ++i) {
+            var fullUrl = url + (fragments[i] ? "#" + fragments[i] : "");
+            invalidateHandles(fullUrl);
+        }
+    }
+
+    /**
+     * Update all handles of a part from an external document
+     * @param {string} url The URL of the document
+     * @param {string} fragment Fragment without pound key which defines the part of the document
+     */
+    function updateExternalHandles(url, fragment) {
 
         var response = c_cachedDocuments[url].response;
         var mimetype = c_cachedDocuments[url].mimetype;
 
+        if(!response) return;
+
         var fullUrl = url + (fragment ? "#" + fragment : "");
         var data = null;
         if (mimetype == "application/json") {
+            // TODO: Select subset of data according to fragment
             data = response;
         } else if (mimetype == "application/xml" || mimetype == "text/xml") {
-            data = response;
+            data = response.querySelectorAll("*[id="+fragment+"]")[0];
         }
 
         if (data) {
-            for ( var adapterType in c_cachedAdapterHandles[fullUrl]) {
-                var handle = c_cachedAdapterHandles[fullUrl][adapterType];
-                if (!handle.hasAdapter() && c_factories[mimetype]) {
-                    for ( var i = 0; i < c_factories[mimetype].length; ++i) {
-                        var fac = c_factories[mimetype][i];
-                        if (fac.isFactoryFor(adapterType)) {
-                            var a = fac.createAdapter(data);
-                            if (a) {
-                                handle.setAdapter(a);
-                            }
-                        }
-                    }
+            updateMissingHandles(fullUrl, mimetype, data);
+        }
+        else{
+            invalidateHandles(fullUrl);
+        }
+    }
+
+
+    /**
+     * Update all AdapterHandles without adapters of a certain url
+     * @param {string} url The complete url + fragment
+     * @param {string} mimetype Mimetype of the document
+     * @param {Object} data Data of the document corresponding to the url. Possibily a DOM element
+     */
+    function updateMissingHandles(url, mimetype, data){
+        for ( var adapterType in c_cachedAdapterHandles[url]) {
+            for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
+                var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
+                var factories = c_factories[canvasId];
+                if (!handle.hasAdapter() && factories[mimetype]) {
+                    updateHandle(handle, adapterType, canvasId, mimetype, data);
                 }
             }
         }
     }
 
     /**
-     *
-     * @param {XML3D.URI} uri
-     * @param {Object} type
-     * @returns {XML3D.base.AdapterHandle}
+     * Invalidate all AdapterHandles without adapters of a certain url
+     * @param {string} url The complete url + fragment
      */
-    ResourceManager.prototype.getExternalAdapter = function(uri, type) {
+    function invalidateHandles(url){
+        for ( var adapterType in c_cachedAdapterHandles[url]) {
+            for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
+                var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
+                handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
+            }
+        }
+    }
+
+    /**
+     * Update a specific AdapterHandle with the provided data.
+     * Internally an adapter will be created with 'data' and added to 'handle'
+     * All other argument are required to finde the correct factory
+     * @param {XML3D.base.AdapterHandle} handle The AdapterHandle to be updated
+     * @param {Object} adapterType The type / aspect of the adapter (e.g. XML3D.data or XML3D.webgl)
+     * @param {number} canvasId Id of corresponding canvas handler. 0 if not dependent of canvas handler
+     * @param {mimetype} mimetype Mimetype of the corresponding document
+     * @param {Object} data Data for this handle. Possibily a DOM element
+     */
+    function updateHandle(handle, adapterType, canvasId, mimetype, data){
+        var factories = c_factories[canvasId];
+        for ( var i = 0; i < factories[mimetype].length; ++i) {
+            var fac = factories[mimetype][i];
+            if (fac.aspect == adapterType) {
+                var adapter = fac.getAdapter ? fac.getAdapter(data) : fac.createAdapter(data);
+                if (adapter) {
+                    handle.setAdapter(adapter, XML3D.base.AdapterHandle.STATUS.READY);
+                }
+            }
+        }
+    }
+
+    /**
+     * Remove the adapter of all AdapterHandles corresponding to the given URL.
+     * This is called e.g. when a node is remove from the document, or an id changes
+     * @param {string} url The URL of all AdapterHandles to be cleared.
+     */
+    function clearHandles(url){
+        for ( var adapterType in c_cachedAdapterHandles[url]) {
+            for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
+                var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
+                if (handle.hasAdapter()) {
+                    handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get any adapter, internal or external.
+     * This function will trigger the loading of documents, if required.
+     * An AdapterHandle will be always be returned, expect when an invalid (empty) uri is passed.
+     *
+     * @param {Document} doc - the document from which to look up the reference
+     * @param {XML3D.URI} uri - The URI used to find the referred AdapterHandle. Can be relative
+     * @param {Object} adapterType The type of adapter required (e.g. XML3D.data or XML3D.webgl)
+     * @param {number} canvasId Id of canvashandle this adapter depends on, 0 if not depending on any canvashandler
+     * @returns {XML3D.base.AdapterHandle=} The requested AdapterHandler. Note: might not contain any adapter.
+     */
+    ResourceManager.prototype.getAdapterHandle = function(doc, uri, adapterType, canvasId) {
+        if(!uri)
+            return null;
+
+        if(typeof uri == "string") uri = new XML3D.URI(uri);
+
+        canvasId = canvasId || 0;
+        if(document != doc || !uri.isLocal()){
+            uri = uri.getAbsoluteURI(doc.documentURI);
+        }
 
         if (!c_cachedAdapterHandles[uri])
             c_cachedAdapterHandles[uri] = {};
 
-        var a = c_cachedAdapterHandles[uri][type];
-        if (a)
-            return a;
-
-        var a = new XML3D.base.AdapterHandle();
-        c_cachedAdapterHandles[uri][type] = a;
-
-        var docURI = uri.toStringWithoutFragment();
-        var docData = c_cachedDocuments[docURI];
-        if (docData && docData.response) {
-            updateAdapterHandlesForFragment(docURI, uri.fragment);
-        } else {
-            if (!docData) {
-                loadDocument(docURI);
-                c_cachedDocuments[docURI] = docData = {
-                    fragments : []
-                };
-            }
-            docData.fragments.push(uri.fragment);
+        if(!c_cachedAdapterHandles[uri][adapterType]){
+            c_cachedAdapterHandles[uri][adapterType] = {};
         }
 
-        return a;
+        var handle = c_cachedAdapterHandles[uri][adapterType][canvasId];
+        if (handle)
+            return handle;
+
+        var handle = new XML3D.base.AdapterHandle(uri);
+        c_cachedAdapterHandles[uri][adapterType][canvasId] = handle;
+
+        if(uri.isLocal()){
+            var node = XML3D.URIResolver.resolveLocal(uri);
+            if(node)
+                updateHandle(handle, adapterType, canvasId, "application/xml", node);
+            else
+                handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
+        }
+        else{
+            var docURI = uri.toStringWithoutFragment();
+            var docData = c_cachedDocuments[docURI];
+            if (docData && docData.response) {
+                updateExternalHandles(docURI, uri.fragment);
+            } else {
+                if (!docData) {
+                    loadDocument(docURI);
+                    c_cachedDocuments[docURI] = docData = {
+                        fragments : []
+                    };
+                }
+                docData.fragments.push(uri.fragment);
+            }
+        }
+        return handle;
     };
 
-    XML3D.base.ResourceManager = ResourceManager;
+    /**
+     * This function is called when an id of an element changes or if that element is now reachable
+     * or not reachable anymore. It will update all AdapterHandles connected to the element.
+     * @param {Element} node Element of which id has changed
+     * @param {string} previousId Previous id of element
+     * @param {string} newId New id of element
+     */
+    ResourceManager.prototype.notifyNodeIdChange = function(node, previousId, newId){
+        var parent = node;
+        while(parent.parentNode) parent = parent.parentNode;
+        if(parent != window.document)
+            return;
+
+        // clear cached adapters of previous id"
+        if(previousId){
+            clearHandles("#" + previousId);
+        }
+        if(newId){
+            updateMissingHandles("#" + newId, "application/xml", node);
+        }
+    }
+
+    /**
+     * This function is called to notify an AdapterHandler about a change (can be triggered through adapters)
+     * Note that this function only works with nodes inside window.document
+     * @param {Element} node Node of AdapterHandler. Must be from window.document
+     * @param {Object} adapterType Type/Aspect of AdapterHandler (e.g. XML3D.data or XML3D.webgl)
+     * @param {number} canvasId CanvasHandler id of AdapterHandler, 0 if not depending on CanvasHandler
+     * @param {Number} type Type of Notification. Usually XML3D.events.ADAPTER_HANDLE_CHANGED
+     */
+    ResourceManager.prototype.notifyNodeAdapterChange = function(node, adapterType, canvasId, type){
+        canvasId = canvasId || 0;
+        var uri = "#" + node.id;
+        if( c_cachedAdapterHandles[uri] && c_cachedAdapterHandles[uri][adapterType] &&
+            c_cachedAdapterHandles[uri][adapterType][canvasId] ){
+            c_cachedAdapterHandles[uri][adapterType][canvasId].notifyListeners(type);
+        }
+    }
+
+
+
+    XML3D.base.resourceManager = new ResourceManager();
 
 })();(function() {
 
-    var events = {
-            NODE_INSERTED: 0,
-            VALUE_MODIFIED:  1,
-            NODE_REMOVED: 2,
-            DANGLING_REFERENCE: 3,
-            VALID_REFERENCE: 4,
-            THIS_REMOVED: 5
-    };
+  var events = {
+          NODE_INSERTED: 0,
+          VALUE_MODIFIED:  1,
+          NODE_REMOVED: 2,
+          DANGLING_REFERENCE: 3,
+          VALID_REFERENCE: 4,
+          THIS_REMOVED: 5,
+          ADAPTER_HANDLE_CHANGED: 6
+  };
 
   //-----------------------------------------------------------------------------
   //Class Notification
@@ -4955,45 +6245,40 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(node) {
   Np.toString = function() {
     return "Notification (type:" + this.type + ")";
   };
+  //-----------------------------------------------------------------------------
   events.NotificationWrapper = function(evt, type) {
       this.wrapped = evt;
       this.type = type;
   };
+  XML3D.createClass(events.NotificationWrapper, events.Notification);
   var NWp = events.NotificationWrapper.prototype;
-
   NWp.toString = function() {
       return "NotificationWrapper (type:" + this.type + ", wrapped: "+ this.wrapped +")";
   };
 
-  events.ReferenceNotification = function(element, attribute, uri) {
-      this.relatedNode = element;
-      this.attrName = attribute;
-      this.value = null;
+  //-----------------------------------------------------------------------------
 
-      if (typeof uri == 'string') {
-          uri = new XML3D.URI(uri);
-      }
-      if (uri && uri.valid) {
-          if(uri.scheme == 'urn') {
-              this.type = events.VALID_REFERENCE;
-          } else {
-              this.value = XML3D.URIResolver.resolveLocal(uri);
-              if (this.value)
-                  XML3D.debug.logDebug("Resolved local node: #" + uri.fragment);
-              this.type = this.value ? events.VALID_REFERENCE : events.DANGLING_REFERENCE;
-          }
-      } else {
-          this.type = events.DANGLING_REFERENCE;
-      }
+  events.AdapterHandleNotification = function(handle, type) {
+    this.adapterHandle = handle;
+    this.type = type;
   };
-  var RNp = events.ReferenceNotification.prototype;
-
-  RNp.toString = function() {
-      return "ReferenceNotification (type:" + this.type + ", value: "+ this.value +")";
+  XML3D.createClass(events.AdapterHandleNotification, events.Notification);
+  events.AdapterHandleNotification.prototype.toString = function() {
+      return "AdapterHandleNotification (type:" + this.type + ")";
   };
+  //-----------------------------------------------------------------------------
 
-
-  XML3D.createClass(events.NotificationWrapper, events.Notification);
+  events.ConnectedAdapterNotification = function(adapterHandleNotification, key) {
+    this.adapter = adapterHandleNotification.adapterHandle.getAdapter();
+    this.key = key;
+    this.url = adapterHandleNotification.adapterHandle.url;
+    this.type = adapterHandleNotification.type;
+    this.handleStatus = adapterHandleNotification.adapterHandle.status;
+  };
+  XML3D.createClass(events.ConnectedAdapterNotification, events.Notification);
+  events.ConnectedAdapterNotification.prototype.toString = function() {
+    return "ConnectedAdapterNotification (type:" + this.type + ", key: " + this.key + ")";
+  };
 
   XML3D.events = XML3D.events || {};
   XML3D.extend(XML3D.events, events);
@@ -5006,7 +6291,9 @@ XML3D.config.isXML3DElement = function(e) {
 
 /**
  * @param {Element} element
- * @param {boolean=} selfmonitoring
+ * @param {boolean=} selfmonitoring: whether to register listeners on element for node 
+ *                  addition/removal and attribute modification. This property is propagated
+ *                  to children. 
  * @return {undefined}
  */
 XML3D.config.element = function(element, selfmonitoring) {
@@ -5023,17 +6310,29 @@ XML3D.config.element = function(element, selfmonitoring) {
             if (element.style == undefined)
                 element.style = null;
             var n = element.firstElementChild;
+
+            XML3D.base.resourceManager.notifyNodeIdChange(element, null, element.getAttribute("id"));
+
             while(n) {
-                XML3D.config.element(n);
+                XML3D.config.element(n, selfmonitoring);
                 n = n.nextElementSibling;
             }
         }
     }
 };
 
+/**
+ * @param {Element} element
+ * @param {boolean=} selfmonitoring: whether to register listeners on element for node 
+ *                  addition/removal and attribute modification. This property is propagated
+ *                  to children. 
+ * @return {undefined}
+ */
 XML3D.config.configure = function(element, selfmonitoring) {
     if (Array.isArray(element)) {
-        Array.forEach(element, XML3D.config.element);
+        Array.forEach(element, function(el) {
+            XML3D.config.element(el, selfmonitoring); 
+        });
     } else {
         XML3D.config.element(element, selfmonitoring);
     }
@@ -5093,6 +6392,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             var prevVal = this.getAttribute(attrName);
             this.__setAttribute(attrName, newVal);
             newVal = this.getAttribute(attrName);
+
             // if (newVal != prevVal)
             {
                 var evt = document.createEvent("MutationEvent");
@@ -5118,6 +6418,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
     var handler = {}, events = XML3D.events;
 
     function attrModified(e) {
+
         var eh = e.target._configured;
         var handler = eh && eh.handlers[e.attrName];
         if(!handler)
@@ -5125,19 +6426,19 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
 
         var notified = false;
         if (handler.setFromAttribute) {
-            notified = handler.setFromAttribute(e.newValue);
+            notified = handler.setFromAttribute(e.newValue, e.prevValue);
         }
         if (!notified) {
-                var n = new events.NotificationWrapper(e);
-                n.type = events.VALUE_MODIFIED;
-                eh.notify(n);
+            var n = new events.NotificationWrapper(e);
+            n.type = events.VALUE_MODIFIED;
+            eh.notify(n);
         }
     };
 
     function nodeRemoved(e) {
         var parent = e.relatedNode,
-            removedChild = e.target,
-            parentHandler = parent._configured;
+        removedChild = e.target,
+        parentHandler = parent._configured;
 
         if(!parentHandler)
             return;
@@ -5176,12 +6477,15 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             removeRecursive(n,evt);
             n = n.nextElementSibling;
         }
+        // We call this here in addition to nodeRemovedFromDocument, since the later is not supported by Firefox
+        // TODO: Remove this function call once DOMNodeRemoveFromDocument is supported by all major browsers
+        XML3D.base.resourceManager.notifyNodeIdChange(element, element.id, null);
     }
 
     function nodeInserted(e) {
         var parent = e.relatedNode,
-            insertedChild = e.target,
-            parentHandler = parent._configured;
+        insertedChild = e.target,
+        parentHandler = parent._configured;
 
         if(!parentHandler || e.currentTarget === insertedChild)
             return;
@@ -5194,10 +6498,33 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         } else {
             XML3D.config.element(insertedChild);
             n.type = events.NODE_INSERTED;
+            addRecursive(insertedChild);
         }
         parentHandler.notify(n);
         // TODO: Quick fix, solve issue of self monitoring elements better
         e.stopPropagation();
+    }
+
+    // TODO: Remove this function once DOMNodeInsertedIntoDocument is supported by all major browsers
+    function addRecursive(element){
+        var n = element.firstElementChild;
+        while(n) {
+            addRecursive(n);
+            n = n.nextElementSibling;
+        }
+        // We call this here in addition to nodeInsertedIntoDocument, since the later is not supported by Firefox
+
+        XML3D.base.resourceManager.notifyNodeIdChange(element, null, element.id);
+    }
+
+    function nodeInsertedIntoDocument(e){
+        var node = e.target;
+        XML3D.base.resourceManager.notifyNodeIdChange(node, null, node.id);
+    }
+
+    function nodeRemovedFromDocument(e){
+        var node = e.target;
+        XML3D.base.resourceManager.notifyNodeIdChange(node, node.id, null);
     }
 
     handler.ElementHandler = function(elem, monitor) {
@@ -5209,7 +6536,9 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             if(monitor) {
                 elem.addEventListener('DOMNodeRemoved', nodeRemoved, true);
                 elem.addEventListener('DOMNodeInserted', nodeInserted, true);
-                elem.addEventListener('DOMAttrModified', attrModified, false);
+                elem.addEventListener('DOMNodeInsertedIntoDocument', nodeInsertedIntoDocument, true);
+                elem.addEventListener('DOMNodeRemovedFromDocument', nodeRemovedFromDocument, true);
+                elem.addEventListener('DOMAttrModified', attrModified, true);
                 this.monitoring = true;
             }
         }
@@ -5239,6 +6568,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         return a;
     };
 
+
     handler.ElementHandler.prototype.registerMixed = function() {
         this.element.addEventListener('DOMCharacterDataModified', this, false);
     };
@@ -5249,11 +6579,11 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         var n = new events.NotificationWrapper(e);
 
         switch (e.type) {
-        case "DOMCharacterDataModified":
-            n.type = events.VALUE_MODIFIED;
-            this.handlers.value.resetValue();
-            this.notify(n);
-            break;
+            case "DOMCharacterDataModified":
+                n.type = events.VALUE_MODIFIED;
+                this.handlers.value.resetValue();
+                this.notify(n);
+                break;
         };
     };
 
@@ -5272,40 +6602,11 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         }
     };
 
-    handler.ElementHandler.prototype.addOpposite =  function(evt) {
-        (this.opposites || (this.opposites = [])).push(evt);
-    };
-
-    handler.ElementHandler.prototype.removeOpposite =  function(evt) {
-        for(var o in this.opposites) {
-            var oi = this.opposites[o];
-            if(oi.relatedNode === evt.relatedNode) {
-                this.opposites.splice(o,1);
-                return;
-            }
-        }
-    };
-
-    handler.ElementHandler.prototype.notifyOpposite = function(evt) {
-        if(evt.value && evt.value._configured) {
-            evt.value._configured.addOpposite(evt);
-        }
-    };
-
     /*
      * Get called, if the related node gets removed from the DOM
      */
     handler.ElementHandler.prototype.remove = function(evt) {
         //console.log("Remove " + this);
-        if (this.opposites) {
-            for(var o in this.opposites) {
-                var oi = this.opposites[o];
-                if(oi.relatedNode._configured) {
-                    var r = new events.ReferenceNotification(oi.relatedNode, oi.attrName);
-                    oi.relatedNode._configured.notify(r);
-                }
-            }
-        }
         for(var h in this.handlers) {
             var handler = this.handlers[h];
             if(handler.remove)
@@ -5314,20 +6615,12 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
 
     };
 
-    handler.ElementHandler.prototype.resolve = function(attrName) {
-        var uri = new XML3D.URI(this.element[attrName]);
-        if (uri.valid && uri.fragment) {
-            return XML3D.URIResolver.resolveLocal(uri);
-        }
-        return null;
-    };
-
     handler.ElementHandler.prototype.toString = function() {
         return "ElementHandler ("+this.element.nodeName + ", id: "+this.element.id+")";
     };
 
     var delegateProperties = ["clientHeight", "clientLeft", "clientTop", "clientWidth",
-                              "offsetHeight", "offsetLeft", "offsetTop", "offsetWidth"];
+        "offsetHeight", "offsetLeft", "offsetTop", "offsetWidth"];
     function delegateProp(name, elem, canvas) {
         var desc = {
             get : function() {
@@ -5383,6 +6676,20 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         };
     };
 
+    handler.IDHandler = function(elem, id) {
+        this.setFromAttribute = function(value, prevValue) {
+            XML3D.base.resourceManager.notifyNodeIdChange(elem, prevValue, value);
+        }
+        this.desc = {
+            get : function() {
+                return this.getAttribute(id) || "";
+            },
+            set : function(value) {
+                this.setAttribute(id, value);
+            }
+        };
+    };
+
     handler.StringAttributeHandler = function(elem, id) {
         this.desc = {
             get : function() {
@@ -5394,30 +6701,9 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         };
     };
 
+    // TODO: remove reference handler in webgl generator and remove this line
+    handler.ReferenceHandler = handler.StringAttributeHandler;
 
-    handler.ReferenceHandler = function(elem, id) {
-        this.setFromAttribute = function(value) {
-            var evt = new events.ReferenceNotification(elem, id, value);
-            elem._configured.notify(evt);
-            elem._configured.notifyOpposite(evt);
-            return true; // Already notified
-        };
-        this.remove = function() {
-            var evt = new events.ReferenceNotification(elem, id, elem.getAttribute(id));
-            if(evt.type == events.VALID_REFERENCE && evt.value._configured) {
-                evt.value._configured.removeOpposite(evt);
-            }
-        };
-        this.desc = {
-            get : function() {
-                return this.getAttribute(id) || "";
-            },
-            set : function(value) {
-                this.setAttribute(id, value);
-            }
-        };
-        elem._configured.notifyOpposite(new events.ReferenceNotification(elem, id, elem.getAttribute(id)));
-    };
 
     handler.EnumAttributeHandler = function(elem, id, p) {
         AttributeHandler.call(this, elem);
@@ -5881,8 +7167,8 @@ new (function() {
     methods.xml3dGenerateRay = function(x, y) {
         var adapters = this._configured.adapters || {};
         for (var adapter in adapters) {
-            if (adapters[adapter].xml3dGenerateRay) {
-                return adapters[adapter].xml3dGenerateRay(x, y);
+            if (adapters[adapter].generateRay) {
+                return adapters[adapter].generateRay(x, y);
             }
         }
         return new window.XML3DRay();
@@ -6010,7 +7296,7 @@ XML3D.classInfo = {};
  * Properties and methods for <xml3d>
  **/
 XML3D.classInfo['xml3d'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.CanvasClassHandler, id: 'class'},
     style : {a: XML3D.CanvasStyleHandler},
     onclick : {a: XML3D.EventAttributeHandler},
@@ -6040,7 +7326,7 @@ XML3D.classInfo['xml3d'] = {
  * Properties and methods for <data>
  **/
 XML3D.classInfo['data'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for data
     compute : {a: XML3D.StringAttributeHandler},
@@ -6055,7 +7341,7 @@ XML3D.classInfo['data'] = {
  * Properties and methods for <defs>
  **/
 XML3D.classInfo['defs'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for defs
     _term: undefined
@@ -6064,7 +7350,7 @@ XML3D.classInfo['defs'] = {
  * Properties and methods for <group>
  **/
 XML3D.classInfo['group'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for group
     onclick : {a: XML3D.EventAttributeHandler},
@@ -6089,7 +7375,7 @@ XML3D.classInfo['group'] = {
  * Properties and methods for <mesh>
  **/
 XML3D.classInfo['mesh'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for mesh
     onclick : {a: XML3D.EventAttributeHandler},
@@ -6114,7 +7400,7 @@ XML3D.classInfo['mesh'] = {
  * Properties and methods for <transform>
  **/
 XML3D.classInfo['transform'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for transform
     translation : {a: XML3D.XML3DVec3AttributeHandler, params: [0, 0, 0]},
@@ -6128,7 +7414,7 @@ XML3D.classInfo['transform'] = {
  * Properties and methods for <shader>
  **/
 XML3D.classInfo['shader'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for shader
     compute : {a: XML3D.StringAttributeHandler},
@@ -6140,7 +7426,7 @@ XML3D.classInfo['shader'] = {
  * Properties and methods for <light>
  **/
 XML3D.classInfo['light'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for light
     onclick : {a: XML3D.EventAttributeHandler},
@@ -6164,7 +7450,7 @@ XML3D.classInfo['light'] = {
  * Properties and methods for <lightshader>
  **/
 XML3D.classInfo['lightshader'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for lightshader
     compute : {a: XML3D.StringAttributeHandler},
@@ -6176,7 +7462,7 @@ XML3D.classInfo['lightshader'] = {
  * Properties and methods for <script>
  **/
 XML3D.classInfo['script'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for script
     value : {a: XML3D.StringAttributeHandler},
@@ -6188,7 +7474,7 @@ XML3D.classInfo['script'] = {
  * Properties and methods for <float>
  **/
 XML3D.classInfo['float'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for float
     name : {a: XML3D.StringAttributeHandler},
@@ -6201,7 +7487,7 @@ XML3D.classInfo['float'] = {
  * Properties and methods for <float2>
  **/
 XML3D.classInfo['float2'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for float2
     name : {a: XML3D.StringAttributeHandler},
@@ -6214,7 +7500,7 @@ XML3D.classInfo['float2'] = {
  * Properties and methods for <float3>
  **/
 XML3D.classInfo['float3'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for float3
     name : {a: XML3D.StringAttributeHandler},
@@ -6227,7 +7513,7 @@ XML3D.classInfo['float3'] = {
  * Properties and methods for <float4>
  **/
 XML3D.classInfo['float4'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for float4
     name : {a: XML3D.StringAttributeHandler},
@@ -6240,7 +7526,7 @@ XML3D.classInfo['float4'] = {
  * Properties and methods for <float4x4>
  **/
 XML3D.classInfo['float4x4'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for float4x4
     name : {a: XML3D.StringAttributeHandler},
@@ -6253,7 +7539,7 @@ XML3D.classInfo['float4x4'] = {
  * Properties and methods for <int>
  **/
 XML3D.classInfo['int'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for int
     name : {a: XML3D.StringAttributeHandler},
@@ -6266,7 +7552,7 @@ XML3D.classInfo['int'] = {
  * Properties and methods for <int4>
  **/
 XML3D.classInfo['int4'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for int4
     name : {a: XML3D.StringAttributeHandler},
@@ -6279,7 +7565,7 @@ XML3D.classInfo['int4'] = {
  * Properties and methods for <bool>
  **/
 XML3D.classInfo['bool'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for bool
     name : {a: XML3D.StringAttributeHandler},
@@ -6292,7 +7578,7 @@ XML3D.classInfo['bool'] = {
  * Properties and methods for <texture>
  **/
 XML3D.classInfo['texture'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for texture
     name : {a: XML3D.StringAttributeHandler},
@@ -6312,7 +7598,7 @@ XML3D.classInfo['texture'] = {
  * Properties and methods for <img>
  **/
 XML3D.classInfo['img'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for img
     src : {a: XML3D.StringAttributeHandler},
@@ -6322,7 +7608,7 @@ XML3D.classInfo['img'] = {
  * Properties and methods for <video>
  **/
 XML3D.classInfo['video'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for video
     src : {a: XML3D.StringAttributeHandler},
@@ -6332,7 +7618,7 @@ XML3D.classInfo['video'] = {
  * Properties and methods for <view>
  **/
 XML3D.classInfo['view'] = {
-    id : {a: XML3D.StringAttributeHandler},
+    id : {a: XML3D.IDHandler},
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for view
     onclick : {a: XML3D.EventAttributeHandler},
@@ -6574,21 +7860,13 @@ IDataAdapter.prototype.addParentAdapter = function(adapter) {
  * @param node
  */
 XML3D.data.DataAdapter = function(factory, node) {
-    XML3D.base.Adapter.call(this, factory, node);
+    XML3D.base.NodeAdapter.call(this, factory, node);
 
     // Node handles for src and proto
     this.handles = {};
     this.xflowDataNode = null;
 };
-XML3D.createClass(XML3D.data.DataAdapter, XML3D.base.Adapter);
-/**
- *
- * @param aType
- * @returns {Boolean}
- */
-XML3D.data.DataAdapter.prototype.isAdapterFor = function(aType) {
-    return aType == XML3D.data.XML3DDataAdapterFactory.prototype;
-};
+XML3D.createClass(XML3D.data.DataAdapter, XML3D.base.NodeAdapter);
 
 XML3D.data.DataAdapter.prototype.init = function() {
     //var xflow = this.resolveScript();
@@ -6632,8 +7910,14 @@ XML3D.data.DataAdapter.prototype.getComputeRequest = function(filter, callback){
  * @param evt notification of type XML3D.Notification
  */
 XML3D.data.DataAdapter.prototype.notifyChanged = function(evt) {
-
-    if (evt.type == XML3D.events.NODE_INSERTED) {
+    if(evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED){
+        this.connectedAdapterChanged(evt.key, evt.adapter);
+        if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+            XML3D.debug.logError("Could not find <data> element of url '" + evt.url + "' for " + evt.key);
+        }
+        return;
+    }
+    else if (evt.type == XML3D.events.NODE_INSERTED) {
         var insertedNode = evt.wrapped.target;
         var insertedXflowNode = this.factory.getAdapter(insertedNode).getXflowNode();
         var sibling = insertedNode, followUpAdapter = null;
@@ -6658,223 +7942,26 @@ XML3D.data.DataAdapter.prototype.notifyChanged = function(evt) {
         else if(attr == "compute"){
             this.xflowDataNode.setCompute(this.node.getAttribute(attr))
         }
-        return;
-    } else if(evt.type == XML3D.events.DANGLING_REFERENCE || evt.type == XML3D.events.VALID_REFERENCE){
-        var attr = evt.attrName;
-        if(attr == "src" || attr == "proto"){
+        else if(attr == "src" || attr == "proto"){
             this.updateHandle(attr);
         }
+        return;
     }
 };
 XML3D.data.DataAdapter.prototype.updateHandle = function(attributeName) {
-    if (this.handles[attributeName])
-        this.handles[attributeName].removeListener(this);
-    this.handles[attributeName] = this.factory.getAdapterURI(this.node.getAttribute(attributeName));
-    this.handles[attributeName].addListener(this);
-    this.referredAdapterChanged(this.handles[attributeName]);
+    var adapterHandle = this.getAdapterHandle(this.node.getAttribute(attributeName));
+    this.connectAdapterHandle(attributeName, adapterHandle);
+    this.connectedAdapterChanged(attributeName, adapterHandle ? adapterHandle.getAdapter() : null);
 };
 
-XML3D.data.DataAdapter.prototype.referredAdapterChanged = function(adapterHandle) {
-    var adapter = adapterHandle.getAdapter();
-    if(this.handles["src"] == adapterHandle){
+XML3D.data.DataAdapter.prototype.connectedAdapterChanged = function(key, adapter) {
+    if(key == "src"){
         this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
     }
-    if(this.handles["proto"] == adapterHandle){
+    if(key == "proto"){
         this.xflowDataNode.protoNode = adapter ? adapter.getXflowNode() : null;
     }
 };
-
-
-XML3D.data.DataAdapter.prototype.getInputs = function() {
-    if (this.cachedInputs)
-        return this.cachedInputs;
-
-    var result = {};
-    this.forEachChildAdapter(function(adapter) {
-        var other = adapter.getOutputs();
-        for ( var output in other) {
-            var inTable = result[output];
-            var newEntry = other[output];
-
-            if (inTable) {
-                if (inTable instanceof XML3D.data.Sequence) {
-                    // There is already a sequence, merging will be done
-                    // in Sequence
-                    inTable.push(newEntry);
-                } else {
-                    if (inTable.key != newEntry.key) {
-                        // Two different keys: create a sequence
-                        result[output] = new XML3D.data.Sequence(inTable, newEntry);
-                    } else {
-                        // Two different keys: overwrite
-                        result[output] = newEntry;
-                    }
-                }
-                ;
-            } else
-                result[output] = other[output];
-        }
-        ;
-    });
-    this.cachedInputs = result;
-    return result;
-};
-
-XML3D.data.DataAdapter.prototype.getOutputs = function() {
-    var result = {};
-
-    // All inputs get propagated as outputs, but
-    var inputs = this.getInputs();
-    for ( var input in inputs) {
-        result[input] = inputs[input];
-    }
-
-    // if they get overridden by a script output
-    var xflow = this.resolveScript();
-    if (xflow && xflow.outputs) {
-        var outputs = xflow.outputs;
-        for ( var i = 0; i < outputs.length; i++) {
-            result[outputs[i].name] = {
-                script : this.scriptInstance,
-                scriptOutputName : outputs[i].name
-            };
-        }
-    }
-
-    // At the end we apply renaming
-    for ( var output in result) {
-        var newName = this.nameMap[output];
-        if (newName) {
-            result[newName] = result[output];
-            delete result[output];
-        }
-    }
-    return result;
-};
-
-XML3D.data.DataAdapter.prototype.resolveScript = function() {
-    if (this.xflow === undefined) {
-        var script = this.node.script;
-        if (script) {
-            var pos = script.indexOf("urn:xml3d:xflow:");
-            var urnfrag = "";
-            if (pos === 0) {
-                urnfrag = script.substring(16, script.length);
-                this.xflow = XML3D.xflow.getScript(urnfrag);
-                if (typeof this.xflow !== 'object') {
-                    XML3D.debug.logError("No xflow script registered with name: " + urnfrag);
-                    this.xflow = null;
-                }
-            } else {
-                var sn = XML3D.URIResolver.resolveLocal(script, this.node.ownerDocument);
-                if (sn && sn.textContent) {
-                    pos = sn.textContent.indexOf("urn:xml3d:xflow:");
-                    if (pos === 0) {
-                        urnfrag = sn.textContent.substring(16, sn.textContent.length);
-                        this.xflow = XML3D.xflow.getScript(urnfrag);
-                        if (typeof this.xflow !== 'object') {
-                            XML3D.debug.logError("No xflow script registered with name: " + urnfrag);
-                            this.xflow = null;
-                        }
-                    }
-                }
-            }
-        }
-        this.xflow = this.xflow || null;
-    }
-
-    return this.xflow;
-};
-
-XML3D.data.DataAdapter.prototype.requestDataOnce = function(table) {
-    this.requestOutputData(table);
-    return table.providers;
-};
-
-XML3D.data.DataAdapter.prototype.rebuildStructure = function(table) {
-    table.open();
-    this.requestOutputData(table);
-    table.close();
-};
-
-XML3D.data.DataAdapter.prototype.requestData = function(table) {
-    this.tables.push(table);
-    this.rebuildStructure(table);
-    return table.providers;
-};
-
-
-/**
- * @param handler
- * @param nameArray
- * @param table {XML3D.data.ProcessTable}
- * @param callback
- * @returns {Object}
- */
-XML3D.data.DataAdapter.prototype.requestInputData = function(table) {
-    this.forEachChildAdapter(function(adapter) {
-        adapter.requestOutputData(table);
-    });
-    return table;
-};
-
-/**
- * @param handler
- * @param nameArray
- * @param table {XML3D.data.ProcessTable}
- * @param callback
- * @returns {Object}
- */
-XML3D.data.DataAdapter.prototype.requestOutputData = function(table) {
-    this.populateProcessTable(table);
-    return table.providers;
-};
-
-/**
- * Calls parameter func for each child element. This includes the child
- * elements of a referenced data element, if src is defined
- *
- * @param func The function to call
- */
-XML3D.data.DataAdapter.prototype.forEachChildAdapter = function(func) {
-    var node = this.node;
-    if (node.src) {
-        if (this.handles["src"].hasAdapter()) {
-            func(this.handles["src"].getAdapter());
-        }
-    } else {
-        for ( var child = this.node.firstElementChild; child !== null; child = child.nextElementSibling) {
-            var ca = this.factory.getAdapter(child, XML3D.data.XML3DDataAdapterFactory.prototype);
-            if (ca)
-                func(ca);
-        }
-    }
-};
-
-XML3D.data.DataAdapter.prototype.populateProcessTable = function(table) {
-
-    var outputs = this.getOutputs();
-    var fields = table.fieldNames;
-    for ( var i = 0; i < fields.length; i++) {
-        var field = fields[i];
-        var provider = outputs[field];
-        if (provider) {
-            if (provider.script) {
-                var scriptProvider = new XML3D.data.ScriptOutput(table, provider.script, provider.scriptOutputName);
-                table.providers[field] = scriptProvider;
-            } else {
-                table.providers[field] = provider;
-            }
-        } else {
-            // No error here: requested field might be optional. Consumer
-            // has to decide.
-            // XML3D.debug.logDebug("Did not find requested input: " +
-            // field)
-        }
-    }
-
-};
-
 /**
  * Returns String representation of this DataAdapter
  */
@@ -6912,7 +7999,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         XML3D.data.DataAdapter.call(this, factory, node);
         this.xflowInputNode = null;
     };
-    XML3D.createClass(ValueDataAdapter, XML3D.base.Adapter);
+    XML3D.createClass(ValueDataAdapter, XML3D.base.NodeAdapter);
 
     ValueDataAdapter.prototype.init = function()
     {
@@ -7116,7 +8203,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         XML3D.data.DataAdapter.call(this, factory, node);
         this.table = new XML3D.data.ProcessTable(this, [ "image" ]);
     };
-    XML3D.createClass(TextureDataAdapter, XML3D.base.Adapter);
+    XML3D.createClass(TextureDataAdapter, XML3D.base.NodeAdapter);
 
     TextureDataAdapter.prototype.init = function() {
         this.xflowInputNode = this.createXflowNode();
@@ -7234,7 +8321,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
             }
         };
         image.crossOrigin = "anonymous";
-        image.src = url;
+        image.src = new XML3D.URI(url).getAbsoluteURI(this.node.ownerDocument.documentURI);
         this.image = image;
     };
 
@@ -7315,28 +8402,11 @@ XML3D.data.DataAdapter.prototype.toString = function() {
      *
      * @param {XML3D.webgl.CanvasHandler} handler
      */
-    var XML3DDataAdapterFactory = function(handler)
+    var XML3DDataAdapterFactory = function()
     {
-        XML3D.base.AdapterFactory.call(this);
-        this.handler = handler;
+        XML3D.base.NodeAdapterFactory.call(this, XML3D.data);
     };
-    XML3D.createClass(XML3DDataAdapterFactory, XML3D.base.AdapterFactory);
-
-    XML3DDataAdapterFactory.prototype.isFactoryFor = function(obj) {
-        return typeof obj == "string" ? (obj == XML3D.data.toString()) : (obj == XML3D.data);
-    };
-
-    /**
-     * Returns a DataAdapter instance associated with the given node. If there is already a DataAdapter created for this node,
-     * this instance is returned, otherwise a new one is created.
-     *
-     * @param   node  element node which uses generic data. The supported elements are listed in the class description above.
-     * @returns DataAdapter instance
-     */
-    XML3DDataAdapterFactory.prototype.getAdapter = function(node)
-    {
-        return XML3D.base.AdapterFactory.prototype.getAdapter.call(this, node, XML3D.data.XML3DDataAdapterFactory.prototype);
-    };
+    XML3D.createClass(XML3DDataAdapterFactory, XML3D.base.NodeAdapterFactory);
 
     /**
      * Tries to create an adapter from an URI
@@ -7344,20 +8414,12 @@ XML3D.data.DataAdapter.prototype.toString = function() {
      * @param {string} uri
      * @returns {Adapter} An resolved adapter
      */
-    XML3DDataAdapterFactory.prototype.getAdapterURI = function(uri)
+    XML3DDataAdapterFactory.prototype.getAdapterURI = function(node, uri)
     {
         if(!uri) {
             return new XML3D.base.AdapterHandle();
         }
-        uri = new XML3D.URI(uri);
-        var element = XML3D.URIResolver.resolveLocal(uri);
-        if (element){
-            var handle = new XML3D.base.AdapterHandle();
-            handle.setAdapter(XML3D.base.AdapterFactory.prototype.getAdapter.call(this, element, XML3D.data.XML3DDataAdapterFactory.prototype));
-            return handle;
-        }
-
-        var a = this.handler.resourceManager.getExternalAdapter(uri, XML3D.data);
+        var a = XML3D.base.resourceManager.getAdapterHandle(node.ownerDocument, uri, XML3D.data);
         return a;
     };
 
@@ -7400,8 +8462,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
 
     // Export
     XML3D.data.XML3DDataAdapterFactory = XML3DDataAdapterFactory;
-
-
+    XML3D.data.factory = new XML3DDataAdapterFactory();
 }());// data/adapter/json/factory.js
 (function() {
 
@@ -7474,16 +8535,18 @@ XML3D.data.DataAdapter.prototype.toString = function() {
      * @constructor
      * @implements {XML3D.base.IFactory}
      */
-    var JSONFactory = {
-        isFactoryFor : function(obj) {
-            return typeof obj == "string" ? (obj == XML3D.data.toString()) : (obj == XML3D.data);
-        },
-        createAdapter : function(data) {
-            return new JSONDataAdapter(data);
-        }
+    var JSONFactory = function()
+    {
+        XML3D.base.AdapterFactory.call(this, XML3D.data, "application/json");
     };
 
-    XML3D.base.registerFactory("application/json", JSONFactory);
+    XML3D.createClass(JSONFactory, XML3D.base.AdapterFactory);
+
+    JSONFactory.prototype.createAdapter = function(data) {
+        return new JSONDataAdapter(data);
+    }
+
+    var jsonFactoryInstance = new JSONFactory();
 }());
 XML3D.webgl = {
     toString : function() {
@@ -7543,9 +8606,11 @@ XML3D.webgl.MAXFPS = 30;
             // Creates the CanvasHandler for the <canvas>  Element
             var canvasHandler = new XML3D.webgl.CanvasHandler(canvas, xml3ds[i]);
             handlers[i] = canvasHandler;
-            canvasHandler._tick();
+            canvasHandler.tick();
         }
     };
+
+    var globalCanvasId = 0;
 
     /**
      * CanvasHandler class.
@@ -7561,6 +8626,7 @@ XML3D.webgl.MAXFPS = 30;
     function CanvasHandler(canvas, xml3dElem) {
         this.canvas = canvas;
         this.xml3dElem = xml3dElem;
+        this.id = ++globalCanvasId; // global canvas id starts at 1
 
         this.needDraw = true;
         this.needPickingDraw = true;
@@ -7577,11 +8643,13 @@ XML3D.webgl.MAXFPS = 30;
         // determine if a redraw
         // is needed
         var handler = this;
-        this._tick = function() {
-            if (handler.update())
+        this.tick = function() {
+            if (handler.needDraw) {
+                handler.dispatchUpdateEvent();
                 handler.draw();
+            }
 
-            window.requestAnimFrame(handler._tick, XML3D.webgl.MAXFPS);
+            window.requestAnimFrame(handler.tick, XML3D.webgl.MAXFPS);
         };
 
         this.redraw = function(reason, forcePickingRedraw) {
@@ -7595,9 +8663,6 @@ XML3D.webgl.MAXFPS = 30;
                 handler.needDraw = true;
             }
         };
-
-        // Create Ressource Manager:
-        this.resourceManager = new XML3D.base.ResourceManager();
 
         // Create renderer
         this.renderer = new XML3D.webgl.Renderer(this, canvas.clientWidth, canvas.clientHeight);
@@ -7656,6 +8721,19 @@ XML3D.webgl.MAXFPS = 30;
         return true;
     };
 
+    /** 
+     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in 
+     * the GL context. The y-coordinate gets turned upside-down. The lowest possible 
+     * canvas coordinate is 0, so we need to subtract 1 from the height, too. 
+     * 
+     * @param {number} canvasY
+     * @return {number} the converted y-coordinate
+     */
+    CanvasHandler.prototype.canvasToGlY = function(canvasY) { 
+        
+        return this.canvas.height - canvasY - 1; 
+    }; 
+    
     /**
      * Binds the picking buffer and passes the request for a picking pass to the
      * renderer
@@ -7669,8 +8747,12 @@ XML3D.webgl.MAXFPS = 30;
             return null;
         if(this.needPickingDraw)
             this.renderer.renderSceneToPickingBuffer();
-        this.currentPickObj = this.renderer.getDrawableFromPickingBuffer(canvasX, this.canvas.height - canvasY);
+        
+        var glY = this.canvasToGlY(canvasY);
+        
+        this.currentPickObj = this.renderer.getDrawableFromPickingBuffer(canvasX, glY);
         this.needPickingDraw = false;
+        
         return this.currentPickObj;
     };
 
@@ -7683,8 +8765,11 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.getWorldSpaceNormalByPoint = function(pickedObj, canvasX, canvasY) {
         if (!pickedObj || this._pickingDisabled)
             return null;
-        this.renderer.renderPickedNormals(pickedObj, canvasX, this.canvas.height - canvasY);
-        return this.renderer.readNormalFromPickingBuffer(canvasX, this.canvas.height - canvasY);
+        
+        var glY = this.canvasToGlY(canvasY);
+        
+        this.renderer.renderPickedNormals(pickedObj);
+        return this.renderer.readNormalFromPickingBuffer(canvasX, glY);
     };
 
     /**
@@ -7696,18 +8781,33 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.getWorldSpacePositionByPoint = function(pickedObj, canvasX, canvasY) {
     	if (!pickedObj)
     		return null;
+
+        var glY = this.canvasToGlY(canvasY); 
+        
         this.renderer.renderPickedPosition(pickedObj);
-        return this.renderer.readPositionFromPickingBuffer(canvasX, this.canvas.height - canvasY);
+        return this.renderer.readPositionFromPickingBuffer(canvasX, glY);
     };
+    
+    CanvasHandler.prototype.getCanvasHeight = function() { 
+    	
+    	return this.canvas.height; 
+    };
+    
+    CanvasHandler.prototype.getCanvasWidth = function() { 
+    	
+    	return this.canvas.width; 
+    };  
 
     /**
      * Uses gluUnProject() to transform the 2D screen point to a 3D ray.
      * Not tested!!
      *
-     * @param {number} glX
-     * @param {number} glY
+     * @param {number} canvasX
+     * @param {number} canvasY
      */
-    CanvasHandler.prototype.generateRay = function(glX, glY) {
+    CanvasHandler.prototype.generateRay = function(canvasX, canvasY) {
+        
+        var glY = this.canvasToGlY(canvasY); 
 
         // setup input to unproject
         var viewport = new Array();
@@ -7726,39 +8826,38 @@ XML3D.webgl.MAXFPS = 30;
         var farHit = new Array();
 
         // do unprojections
-        if (false === GLU.unProject(glX, glY, 0, viewMat, projMat, viewport, nearHit)) {
+        if (false === GLU.unProject(canvasX, glY, 0, viewMat, projMat, viewport, nearHit)) {
             return ray;
         }
 
-        if (false === GLU.unProject(glX, glY, 1, viewMat, projMat, viewport, farHit)) {
+        if (false === GLU.unProject(canvasX, glY, 1, viewMat, projMat, viewport, farHit)) {
             return ray;
         }
 
         // calculate ray
 
-        ray.origin = this.renderer.currentView.position;
-        ray.direction = new window.XML3DVec3(farHit[0] - nearHit[0], farHit[1] - nearHit[1], farHit[2] - nearHit[2]);
-        ray.direction = ray.direction.normalize();
+        ray.origin.set(this.renderer.currentView.position);
+        ray.direction.set(farHit[0] - nearHit[0], farHit[1] - nearHit[1], farHit[2] - nearHit[2]);
+        ray.direction.set(ray.direction.normalize());
 
         return ray;
     };
 
-    // This function is called by _tick() at regular intervals to determine if a
-    // redraw of the scene is required
-    CanvasHandler.prototype.update = function() {
+    /**
+     * The update event can be used by user to sync actions
+     * with rendering
+     */
+    CanvasHandler.prototype.dispatchUpdateEvent = function() {
         var event = document.createEvent('CustomEvent');
         event.initCustomEvent('update', true, true, null);
         this.xml3dElem.dispatchEvent(event);
-
-        return this.needDraw;
     };
 
     /**
-     * Called by _tick() to redraw the scene if needed
+     * Called by tick() to redraw the scene if needed
      */
     CanvasHandler.prototype.draw = function() {
         try {
-
             var start = Date.now();
             var stats = this.renderer.render();
             var end = Date.now();
@@ -8400,6 +9499,24 @@ XML3D.webgl.stopEvent = function(ev) {
 
 
     };
+    
+    /** for every component of v1 and v2 applies f, i.e. f(v1[.],v2[.]), 
+     *  and returns it.
+     *  
+     *  @param {vec3} v1 
+     *  @param {vec3} v2
+     *  @param {function(number, number):number} f
+     *  @return {vec3} the mapped vector 
+     */    
+    function mapVec(v1, v2, f)
+    {
+        var vec = vec3.create(); 
+        vec[0] = f(v1[0], v2[0]); 
+        vec[1] = f(v1[1], v2[1]);
+        vec[2] = f(v1[2], v2[2]); 
+        
+        return vec; 
+    };
 
     /**
      * @param {XML3DBox} bbox
@@ -8408,10 +9525,18 @@ XML3D.webgl.stopEvent = function(ev) {
      * @param {mat4} trafo
      */
     XML3D.webgl.adjustMinMax = function(bbox, min, max, trafo) {
-        var bbmin = vec3.create();
-        var bbmax = vec3.create();
-        mat4.multiplyVec3(trafo, bbox.min._data, bbmin);
-        mat4.multiplyVec3(trafo, bbox.max._data, bbmax);
+        var xfmmin = vec3.create();
+        var xfmmax = vec3.create();
+        mat4.multiplyVec3(trafo, bbox.min._data, xfmmin);
+        mat4.multiplyVec3(trafo, bbox.max._data, xfmmax);
+        
+        /* bounding box is axis-aligned, but through transformation
+         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57), 
+         * here min's and max' x and z values are swapped). So we 
+         * order them now. 
+         */
+        var bbmin = mapVec(xfmmin, xfmmax, Math.min); 
+        var bbmax = mapVec(xfmmin, xfmmax, Math.max); 
 
         if (bbmin[0] < min[0])
             min[0] = bbmin[0];
@@ -8491,10 +9616,9 @@ XML3D.webgl.stopEvent = function(ev) {
         this.fSource = sources.fragment;
     };
 
-    var XML3DShaderManager = function(renderer, dataFactory, factory) {
+    var XML3DShaderManager = function(renderer, factory) {
         this.renderer = renderer;
         this.gl = renderer.gl;
-        this.dataFactory = dataFactory;
         this.factory = factory;
 
         this.shaderCache = {
@@ -8536,7 +9660,7 @@ XML3D.webgl.stopEvent = function(ev) {
         var mat = this.createMaterialFromShaderDescriptor(desc);
         var fallbackShader = mat.getProgram();
         this.bindShader(fallbackShader);
-        this.setUniform(fallbackShader.uniforms["diffuseColor"], [ 1, 0, 0 ]);
+        XML3DShaderManager.setUniform(this.gl, fallbackShader.uniforms["diffuseColor"], [ 1, 0, 0 ]);
         this.unbindShader(fallbackShader);
         this.shaders["defaultShader"] = fallbackShader;
     };
@@ -8560,6 +9684,7 @@ XML3D.webgl.stopEvent = function(ev) {
         return result;
     };
 
+
     /**
      *
      * @param shaderAdapter
@@ -8572,7 +9697,9 @@ XML3D.webgl.stopEvent = function(ev) {
         }
 
         var shaderNode = shaderAdapter.node;
-        var shaderId = shaderNode.id;
+        var uri = new XML3D.URI("#" + shaderNode.id);
+        var shaderId = uri.getAbsoluteURI(shaderNode.ownerDocument.documentURI).toString();
+
         var program = this.shaders[shaderId];
 
         if (program)
@@ -8588,6 +9715,11 @@ XML3D.webgl.stopEvent = function(ev) {
         var dataTable = shaderAdapter.requestData(material.getRequestFields());
 
         program = material.getProgram(lights, dataTable);
+
+        if (!program) {
+            return "defaultShader";
+        }
+
         this.shaders[shaderId] = program;
         this.gl.useProgram(program.handle);
 
@@ -8599,7 +9731,7 @@ XML3D.webgl.stopEvent = function(ev) {
 
     /**
      * @param {string} path
-     * @returns
+     * @returns {string}
      */
     XML3DShaderManager.getShaderDescriptor = function(path) {
         var shaderName = path.substring(path.lastIndexOf(':') + 1);
@@ -8665,6 +9797,7 @@ XML3D.webgl.stopEvent = function(ev) {
         }
 
         var programObject = new ProgramObject(prg, sources);
+        this.currentProgram = prg;
         gl.useProgram(prg);
 
         // Tally shader attributes
@@ -8740,7 +9873,9 @@ XML3D.webgl.stopEvent = function(ev) {
     };
 
     XML3DShaderManager.prototype.shaderDataChanged = function(adapter, request, changeType) {
-        var program = this.shaders[adapter.node.id];
+        var shaderId = new XML3D.URI("#" + adapter.node.id).getAbsoluteURI(adapter.node.ownerDocument.documentURI).toString();
+        var program = this.shaders[shaderId];
+        if(!program) return; // No Program - probably invalid shader
         var result = request.getResult();
         this.bindShader(program);
         this.setUniformsFromComputeResult(program, result);
@@ -8750,7 +9885,6 @@ XML3D.webgl.stopEvent = function(ev) {
             program.hasTransparency = program.material.isTransparent;
         }
         this.renderer.requestRedraw("Shader data changed");
-
     };
 
     XML3DShaderManager.prototype.getShaderById = function(shaderId) {
@@ -8781,8 +9915,7 @@ XML3D.webgl.stopEvent = function(ev) {
         for ( var name in uniforms) {
             var entry = dataMap[name];
             if (entry) {
-                var v = entry.getValue();
-                this.setUniform(uniforms[name], (v.length == 1) ? v[0] : v);
+                XML3DShaderManager.setUniform(this.gl, uniforms[name], entry.getValue());
             }
         }
     };
@@ -8795,11 +9928,9 @@ XML3D.webgl.stopEvent = function(ev) {
                 u = u.value;
             if (u.clean)
                 continue;
-            if (u.length == 1)
-                u = u[0]; // Either a single float, int or bool
 
             if (shader.uniforms[name]) {
-                this.setUniform(shader.uniforms[name], u);
+                XML3DShaderManager.setUniform(this.gl, shader.uniforms[name], u);
             }
         }
 
@@ -8826,7 +9957,7 @@ XML3D.webgl.stopEvent = function(ev) {
         for ( var i = 0, l = sp.changes.length; i < l; i++) {
             var change = sp.changes[i];
             if (change.type == "uniform" && sp.uniforms[change.name]) {
-                this.setUniform(sp.uniforms[change.name], change.newValue);
+                XML3DShaderManager.setUniform(this.gl, sp.uniforms[change.name], change.newValue);
             }
         }
         sp.changes = [];
@@ -8848,17 +9979,21 @@ XML3D.webgl.stopEvent = function(ev) {
 
     /**
      * Set uniforms for active program
+     * @param gl
      * @param u
      * @param value
      * @param {boolean=} transposed
      */
-    XML3DShaderManager.prototype.setUniform = function(u, value, transposed) {
-        var gl = this.gl;
+    XML3DShaderManager.setUniform = function(gl, u, value, transposed) {
+
         switch (u.glType) {
         case rc.BOOL:
         case rc.INT:
         case rc.SAMPLER_2D:
-            gl.uniform1i(u.location, value);
+            if (value.length)
+                gl.uniform1i(u.location, value[0]);
+            else
+                gl.uniform1i(u.location, value);
             break;
 
         case 35671: // gl.BOOL_VEC2
@@ -8877,7 +10012,10 @@ XML3D.webgl.stopEvent = function(ev) {
             break; // gl.INT_VEC4
 
         case 5126:
-            gl.uniform1f(u.location, value);
+            if (value.length)
+                gl.uniform1f(u.location, value[0]);
+            else
+                gl.uniform1f(u.location, value);
             break; // gl.FLOAT
         case 35664:
             gl.uniform2fv(u.location, value);
@@ -9072,7 +10210,7 @@ XML3D.webgl.stopEvent = function(ev) {
             gl.activeTexture(gl.TEXTURE0 + info.unit + 1);
             gl.bindTexture(info.glType, info.handle);
             // Should not be here, since the texunit is static
-            this.setUniform(tex, info.unit + 1);
+            XML3DShaderManager.setUniform(gl, tex, info.unit + 1);
             break;
         case TEXTURE_STATE.LOADED:
             // console.dir("Creating '"+ tex.name + "' from " + info.image.src);
@@ -9083,7 +10221,7 @@ XML3D.webgl.stopEvent = function(ev) {
         case TEXTURE_STATE.UNLOADED:
             gl.activeTexture(gl.TEXTURE0 + info.unit + 1);
             gl.bindTexture(gl.TEXTURE_2D, null);
-            this.setUniform(tex, info.unit + 1);
+            XML3DShaderManager.setUniform(gl, tex, info.unit + 1);
         }
         ;
     };
@@ -9433,9 +10571,8 @@ var Renderer = function(handler, width, height) {
     this.setGlobalStates();
     this.currentView = null;
     this.xml3dNode = handler.xml3dElem;
-    this.factory = new XML3D.webgl.XML3DRenderAdapterFactory(handler, this);
-	this.dataFactory = new XML3D.data.XML3DDataAdapterFactory(handler);
-    this.shaderManager = new XML3D.webgl.XML3DShaderManager(this, this.dataFactory, this.factory);
+    this.factory = new XML3D.webgl.RenderAdapterFactory(handler, this);
+    this.shaderManager = new XML3D.webgl.XML3DShaderManager(this, this.factory);
     this.bufferHandler = new XML3D.webgl.XML3DBufferHandler(this.gl, this, this.shaderManager);
     this.changeListener = new XML3D.webgl.DataChangeListener(this);
     this.camera = this.initCamera();
@@ -9511,7 +10648,12 @@ Renderer.prototype.initCamera = function() {
             return XML3D.xml3dNS;
         }, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
         if (av == null)
-            XML3D.debug.logError("No view defined.");
+        {
+            XML3D.debug.logWarning("No view defined: creating one.");
+
+            av = XML3D.createElement("view");
+            this.xml3dNode.appendChild(av);
+        }
         this.currentView = av;
         return this.factory.getAdapter(av);
     }
@@ -9522,16 +10664,17 @@ Renderer.prototype.initCamera = function() {
 Renderer.prototype.processShaders = function(objects) {
     for (var i=0, l=objects.length; i < l; i++) {
         var obj = objects[i];
-        var groupAdapter = this.factory.getAdapter(obj.meshNode.parentNode);
-        var shader = groupAdapter ? groupAdapter.getShader() : null;
-        var shaderName = this.shaderManager.createShader(shader, this.lights);
-        obj.shader = shaderName;
+        var shaderHandle = this.factory.getAdapter(obj.meshNode).getShaderHandle();
+        var shaderAdapter = null;
+        if(shaderHandle)
+            shaderAdapter = shaderHandle.getAdapter();
+        obj.shader = this.shaderManager.createShader(shaderAdapter, this.lights);
     }
 };
 
-Renderer.prototype.recursiveBuildScene = function(scene, currentNode, visible, transform, parentShader, pickable) {
+Renderer.prototype.recursiveBuildScene = function(scene, currentNode, visible, transform, parentShaderHandle, pickable) {
     var adapter = this.factory.getAdapter(currentNode);
-    var downstreamShader = parentShader;
+    var downstreamShaderHandle = parentShaderHandle;
     var downstreamTransform = transform;
 
     switch(currentNode.nodeName) {
@@ -9543,10 +10686,10 @@ Renderer.prototype.recursiveBuildScene = function(scene, currentNode, visible, t
 		if (currentNode.hasAttribute("interactive"))
 			pickable = currentNode.getAttribute("interactive") == "true";
 
-        var shader = adapter.getShader();
-        downstreamShader = shader ? shader : parentShader;
+        var shaderHandle = adapter.getShaderHandle();
+        downstreamShaderHandle = shaderHandle ? shaderHandle : parentShaderHandle;
         adapter.parentTransform = transform;
-        adapter.parentShader = parentShader;
+        adapter.parentShaderHandle = parentShaderHandle;
         adapter.isVisible = visible;
         downstreamTransform = adapter.applyTransformMatrix(mat4.identity(mat4.create()));
         break;
@@ -9562,6 +10705,7 @@ Renderer.prototype.recursiveBuildScene = function(scene, currentNode, visible, t
             break; //TODO: error handling
 
         adapter.parentVisible = visible;
+        adapter.setShaderHandle(parentShaderHandle);
 
         // Add a new drawable object to the scene
         var newObject = new Renderer.drawableObject();
@@ -9595,7 +10739,7 @@ Renderer.prototype.recursiveBuildScene = function(scene, currentNode, visible, t
 
     var child = currentNode.firstElementChild;
     while (child) {
-		this.recursiveBuildScene(scene, child, visible, downstreamTransform, downstreamShader, pickable);
+		this.recursiveBuildScene(scene, child, visible, downstreamTransform, downstreamShaderHandle, pickable);
         child = child.nextSibling;
     }
 };
@@ -9670,25 +10814,29 @@ Renderer.prototype.sceneTreeAddition = function(evt) {
     if (!adapter)
         return;
 
-    var transform = mat4.identity(mat4.create());
-    var shader = null;
-    if (adapter.getShader)
-        shader = adapter.getShader();
+    var shaderHandle = null;
+    if (adapter.getShaderHandle)
+        shaderHandle = adapter.getShaderHandle();
 
-    var currentNode = evt.wrapped.target;
+    var currentNode = evt.wrapped.target.parentElement;
 	var pickable = null;
 	var visible = null;
     var didListener = false;
     adapter.isValid = true;
 
+    var parentTransform = mat4.identity(mat4.create());
+    if(currentNode && currentNode.nodeName == "group")
+    {
+        var parentAdapter = this.factory.getAdapter(currentNode);
+        parentTransform = parentAdapter.applyTransformMatrix(parentTransform);
+    }
+
     //Traverse parent group nodes to build any inherited shader and transform elements
-    while (currentNode.parentElement) {
-        currentNode = currentNode.parentElement;
+    while (currentNode) {
         if (currentNode.nodeName == "group") {
-			var parentAdapter = this.factory.getAdapter(currentNode);
-            transform = parentAdapter.applyTransformMatrix(transform);
-            if (!shader)
-                shader = parentAdapter.getShader();
+            var parentAdapter = this.factory.getAdapter(currentNode);
+            if (!shaderHandle)
+                shaderHandle = parentAdapter.getShaderHandle();
 			if (currentNode.hasAttribute("visible")) {
 				var visibleFlag = currentNode.getAttribute("visible");
 				visible = visible !== null ? visible : visibleFlag == "true";
@@ -9702,11 +10850,13 @@ Renderer.prototype.sceneTreeAddition = function(evt) {
         } else {
             break; //End of nested groups
         }
+
+        currentNode = currentNode.parentElement;
     }
 	visible = visible === null ? true : visible;
     //Build any new objects and add them to the scene
     var newObjects = new Array();
-	this.recursiveBuildScene(newObjects, evt.wrapped.target, visible, transform, shader, pickable);
+    this.recursiveBuildScene(newObjects, evt.wrapped.target, visible, parentTransform, shaderHandle, pickable);
     this.processShaders(newObjects);
     this.drawableObjects = this.drawableObjects.concat(newObjects);
 
@@ -10223,7 +11373,7 @@ Renderer.prototype.notifyDataChanged = function() {
 };
 
     // Export
-    XML3D.webgl['Renderer'] = Renderer;
+    XML3D.webgl.Renderer = Renderer;
 })();
 
 
@@ -10234,17 +11384,17 @@ Renderer.prototype.notifyDataChanged = function() {
 // Misc adapters
 (function() {
     XML3D.webgl.RenderAdapter = function(factory, node) {
-        XML3D.base.Adapter.call(this, factory, node);
+        XML3D.base.NodeAdapter.call(this, factory, node);
     };
-    XML3D.webgl.RenderAdapter.prototype = new XML3D.base.Adapter();
-    XML3D.webgl.RenderAdapter.prototype.constructor = XML3D.webgl.RenderAdapter;
-
-    XML3D.webgl.RenderAdapter.prototype.isAdapterFor = function(protoType) {
-        return protoType == XML3D.webgl.Renderer.prototype;
-    };
+    XML3D.createClass(XML3D.webgl.RenderAdapter, XML3D.base.NodeAdapter);
 
     XML3D.webgl.RenderAdapter.prototype.getShader = function() {
         return null;
+    };
+
+    XML3D.webgl.RenderAdapter.prototype.getAdapterHandle = function(uri) {
+        return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
+            XML3D.webgl, this.factory.handler.id);
     };
 
     XML3D.webgl.RenderAdapter.prototype.applyTransformMatrix = function(
@@ -10254,23 +11404,19 @@ Renderer.prototype.notifyDataChanged = function() {
 
 
     //Adapter for <defs>
-    XML3D.webgl.XML3DDefsRenderAdapter = function(factory, node) {
+    XML3D.webgl.DefsRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
     };
-    XML3D.webgl.XML3DDefsRenderAdapter.prototype = new XML3D.webgl.RenderAdapter();
-    XML3D.webgl.XML3DDefsRenderAdapter.prototype.constructor = XML3D.webgl.XML3DDefsRenderAdapter;
-    XML3D.webgl.XML3DDefsRenderAdapter.prototype.notifyChanged = function(evt) {
-
-    };
+    XML3D.createClass(XML3D.webgl.DefsRenderAdapter, XML3D.webgl.RenderAdapter);
 
     //Adapter for <img>
-    XML3D.webgl.XML3DImgRenderAdapter = function(factory, node) {
+    XML3D.webgl.ImgRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.textureAdapter = factory.getAdapter(node.parentNode);
     };
-    XML3D.webgl.XML3DImgRenderAdapter.prototype = new XML3D.webgl.RenderAdapter();
-    XML3D.webgl.XML3DImgRenderAdapter.prototype.constructor = XML3D.webgl.XML3DImgRenderAdapter;
-    XML3D.webgl.XML3DImgRenderAdapter.prototype.notifyChanged = function(evt) {
+    XML3D.createClass(XML3D.webgl.ImgRenderAdapter, XML3D.webgl.RenderAdapter);
+
+    XML3D.webgl.ImgRenderAdapter.prototype.notifyChanged = function(evt) {
         this.textureAdapter.notifyChanged(evt);
     };
 
@@ -10282,15 +11428,14 @@ Renderer.prototype.notifyDataChanged = function() {
      * @param {RenderAdapterFactory} factory
      * @param {Element} node
      */
-    XML3D.webgl.XML3DLightShaderRenderAdapter = function(factory, node) {
+    XML3D.webgl.LightShaderRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.dataAdapter = factory.renderer.dataFactory.getAdapter(this.node);
+        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
         this.computeRequest = this.dataAdapter.getComputeRequest(staticAttributes, this.dataChanged.bind(this));
         this.offsets = [];
         this.listeners = [];
     };
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype = new XML3D.webgl.RenderAdapter();
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.constructor = XML3D.webgl.XML3DLightShaderRenderAdapter;
+    XML3D.createClass(XML3D.webgl.LightShaderRenderAdapter, XML3D.webgl.RenderAdapter);
 
     /** @const */
     var LIGHT_DEFAULT_INTENSITY = vec3.create([1,1,1]);
@@ -10303,7 +11448,7 @@ Renderer.prototype.notifyDataChanged = function() {
      * @param {number} i
      * @param {number} offset
      */
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.fillPointLight = function(point, i, offset) {
+    XML3D.webgl.LightShaderRenderAdapter.prototype.fillPointLight = function(point, i, offset) {
         this.callback = point.dataChanged;
         this.offsets.push(offset);
         var dataTable = this.computeRequest.getResult().getOutputMap();
@@ -10321,7 +11466,7 @@ Renderer.prototype.notifyDataChanged = function() {
     * @param {number} i
     * @param {number} offset
     */
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.fillDirectionalLight = function(directional, i, offset) {
+    XML3D.webgl.LightShaderRenderAdapter.prototype.fillDirectionalLight = function(directional, i, offset) {
         this.callback = directional.dataChanged;
         this.offsets.push(offset);
         var dataTable = this.computeRequest.getResult().getOutputMap();
@@ -10335,7 +11480,7 @@ Renderer.prototype.notifyDataChanged = function() {
      * @param {Xflow.data.Request} request
      * @param {Xflow.RequestNotification} notification
      */
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.dataChanged = function(request, notification) {
+    XML3D.webgl.LightShaderRenderAdapter.prototype.dataChanged = function(request, notification) {
         var dataTable = request.getResult();
 
         for (var i=0; i<staticAttributes.length; i++) {
@@ -10352,10 +11497,10 @@ Renderer.prototype.notifyDataChanged = function() {
      *
      * @param {Function} func
      */
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.registerLightListener = function(func) {
+    XML3D.webgl.LightShaderRenderAdapter.prototype.registerLightListener = function(func) {
         this.listeners.push(func);
     };
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.removeLightListener = function(func) {
+    XML3D.webgl.LightShaderRenderAdapter.prototype.removeLightListener = function(func) {
         //this.listeners.splice(func);
         //TODO: remove light node listeners
     };
@@ -10364,24 +11509,24 @@ Renderer.prototype.notifyDataChanged = function() {
      *
      * @param {string} name
      */
-    XML3D.webgl.XML3DLightShaderRenderAdapter.prototype.requestParameter = function(name) {
+    XML3D.webgl.LightShaderRenderAdapter.prototype.requestParameter = function(name) {
         return this.computeRequest.getResult().getOutputData(name);
     };
 
 }());
 // Adapter for <xml3d>
 (function() {
-    var XML3DCanvasRenderAdapter = function(factory, node) {
+    var XML3DRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.factory = factory;
         this.processListeners();
     };
-    XML3D.createClass(XML3DCanvasRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(XML3DRenderAdapter, XML3D.webgl.RenderAdapter);
 
-    XML3DCanvasRenderAdapter.prototype.notifyChanged = function(evt) {
-        if (evt.type == 0) {
+    XML3DRenderAdapter.prototype.notifyChanged = function(evt) {
+        if (evt.type == XML3D.events.NODE_INSERTED) {
             this.factory.renderer.sceneTreeAddition(evt);
-        } else if (evt.type == 2) {
+        } else if (evt.type == XML3D.events.NODE_REMOVED) {
             this.factory.renderer.sceneTreeRemoval(evt);
         }
 
@@ -10392,7 +11537,7 @@ Renderer.prototype.notifyDataChanged = function() {
         }
     };
 
-    XML3DCanvasRenderAdapter.prototype.processListeners = function() {
+    XML3DRenderAdapter.prototype.processListeners = function() {
         var attributes = this.node.attributes;
         for ( var index in attributes) {
             var att = attributes[index];
@@ -10408,7 +11553,7 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     /* Interface methods */
-    XML3DCanvasRenderAdapter.prototype.getBoundingBox = function() {
+    XML3DRenderAdapter.prototype.getBoundingBox = function() {
         var bbox = new window.XML3DBox();
         Array.prototype.forEach.call(this.node.childNodes, function(c) {
             if(c.getBoundingBox)
@@ -10417,7 +11562,7 @@ Renderer.prototype.notifyDataChanged = function() {
         return bbox;
     };
 
-    XML3DCanvasRenderAdapter.prototype.getElementByPoint = function(x, y, hitPoint, hitNormal) {
+    XML3DRenderAdapter.prototype.getElementByPoint = function(x, y, hitPoint, hitNormal) {
         var handler = this.factory.handler;
         var object = handler.updatePickObjectByPoint(x, y);
         if(object){
@@ -10437,24 +11582,23 @@ Renderer.prototype.notifyDataChanged = function() {
         return object ? object.meshNode : null;
     };
 
-    XML3DCanvasRenderAdapter.prototype.generateRay = function(x, y) {
-
-        var glY = this.factory.handler.getCanvasHeight() - y - 1;
-        return this.factory.handler.generateRay(x, glY);
+    XML3DRenderAdapter.prototype.generateRay = function(x, y) {
+        
+        return this.factory.handler.generateRay(x, y);
     };
-    XML3D.webgl.XML3DCanvasRenderAdapter = XML3DCanvasRenderAdapter;
+    XML3D.webgl.XML3DRenderAdapter = XML3DRenderAdapter;
 
 }());﻿// Adapter for <transform>
 (function() {
 
-    var XML3DTransformRenderAdapter = function(factory, node) {
+    var TransformRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.isValid = true;
 		this.needsUpdate = true;
     };
 
-    XML3D.createClass(XML3DTransformRenderAdapter, XML3D.webgl.RenderAdapter);
-    var p = XML3DTransformRenderAdapter.prototype;
+    XML3D.createClass(TransformRenderAdapter, XML3D.webgl.RenderAdapter);
+    var p = TransformRenderAdapter.prototype;
 
 	var IDENT_MAT = mat4.identity(mat4.create());
 
@@ -10516,26 +11660,17 @@ Renderer.prototype.notifyDataChanged = function() {
         } else if (e.type == 2) {
             this.dispose();
         }
-
-        var opposites = this.node._configured.opposites;
-        if (opposites) {
-            for (var i=0, length = opposites.length; i<length; i++) {
-                var adapter = this.factory.getAdapter(opposites[i].relatedNode);
-                if (adapter && adapter.notifyChanged)
-                    adapter.notifyChanged(e);
-            }
-        }
-
+        this.notifyOppositeAdapters();
     };
     p.dispose = function() {
         this.isValid = false;
     };
     // Export to XML3D.webgl namespace
-    XML3D.webgl.XML3DTransformRenderAdapter = XML3DTransformRenderAdapter;
+    XML3D.webgl.TransformRenderAdapter = TransformRenderAdapter;
 
 }());// Adapter for <view>
 (function() {
-    var XML3DViewRenderAdapter = function(factory, node) {
+    var ViewRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.zFar = 100000;
         this.zNear = 0.1;
@@ -10545,8 +11680,8 @@ Renderer.prototype.notifyDataChanged = function() {
         this.worldPosition = [0,0,0];
         this.updateViewMatrix();
     };
-    XML3D.createClass(XML3DViewRenderAdapter, XML3D.webgl.RenderAdapter);
-    var p = XML3DViewRenderAdapter.prototype;
+    XML3D.createClass(ViewRenderAdapter, XML3D.webgl.RenderAdapter);
+    var p = ViewRenderAdapter.prototype;
 
     var tmp = mat4.create(),
         tmp2 = mat4.create();
@@ -10594,6 +11729,19 @@ Renderer.prototype.notifyDataChanged = function() {
         m._data.set(this.viewMatrix);
         return m;
     };
+    
+    /** 
+     * @return {XML3DMatrix} returns the inverse of the view matrix, since now we 
+     * want to go world2view and not view2world
+     */
+    p.getWorldMatrix = function() {        
+        var m = new window.XML3DMatrix();  
+        var tmp = mat4.create(); 
+        mat4.inverse(this.viewMatrix, tmp); 
+        m._data.set(tmp);
+        return m; 
+    }; 
+
 
     p.getModelViewMatrix = function(model) {
         return mat4.multiply(this.viewMatrix, model, mat4.create());
@@ -10634,32 +11782,31 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     // Export to XML3D.webgl namespace
-    XML3D.webgl.XML3DViewRenderAdapter = XML3DViewRenderAdapter;
+    XML3D.webgl.ViewRenderAdapter = ViewRenderAdapter;
 
 }());
 // Adapter for <shader>
 (function() {
 
-    var XML3DShaderRenderAdapter = function(factory, node) {
+    var ShaderRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.renderer = this.factory.renderer;
 
-        this.dataAdapter = this.renderer.dataFactory.getAdapter(this.node);
-        this.table = new XML3D.data.ProcessTable(this, [], this.dataChanged);
+        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
         this.computeRequest;
     };
 
-    XML3D.createClass(XML3DShaderRenderAdapter, XML3D.webgl.RenderAdapter);
-    var p = XML3DShaderRenderAdapter.prototype;
+    XML3D.createClass(ShaderRenderAdapter, XML3D.webgl.RenderAdapter);
+    var p = ShaderRenderAdapter.prototype;
 
     p.notifyChanged = function(evt) {
-        if (evt.type == 0) {
+        if (evt.type == XML3D.events.NODE_INSERTED) {
             this.factory.renderer.sceneTreeAddition(evt);
             return;
-        } else if (evt.type == 2) {
+        } else if (evt.type == XML3D.events.NODE_REMOVED) {
             this.factory.renderer.sceneTreeRemoval(evt);
             return;
-        } else if (evt.type == 5) {
+        } else if (evt.type == XML3D.events.THIS_REMOVED) {
             var target = evt.wrapped.target;
             if (target && target.nodeName == "texture") {
                 // A texture was removed completely, so this shader has to be
@@ -10705,32 +11852,32 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     // Export to XML3D.webgl namespace
-    XML3D.webgl.XML3DShaderRenderAdapter = XML3DShaderRenderAdapter;
+    XML3D.webgl.ShaderRenderAdapter = ShaderRenderAdapter;
 
 }());
 //Adapter for <texture>
 (function() {
 
-    var XML3DTextureRenderAdapter = function(factory, node) {
+    var TextureRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.gl = factory.renderer.handler.gl;
         this.factory = factory;
         this.node = node;
-        this.dataAdapter = factory.renderer.dataFactory.getAdapter(this.node);
+        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
     };
     
-    XML3D.createClass(XML3DTextureRenderAdapter, XML3D.webgl.RenderAdapter);
-    XML3DTextureRenderAdapter.prototype.notifyChanged = function(evt) {
+    XML3D.createClass(TextureRenderAdapter, XML3D.webgl.RenderAdapter);
+    TextureRenderAdapter.prototype.notifyChanged = function(evt) {
         var shaderAdapter = this.factory.getAdapter(this.node.parentElement);
         if (shaderAdapter)
             shaderAdapter.notifyChanged(evt);
     };
     
-    XML3DTextureRenderAdapter.prototype.getDataTable = function() {
+    TextureRenderAdapter.prototype.getDataTable = function() {
         return this.dataAdapter.createDataTable();
     };
     
-    XML3DTextureRenderAdapter.prototype.destroy = function() {
+    TextureRenderAdapter.prototype.destroy = function() {
         if (!this.info || this.info.handle === null)
             return;
         
@@ -10740,47 +11887,57 @@ Renderer.prototype.notifyDataChanged = function() {
         this.unbind = function(texUnit) { return; };
     };
     
-    XML3DTextureRenderAdapter.prototype.dispose = function(evt) {
+    TextureRenderAdapter.prototype.dispose = function(evt) {
         //TODO: tell renderer to dispose
     };
     
-    XML3D.webgl.XML3DTextureRenderAdapter = XML3DTextureRenderAdapter;
+    XML3D.webgl.TextureRenderAdapter = TextureRenderAdapter;
 }());
 XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
 //Adapter for <mesh>
 (function() {
     var eventTypes = {onclick:1, ondblclick:1,
-            ondrop:1, ondragenter:1, ondragleave:1};
+        ondrop:1, ondragenter:1, ondragleave:1};
 
     var noDrawableObject = function() {
         XML3D.debug.logError("Mesh adapter has no callback to its mesh object!");
     },
-    /**
-     * @type WebGLRenderingContext
-     * @private
-     */
-    rc = window.WebGLRenderingContext;
+        /**
+         * @type WebGLRenderingContext
+         * @private
+         */
+            rc = window.WebGLRenderingContext;
 
     var staticAttributes = ["index", "position", "normal", "color", "texcoord", "size", "tangent"];
+    var bboxAttributes = ["boundingbox"];
 
     /**
      * @constructor
      */
-    var XML3DMeshRenderAdapter = function(factory, node) {
+    var MeshRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
 
         this.processListeners();
-        this.dataAdapter = factory.renderer.dataFactory.getAdapter(this.node);
+        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
         this.parentVisible = true;
         this.getMyDrawableObject = noDrawableObject;
 
         this.computeRequest = null;
+        this.bboxComputeRequest = null;
     };
 
-    XML3D.createClass(XML3DMeshRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(MeshRenderAdapter, XML3D.webgl.RenderAdapter);
 
-    var p = XML3DMeshRenderAdapter.prototype;
+    var p = MeshRenderAdapter.prototype;
+
+    p.applyTransformMatrix = function(m) {
+
+        if (this.getMyDrawableObject().transform)
+            mat4.multiply(m, this.getMyDrawableObject().transform);
+
+        return m;
+    };
 
     /**
      *
@@ -10812,10 +11969,16 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @param {XML3D.events.Notification} evt
      */
     p.notifyChanged = function(evt) {
-        if (evt.type == 0)
-            // Node insertion is handled by the CanvasRenderAdapter
+        if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED ) && !evt.internalType ){
+            if(evt.key == "shader"){
+                this.updateShader(evt.adapter);
+            }
             return;
-        else if (evt.type == 2)
+        }
+        if (evt.type == XML3D.events.NODE_INSERTED)
+        // Node insertion is handled by the CanvasRenderAdapter
+            return;
+        else if (evt.type == XML3D.events.NODE_REMOVED)
             return this.factory.renderer.sceneTreeRemoval(evt);
 
         var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
@@ -10826,8 +11989,8 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 break;
 
             case "parentshader":
-                var newShaderId = evt.newValue ? evt.newValue.node.id : "defaultShader";
-                this.getMyDrawableObject().shader = newShaderId;
+                this.setShaderHandle(evt.newValue);
+                this.updateShader(evt.newValue ? evt.newValue.getAdapter() : null);
                 break;
 
             case "parentvisible":
@@ -10854,6 +12017,21 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     };
 
+    p.getShaderHandle = function(){
+        return this.getConnectedAdapterHandle("shader");
+    }
+
+    p.setShaderHandle = function(newHandle){
+        this.connectAdapterHandle("shader", newHandle);
+    };
+    p.updateShader = function(adapter){
+        var shaderName = this.factory.renderer.shaderManager.createShader(adapter,
+            this.factory.renderer.lights);
+        this.getMyDrawableObject().shader = shaderName;
+        this.factory.renderer.requestRedraw("Shader changed.", false);
+    }
+
+
     /**
      * @param {WebGLRenderingContext} gl
      * @param {number} type
@@ -10877,7 +12055,11 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             function(request, changeType) {
                 that.dataChanged(request, changeType);
         });
+        this.bboxComputeRequest = this.dataAdapter.getComputeRequest(bboxAttributes);
+
         this.dataChanged();
+
+        this.bbox = this.calcBoundingBox();
     };
 
     var emptyFunction = function() {};
@@ -10937,24 +12119,24 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             var buffer = entry.userData.buffer;
 
             switch(entry.userData.webglDataChanged) {
-            case Xflow.DataNotifications.CHANGED_CONTENT:
-                var bufferType = attr == "index" ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
+                case Xflow.DataNotifications.CHANGED_CONTENT:
+                    var bufferType = attr == "index" ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
 
-                gl.bindBuffer(bufferType, buffer);
-                gl.bufferSubData(bufferType, 0, entry.getValue());
-                break;
-            case Xflow.DataNotifications.CHANGED_NEW:
-            case Xflow.DataNotifications.CHANGE_SIZE:
-                if (attr == "index") {
-                    buffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(entry.getValue()));
-                } else {
-                    buffer = createBuffer(gl, gl.ARRAY_BUFFER, entry.getValue());
-                }
-                buffer.tupleSize = entry.getTupleSize();
-                entry.userData.buffer = buffer;
-                break;
-             default:
-                 break;
+                    gl.bindBuffer(bufferType, buffer);
+                    gl.bufferSubData(bufferType, 0, entry.getValue());
+                    break;
+                case Xflow.DataNotifications.CHANGED_NEW:
+                case Xflow.DataNotifications.CHANGE_SIZE:
+                    if (attr == "index") {
+                        buffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(entry.getValue()));
+                    } else {
+                        buffer = createBuffer(gl, gl.ARRAY_BUFFER, entry.getValue());
+                    }
+                    buffer.tupleSize = entry.getTupleSize();
+                    entry.userData.buffer = buffer;
+                    break;
+                default:
+                    break;
             }
 
             meshInfo.vbos[attr] = [];
@@ -10971,8 +12153,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
         //Calculate a bounding box for the mesh
         if (calculateBBox) {
-            var positions = dataResult.getOutputData("position").getValue();
-            this.bbox = XML3D.webgl.calculateBoundingBox(positions, meshInfo.isIndexed ? dataResult.getOutputData("index").getValue() : null);
+            this.bbox = this.calcBoundingBox();
             meshInfo.bbox.set(this.bbox);
         }
 
@@ -10997,6 +12178,54 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      */
     p.getBoundingBox = function() {
         return this.bbox;
+    };
+
+    /**
+     * @return {XML3DMatrix}
+     */
+    p.getWorldMatrix = function() {
+
+        var m = new window.XML3DMatrix();
+
+        var obj = this.getMyDrawableObject();
+        if(obj)
+            m._data.set(obj.transform);
+
+        return m;
+    };
+
+    /**
+     * @private
+     * @return {XML3DBox} the calculated bounding box of this mesh.
+     */
+    p.calcBoundingBox = function() {
+
+        var bbox = new window.XML3DBox();
+        
+        // try to compute bbox using the boundingbox property of xflow
+        var bboxResult = this.bboxComputeRequest.getResult();
+        var bboxOutData = bboxResult.getOutputData("boundingbox");
+        if (bboxOutData)
+        {
+            var bboxVal = bboxOutData.getValue();
+            bbox.extend(bboxVal[0]);
+            bbox.extend(bboxVal[1]);
+
+            return bbox;
+        }
+
+        // compute bounding box from positions and indices, if present
+        var dataResult = this.computeRequest.getResult();
+        var posData = dataResult.getOutputData("position"); 
+        if(!posData)
+            return bbox; 
+        
+        var positions = posData.getValue();
+
+        var idxOutData = dataResult.getOutputData("index");
+        var indices = idxOutData ? idxOutData.getValue() : null;
+
+        return XML3D.webgl.calculateBoundingBox(positions, indices);
     };
 
     var getGLTypeFromArray = function(array) {
@@ -11024,23 +12253,23 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         if (typeName && typeName.toLowerCase)
             typeName = typeName.toLowerCase();
         switch (typeName) {
-        case "triangles":
-            return rc.TRIANGLES;
-        case "tristrips":
-            return rc.TRIANGLE_STRIP;
-        case "points":
-            return rc.POINTS;
-        case "lines":
-            return rc.LINES;
-        case "linestrips":
-            return rc.LINE_STRIP;
-        default:
-            return rc.TRIANGLES;
+            case "triangles":
+                return rc.TRIANGLES;
+            case "tristrips":
+                return rc.TRIANGLE_STRIP;
+            case "points":
+                return rc.POINTS;
+            case "lines":
+                return rc.LINES;
+            case "linestrips":
+                return rc.LINE_STRIP;
+            default:
+                return rc.TRIANGLES;
         }
     };
 
     // Export to XML3D.webgl namespace
-    XML3D.webgl.XML3DMeshRenderAdapter = XML3DMeshRenderAdapter;
+    XML3D.webgl.MeshRenderAdapter = MeshRenderAdapter;
 
 }());// Adapter for <group>
 (function() {
@@ -11048,39 +12277,50 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 	var eventTypes = {onclick:1, ondblclick:1,
 			ondrop:1, ondragenter:1, ondragleave:1};
 	
-    var XML3DGroupRenderAdapter = function(factory, node) {
+    var GroupRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.processListeners();
         this.factory = factory;
         this.parentTransform = null;
-        this.parentShader = null;
+        this.parentShaderHandle = null;
         this.parentVisible = true;
         this.isValid = true;
         this.updateTransformAdapter();
     };
 
-    XML3D.createClass(XML3DGroupRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(GroupRenderAdapter, XML3D.webgl.RenderAdapter);
 
-    var p = XML3DGroupRenderAdapter.prototype;
+    var p = GroupRenderAdapter.prototype;
 
+    /** It is assumed that this method uses the world matrix! */
     p.applyTransformMatrix = function(m) {
         if (this.parentTransform !== null)
             mat4.multiply(this.parentTransform, m,  m);
 
-        if (this.transformAdapter)
-            mat4.multiply(m, this.transformAdapter.getMatrix());
+        var matrix = this.getLocalMatrixInternal();
+        if (matrix)
+            mat4.multiply(m, matrix);
 
         return m;
     };
+
+    p.getLocalMatrixInternal = function()
+    {
+        var cssMatrix = XML3D.css.getCSSMatrix(this.node);
+        if(cssMatrix){
+            return XML3D.css.convertCssToMat4(cssMatrix);
+        }
+
+        var handle = this.getConnectedAdapter("transform");
+        if (handle)
+            return handle.getMatrix();
+
+        return null;
+    }
     
     p.updateTransformAdapter = function() {
-        this.transformAdapter = null;
-        var tNode = this.node.transform;
-        if (tNode) {
-            tNode = XML3D.URIResolver.resolveLocal(tNode);
-            if (tNode)
-                this.transformAdapter = this.factory.getAdapter(tNode);
-        }
+        var transformHref = this.node.transform;
+        this.connectAdapterHandle("transform", this.getAdapterHandle(transformHref));
     };
 
     p.processListeners  = function() {
@@ -11099,14 +12339,19 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
     };
 
     p.notifyChanged = function(evt) {
-        if (evt.type == 0) {
+        if (evt.type == XML3D.events.NODE_INSERTED) {
             this.factory.renderer.sceneTreeAddition(evt);
             return;
         }
-        else if (evt.type == 2) {
+        else if (evt.type == XML3D.events.NODE_REMOVED) {
             this.factory.renderer.sceneTreeRemoval(evt);
             return;
-        } else if (evt.type == 5) {
+        } else if (evt.type == XML3D.events.THIS_REMOVED) {
+            return;
+        }
+        else if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED) && !evt.internalType){
+            // The connected transform node changed;
+            this.propagateTransform(evt);
             return;
         }
         
@@ -11114,74 +12359,38 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         
         switch (target) {
         case "shader":
-            //Update this group node's shader then propagate the change down to its children
-            var downstreamValue = this.getShader();
-            if (!downstreamValue) {
-                //This node's shader was removed, pass down the parent shader instead
-                downstreamValue = this.parentShader;
-            }
             evt.internalType = "parentshader";
-            evt.newValue = downstreamValue;
+            evt.newValue = this.getShaderHandle();
             this.notifyChildren(evt);
-
             this.factory.renderer.requestRedraw("Group shader changed.", false);
             break;
             
         case "parentshader":
-            this.parentShader = null;        
-            if (!this.getShader()) { // This node's shader would override parent shaders
+            this.parentShaderHandle = null;
+            if (!this.getShaderHandle()) { // This node's shader would override parent shaders
                 this.notifyChildren(evt);
             }
-            this.parentShader = evt.newValue;
-            break;
-            
-        case "translation":
-        case "rotation":
-        case "scale":
-            //This group adapter's transform node was changed
-            var downstreamValue = this.transformAdapter.getMatrix();
-            if (this.parentTransform)
-                downstreamValue = mat4.multiply(this.parentTransform, downstreamValue, mat4.create());
-            
-            evt.internalType = "parenttransform";
-            evt.newValue = downstreamValue;
-            this.notifyChildren(evt);
-            delete evt.internalType;
-            delete evt.newValue;
+            this.parentShaderHandle = evt.newValue;
             break;
             
         case "transform":
             //This group is now linked to a different transform node. We need to notify all
             //of its children with the new transformation matrix
-            this.updateTransformAdapter(this);
+            this.updateTransformAdapter();
 
-            var downstreamValue;
-            if (this.transformAdapter)
-                downstreamValue = this.transformAdapter.getMatrix();
-            else if (this.parentTransform)
-                downstreamValue = mat4.identity(mat4.create());
-            else
-                downstreamValue = null;
+            this.propagateTransform(evt);
 
-            if(this.parentTransform)
-                downstreamValue = mat4.multiply(this.parentTransform, downstreamValue, mat4.create());
-
-            evt.internalType = "parenttransform";
-            evt.newValue = downstreamValue;
-            
-            this.notifyChildren(evt);
-            delete evt.internalType;
-            delete evt.newValue;
-            this.factory.renderer.requestRedraw("Group transform changed.", true);
             break;
         
         //TODO: this will change once the wrapped events are sent to all listeners of a node
         case "parenttransform":  
             var parentValue = downstreamValue = evt.newValue;
             this.parentTransform = evt.newValue;
-            
-            if (this.transformAdapter)
-                downstreamValue = mat4.multiply(parentValue, this.transformAdapter.getMatrix(), mat4.create());
+
+            var downstreamValue;
+            var matrix = this.getLocalMatrixInternal();
+            if (matrix)
+                downstreamValue = mat4.multiply(parentValue, matrix, mat4.create());
             
             evt.newValue = downstreamValue;
             this.notifyChildren(evt);
@@ -11221,7 +12430,6 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     };
 
-
     p.notifyChildren = function(evt) {
         var child = this.node.firstElementChild;
         while (child) {
@@ -11231,27 +12439,46 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         }
     };
 
-    p.getShader = function()
-    {
-        var shader = this.node.shader;
+    p.propagateTransform = function(evt){
+        var downstreamValue;
+        var matrix = this.getLocalMatrixInternal();
+        if (matrix)
+            downstreamValue = matrix;
+        else if (this.parentTransform)
+            downstreamValue = mat4.identity(mat4.create());
+        else
+            downstreamValue = null;
 
-        // if no shader attribute is specified, try to get a shader from the style attribute
-        if(shader == "")
+        if(this.parentTransform)
+            downstreamValue = mat4.multiply(this.parentTransform, downstreamValue, mat4.create());
+
+        evt.internalType = "parenttransform";
+        evt.newValue = downstreamValue;
+
+        this.notifyChildren(evt);
+        delete evt.internalType;
+        delete evt.newValue;
+        this.factory.renderer.requestRedraw("Group transform changed.", true);
+    }
+
+    p.getShaderHandle = function()
+    {
+        var shaderHref = this.node.shader;
+        if(shaderHref == "")
         {
             var styleValue = this.node.getAttribute('style');
-            if(styleValue) {        
+            if(styleValue) {
                 var pattern    = /shader\s*:\s*url\s*\(\s*(\S+)\s*\)/i;
                 var result = pattern.exec(styleValue);
-                if (result)
-                    shader = XML3D.URIResolver.resolveLocal(result[1]);
+                if(result)
+                    shaderHref = result[1];
             }
-        } else {
-            shader = XML3D.URIResolver.resolveLocal(shader);
         }
-        
-        shader = this.factory.getAdapter(shader);
-        
-        return shader || this.parentShader;    
+        if(shaderHref)
+            return this.getAdapterHandle(shaderHref);
+        else
+            return this.parentShaderHandle;
+
     };
 
     p.destroy = function() {
@@ -11273,29 +12500,33 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             if(c.getBoundingBox)
                 bbox.extend(c.getBoundingBox());
         });
-        if (this.transformAdapter) {
-            XML3D.webgl.transformAABB(bbox, this.transformAdapter.getMatrix());
+        var matrix = this.getLocalMatrixInternal();
+        if (matrix) {
+            XML3D.webgl.transformAABB(bbox, matrix);
         }
         return bbox;
     };
   
     p.getLocalMatrix = function() {
         var m = new window.XML3DMatrix();
-        if (this.transformAdapter !== null)
-            m._data.set(this.transformAdapter.getMatrix());
+        var matrix = this.getLocalMatrixInternal();
+        if (matrix)
+            m._data.set(matrix);
         return m;
     };
     
+    var tmpIdMat = mat4.create();
+    
     p.getWorldMatrix = function() {
         var m = new window.XML3DMatrix();
-        if (this.parentTransform)
-            m._data.set(this.parentTransform);
-        if (this.transformAdapter)
-            mat4.multiply(m._data, this.transformAdapter.getMatrix());
+
+        mat4.identity(tmpIdMat);
+        m._data.set(this.applyTransformMatrix(tmpIdMat));
+
         return m;
     };
 
-    XML3D.webgl.XML3DGroupRenderAdapter = XML3DGroupRenderAdapter;
+    XML3D.webgl.GroupRenderAdapter = GroupRenderAdapter;
 }());
 (function() {
 
@@ -11305,7 +12536,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @param {RenderAdapterFactory} factory
      * @param {Element} node
      */
-    var XML3DLightRenderAdapter = function(factory, node) {
+    var LightRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
 
         this.visible = true;
@@ -11315,11 +12546,14 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
         this.offset = 0;
         this.lightType = "point";
-    };
-    XML3D.createClass(XML3DLightRenderAdapter, XML3D.webgl.RenderAdapter);
+        this.updateLightShader();
 
-    XML3DLightRenderAdapter.prototype.notifyChanged = function(evt) {
+    };
+    XML3D.createClass(LightRenderAdapter, XML3D.webgl.RenderAdapter);
+
+    LightRenderAdapter.prototype.notifyChanged = function(evt) {
         var target = evt.internalType || evt.wrapped.attrName;
+        // TODO: Support change of lightshader
 
         switch(target) {
         case "visible":
@@ -11358,7 +12592,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 	var XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION = vec3.create([0,0,-1]), tmpDirection = vec3.create();
 
 
-	XML3DLightRenderAdapter.prototype.applyTransform = function(vec) {
+	LightRenderAdapter.prototype.applyTransform = function(vec) {
 	    if (this.transform) {
             var t = this.transform;
             var newVec = mat4.multiplyVec4(t, quat4.create([vec[0], vec[1], vec[2], 1]));
@@ -11371,7 +12605,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 	 *
 	 * @param {Object} lights
 	 */
-	XML3DLightRenderAdapter.prototype.addLight = function(lights) {
+	LightRenderAdapter.prototype.addLight = function(lights) {
 	    this.callback = lights.dataChanged;
 	    var shader = this.getLightShader();
         if (!shader)
@@ -11410,32 +12644,40 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         }
 	};
 
-	/**
-	 *
-	 */
-    XML3DLightRenderAdapter.prototype.getLightShader = function() {
-        if (!this.lightShader) {
-            var shaderLink = this.node.shader;
-            var shader = null;
-            if (shaderLink != "")
-                shader = XML3D.URIResolver.resolveLocal(shaderLink);
-            // if no shader attribute is specified, try to get a shader from the style attribute
-            if(shader == null)
-            {
-                var styleValue = this.node.getAttribute('style');
-                if(!styleValue)
-                    return null;
+    LightRenderAdapter.prototype.updateLightShader = function(){
+        var shaderHref = this.node.shader;
+        if(!shaderHref)
+        {
+            var styleValue = this.node.getAttribute('style');
+            if(styleValue){
                 var pattern    = /shader\s*:\s*url\s*\(\s*(\S+)\s*\)/i;
                 var result = pattern.exec(styleValue);
                 if (result)
-                    shader = this.node.xml3ddocument.resolve(result[1]);
+                    shaderHref = result[1];
             }
-            this.lightShader = this.factory.getAdapter(shader);
         }
-        return this.lightShader;
+        this.connectAdapterHandle("shader", this.getAdapterHandle(shaderHref));
+    }
+
+	/**
+	 *
+	 */
+    LightRenderAdapter.prototype.getLightShader = function() {
+        return this.getConnectedAdapter("shader");
     };
-    XML3DLightRenderAdapter.prototype.dispose = function() {
+    LightRenderAdapter.prototype.dispose = function() {
         this.isValid = false;
+    };
+
+
+    /**
+     * @return {XML3DMatrix}
+     */
+    LightRenderAdapter.prototype.getWorldMatrix = function() {
+
+        var m = new window.XML3DMatrix();
+        m._data.set(this.transform);
+        return m;
     };
 
     /**
@@ -11444,12 +12686,12 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @param {Array.<number>} newValue
      * @return
      */
-    XML3DLightRenderAdapter.prototype.dataChanged = function(field, newValue) {
+    LightRenderAdapter.prototype.dataChanged = function(field, newValue) {
         this.renderer.changeLightData(this.lightType, field, this.offset, newValue);
     };
 
     // Export to XML3D.webgl namespace
-    XML3D.webgl.XML3DLightRenderAdapter = XML3DLightRenderAdapter;
+    XML3D.webgl.LightRenderAdapter = LightRenderAdapter;
 
 }());// adapter/factory.js
 
@@ -11458,46 +12700,47 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @constructor
      * @implements {XML3D.base.IFactory}
      * @extends XML3D.base.AdapterFactory
+     * @param {XML3D.webgl.CanvasHandler} handler
+     * @param {XML3D.webgl.Renderer} renderer
      */
-    var XML3DRenderAdapterFactory = function(handler, renderer) {
-        XML3D.base.AdapterFactory.call(this);
+    var RenderAdapterFactory = function(handler, renderer) {
+        XML3D.base.NodeAdapterFactory.call(this, XML3D.webgl, handler.id);
         this.handler = handler;
         this.renderer = renderer;
-        this.type = "XML3DRenderAdapterFactory";
+        this.type = "RenderAdapterFactory";
     };
-    XML3D.createClass(XML3DRenderAdapterFactory, XML3D.base.AdapterFactory);
+    XML3D.createClass(RenderAdapterFactory, XML3D.base.NodeAdapterFactory);
 
-    var gl = XML3D.webgl,
-        reg = {
-            xml3d:          gl.XML3DCanvasRenderAdapter,
-            view:           gl.XML3DViewRenderAdapter,
-            defs:           gl.XML3DDefsRenderAdapter,
-            mesh:           gl.XML3DMeshRenderAdapter,
-            transform:      gl.XML3DTransformRenderAdapter,
-            shader:         gl.XML3DShaderRenderAdapter,
-            texture:        gl.XML3DTextureRenderAdapter,
-            group:          gl.XML3DGroupRenderAdapter,
-            img:            gl.XML3DImgRenderAdapter,
-            light:          gl.XML3DLightRenderAdapter,
-            lightshader:    gl.XML3DLightShaderRenderAdapter
+    var ns = XML3D.webgl,
+        registry = {
+            xml3d:          ns.XML3DRenderAdapter,
+            view:           ns.ViewRenderAdapter,
+            defs:           ns.DefsRenderAdapter,
+            mesh:           ns.MeshRenderAdapter,
+            transform:      ns.TransformRenderAdapter,
+            shader:         ns.ShaderRenderAdapter,
+            texture:        ns.TextureRenderAdapter,
+            group:          ns.GroupRenderAdapter,
+            img:            ns.ImgRenderAdapter,
+            light:          ns.LightRenderAdapter,
+            lightshader:    ns.LightShaderRenderAdapter
 
-    };
-
-    XML3DRenderAdapterFactory.prototype.isFactoryFor = function(obj) {
-        return obj === XML3D.webgl;
     };
 
-    XML3DRenderAdapterFactory.prototype.createAdapter = function(node) {
-        var adapterContructor = reg[node.localName];
-        if(adapterContructor !== undefined) {
-            return new adapterContructor(this, node);
+    /**
+     * @param node
+     * @return {XML3D.base.Adapter|null}
+     */
+    RenderAdapterFactory.prototype.createAdapter = function(node) {
+        var adapterConstructor = registry[node.localName];
+        if(adapterConstructor !== undefined) {
+            return new adapterConstructor(this, node);
         }
         return null;
     };
 
-
     // Export
-    XML3D.webgl.XML3DRenderAdapterFactory = XML3DRenderAdapterFactory;
+    XML3D.webgl.RenderAdapterFactory = RenderAdapterFactory;
 }());// renderer/shaders/base.js
 (function() {
     "use strict";

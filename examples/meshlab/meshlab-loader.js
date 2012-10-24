@@ -112,14 +112,15 @@
      * @constructor
      * @implements {XML3D.base.IFactory}
      */
-    var MeshLabJSONFactory = {
-        isFactoryFor : function(obj) {
-            return typeof obj == "string" ? (obj == XML3D.data.toString()) : (obj == XML3D.data);
-        },
-        createAdapter : function(data) {
-            return new MeshLabJSONDataAdapter(data);
-        }
+    var MeshLabJSONFactory = function(){
+        XML3D.base.AdapterFactory.call(this, XML3D.data, "application/json");
     };
+    XML3D.createClass(MeshLabJSONFactory, XML3D.base.AdapterFactory);
 
-    XML3D.base.registerFactory("application/json", MeshLabJSONFactory);
+    MeshLabJSONFactory.prototype.createAdapter = function(data) {
+        return new MeshLabJSONDataAdapter(data);
+    }
+
+    var meshlabFactoryInstance = new MeshLabJSONFactory();
+
 }());
