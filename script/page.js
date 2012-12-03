@@ -3,7 +3,8 @@ var CATEGORY_LIST = {
     unknown : { name : "???" },
     basic: { name: "Basics" },
     external : { name: "External References" },
-    shader : { name: "Shaders" }
+    shader : { name: "Shaders" },
+    xflow  : { name: "Xflow" }
 
 }
 
@@ -18,7 +19,10 @@ var EXAMPLE_LIST = [
     {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.xhtml",
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
-        info: "Demonstrates the usage of custom shaders to implement an eyelight shader."}
+        info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
+    
+    {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
+        info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."}
 ]
 
 var CURRENT = null;
