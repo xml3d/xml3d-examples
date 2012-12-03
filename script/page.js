@@ -11,6 +11,8 @@ var CATEGORY_LIST = {
 var EXAMPLE_LIST = [
     {cat: "basic", name: "Directional Light", href: "examples/directionalLight/index.xhtml",
         info: "Demonstrates the directional light shader."},
+    {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.xhtml",
+        info: "Demonstrates the spot light shader."},
     {cat: "external", name: "Suzanne", href: "examples/suzanne/suzanne.xhtml",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
     {cat: "external", name: "MeshLab", href: "examples/meshlab/meshlab.xhtml",
