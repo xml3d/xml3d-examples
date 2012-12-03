@@ -9,14 +9,14 @@
     };
     var BUFFER_TYPE_TABLE = {};
     BUFFER_TYPE_TABLE['float32'] = {
-        1 : Xflow.DataEntry.TYPE.FLOAT,
-        2 : Xflow.DataEntry.TYPE.FLOAT2,
-        3 : Xflow.DataEntry.TYPE.FLOAT3,
-        4 : Xflow.DataEntry.TYPE.FLOAT4
+        1 : Xflow.DATA_TYPE.FLOAT,
+        2 : Xflow.DATA_TYPE.FLOAT2,
+        3 : Xflow.DATA_TYPE.FLOAT3,
+        4 : Xflow.DATA_TYPE.FLOAT4
     };
     BUFFER_TYPE_TABLE['uint32'] = {
-        1 : Xflow.DataEntry.TYPE.INT,
-        4 : Xflow.DataEntry.TYPE.INT4
+        1 : Xflow.DATA_TYPE.INT,
+        4 : Xflow.DATA_TYPE.INT4
     };
 
     function createXflowBuffer(data) {
