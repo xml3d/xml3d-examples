@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (03.12.2012 16:58:00 MEZ)
+@version: DEVELOPMENT SNAPSHOT (04.12.2012 14:04:09 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (03.12.2012 16:58:00 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (04.12.2012 14:04:09 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -169,6 +169,18 @@ XML3D.createClass = function(ctor, parent, methods) {
                 }
             }
         }
+
+        var ready = (function(eventType) {
+            var evt = null;
+            if (document.createEvent) {
+                evt = document.createEvent("Events");
+                evt.initEvent(eventType, true, true);
+                document.dispatchEvent(evt);
+            } else if (document.createEventObject) {
+                evt = document.createEventObject();
+                document.fireEvent('on' + eventType, evt);
+            }
+        })('load');
     };
     var onunload = function() {
         if (XML3D.document)
@@ -4638,39 +4650,17 @@ XML3D.base.Adapter.prototype.connectAdapterHandle = function(key, adapterHandle)
         this.connectedAdapterHandles = {};
         this._bindedAdapterHandleCallback = adapterHandleCallback.bind(this);
     }
-
-    this.disconnectAdapterHandle(key);
-
-    if(adapterHandle) {
-        this.connectedAdapterHandles[key] = adapterHandle;
-        this.connectedAdapterHandles[key].addListener(this._bindedAdapterHandleCallback);
-    }
-    else
-        delete this.connectedAdapterHandles[key];
-
-};
-
-/**
- * Disconnects the adapter handle from the given key.
- * @param {string} key - the key that was provided when this adapter handle was connected
- */
-XML3D.base.Adapter.prototype.disconnectAdapterHandle = function(key){
-    if (this.connectedAdapterHandles && this.connectedAdapterHandles[key]) {
-        this.connectedAdapterHandles[key].removeListener(this._bindedAdapterHandleCallback);
-        delete this.connectedAdapterHandles[key];
-    }
-};
-
-/**
- * Disconnects all adapter handles.
- */
-XML3D.base.Adapter.prototype.clearAdapterHandles = function(){
     for(var i in this.connectedAdapterHandles){
         this.connectedAdapterHandles[i].removeListener(this._bindedAdapterHandleCallback);
     }
-
-    this.connectedAdapterHandles = {};
-};
+    if(adapterHandle)
+        this.connectedAdapterHandles[key] = adapterHandle;
+    else
+        delete this.connectedAdapterHandles[key];
+    for(var i in this.connectedAdapterHandles){
+        this.connectedAdapterHandles[i].addListener(this._bindedAdapterHandleCallback);
+    }
+}
 
 /**
 * Get the connected AdapterHandle of a certain key.
@@ -4680,7 +4670,7 @@ XML3D.base.Adapter.prototype.clearAdapterHandles = function(){
 */
 XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key){
     return this.connectedAdapterHandles && this.connectedAdapterHandles[key];
-};
+}
 
 /**
  * Get the connected adapter of a certain key.
@@ -4691,7 +4681,7 @@ XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key){
 XML3D.base.Adapter.prototype.getConnectedAdapter = function(key){
     var handle = this.getConnectedAdapterHandle(key);
     return handle && handle.getAdapter();
-};
+}
 
 
 /**
@@ -4706,7 +4696,7 @@ function adapterHandleCallback(evt){
             this.notifyChanged(subEvent);
         }
     }
-};
+}
 
 
 
@@ -4743,7 +4733,7 @@ XML3D.base.NodeAdapter.prototype.notifyChanged = function(e) {
 XML3D.base.NodeAdapter.prototype.getAdapterHandle = function(uri){
     return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
         this.factory.aspect, this.factory.canvasId);
-};
+}
 /**
  * notifies all adapter that refer to this adapter through AdapterHandles.
  * @param {number,string} hint with type of change
@@ -4752,7 +4742,7 @@ XML3D.base.NodeAdapter.prototype.notifyOppositeAdapters = function(type){
     type = type || XML3D.events.ADAPTER_HANDLE_CHANGED;
     return XML3D.base.resourceManager.notifyNodeAdapterChange(this.node,
         this.factory.aspect, this.factory.canvasId, type);
-};
+}
 
 
 /**
@@ -8005,7 +7995,7 @@ function mappingNotifyOwner(mapping){
             var entry = this.map[name];
             for(var key in entry.channels){
                 var channel = entry.channels[key].channel;
-                if(channel.map == this)
+                if(channel && channel.map == this)
                     channel.clear();
             }
         }
@@ -9355,24 +9345,21 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
         result[2] = value[2] + weight[0] * valueAdd[2];
     }
 });Xflow.registerOperator("sub", {
-    outputs: [{name: 'result', tupleSize: '3'}],
-    params:  ['value1','value2'],
-    evaluate: function(value1, value2) {
-        if(!(value1 && value2))
-            throw "Xflow::sub3: Not all parameters are set";
+    outputs: [  {type: 'float3', name: 'result'}],
+    params:  [  {type: 'float3', source: 'value1'},
+                {type: 'float3', source: 'value2'}],
+    evaluate: function(result, value1, value2, info) {
+        throw "Not used!";
 
-        if(value1.length != value1.length)
-            throw "Xflow::sub3: Input arrays differ in size";
-
-        if (!this.tmp || this.tmp.length != value1.length)
-            this.tmp = new Float32Array(value1.length);
-
-        var result = this.tmp;
-        for(var i = 0; i<value1.length; i++)
+        for(var i = 0; i< info.iterateCount*3; i++)
             result[i] = value1[i] - value2[i];
 
-        this.result.result = result;
         return true;
+    },
+    evaluate_core: function(result, value1, value2){
+        result[0] = value1[0] - value2[0];
+        result[1] = value1[1] - value2[1];
+        result[2] = value1[2] - value2[2];
     }
 });Xflow.registerOperator("normalize", {
     outputs: [  {type: 'float3', name: 'result'}],
@@ -10421,6 +10408,10 @@ function updateLoadState(dataAdpater){
     
 XML3D.data.DataAdapter.prototype.updateHandle = function(attributeName) {
     var adapterHandle = this.getAdapterHandle(this.node.getAttribute(attributeName));
+    if(adapterHandle && adapterHandle.status == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+        XML3D.debug.logError("Could not find <data> element of url '" + adapterHandle.url + "' for " + attributeName);
+    }
+
     this.connectAdapterHandle(attributeName, adapterHandle);
     this.connectedAdapterChanged(attributeName, adapterHandle ? adapterHandle.getAdapter() : null);
     updateLoadState(this);
@@ -12932,7 +12923,7 @@ var Renderer = function(handler, width, height) {
             changed : true,
             point: { length: 0, adapter: [], intensity: [], position: [], attenuation: [], visibility: [] },
             directional: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [] },
-            spot: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [], position: [], falloffAngle: [], softness: [] }
+            spot: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [], position: [], beamWidth: [], cutOffAngle: [] }
 	};
 
     this.drawableObjects = new Array();
@@ -13102,7 +13093,7 @@ Renderer.prototype.recompileShader = function(shaderAdapter) {
 Renderer.prototype.changeLightData = function(lightType, field, offset, newValue) {
     var data = this.lights[lightType][field];
     if (!data) return;
-    if(field=="falloffAngle" || field=="softness") offset/=3; //some parameters are scalar
+    if(field=="beamWidth" || field=="cutOffAngle") offset/=3; //some parameters are scalar
     Array.set(data, offset, newValue);
     this.lights.changed = true;
 };
@@ -13326,8 +13317,8 @@ Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, 
         parameters["spotLightIntensity[0]"] = lights.spot.intensity;
         parameters["spotLightVisibility[0]"] = lights.spot.visibility;
         parameters["spotLightDirection[0]"] = lights.spot.direction;
-        parameters["spotLightCosFalloffAngle[0]"] = lights.spot.falloffAngle.map(Math.cos);
-        parameters["spotLightSoftness[0]"] = lights.spot.softness;
+        parameters["spotLightCosBeamWidth[0]"] = lights.spot.beamWidth.map(Math.cos);
+        parameters["spotLightCosCutOffAngle[0]"] = lights.spot.cutOffAngle.map(Math.cos);
         shader.needsLights = false;
     }
 
@@ -13758,7 +13749,7 @@ Renderer.prototype.notifyDataChanged = function() {
         this.textureAdapter.notifyChanged(evt);
     };
 
-    var staticAttributes = ["position", "direction", "intensity", "attenuation", "softness", "falloffAngle"];
+    var staticAttributes = ["position", "direction", "intensity", "attenuation", "beamWidth", "cutOffAngle"];
 
     /**
      * Adapter for <lightshader>
@@ -13780,9 +13771,9 @@ Renderer.prototype.notifyDataChanged = function() {
     /** @const */
     var LIGHT_DEFAULT_ATTENUATION = vec3.create([0,0,1]);
     /** @const */
-    var SPOTLIGHT_DEFAULT_FALLOFFANGLE = Math.PI / 4.0;
+    var SPOTLIGHT_DEFAULT_BEAMWIDTH = 1.570796;
     /** @const */
-    var SPOTLIGHT_DEFAULT_SOFTNESS = 0.0;
+    var SPOTLIGHT_DEFAULT_CUTOFFANGLE = 2.356194;
 
     /**
      *
@@ -13829,13 +13820,13 @@ Renderer.prototype.notifyDataChanged = function() {
         var dataTable = this.computeRequest.getResult().getOutputMap();
         var intensity = dataTable["intensity"] ? dataTable["intensity"].getValue() : LIGHT_DEFAULT_INTENSITY;
         var attenuation = dataTable["attenuation"] ? dataTable["attenuation"].getValue() : LIGHT_DEFAULT_ATTENUATION;
-        var falloffAngle = dataTable["falloffAngle"] ? dataTable["falloffAngle"].getValue() : [SPOTLIGHT_DEFAULT_FALLOFFANGLE];
-        var softness = dataTable["softness"] ? dataTable["softness"].getValue() : [SPOTLIGHT_DEFAULT_SOFTNESS];
+        var beamWidth = dataTable["beamWidth"] ? dataTable["beamWidth"].getValue() : [SPOTLIGHT_DEFAULT_BEAMWIDTH];
+        var cutOffAngle = dataTable["cutOffAngle"] ? dataTable["cutOffAngle"].getValue() : [SPOTLIGHT_DEFAULT_CUTOFFANGLE];
 
         Array.set(spot.intensity, offset, [intensity[0]*i, intensity[1]*i, intensity[2]*i]);
         Array.set(spot.attenuation, offset, attenuation);
-        Array.set(spot.falloffAngle, offset/3, falloffAngle);
-        Array.set(spot.softness, offset/3, softness);
+        Array.set(spot.beamWidth, offset/3, [beamWidth[0]]);
+        Array.set(spot.cutOffAngle, offset/3, [cutOffAngle[0]]);
     };
 
     /**
@@ -14364,6 +14355,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED ) && !evt.internalType ){
             if(evt.key == "shader"){
                 this.updateShader(evt.adapter);
+                if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+                    XML3D.debug.logError("Could not find <shader> element of url '" + evt.url);
+                }
             }
             return;
         }
@@ -14381,8 +14375,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 break;
 
             case "parentshader":
-                this.setShaderHandle(evt.newValue);
-                this.updateShader(evt.newValue ? evt.newValue.getAdapter() : null);
+                var adapterHandle = evt.newValue;
+                this.setShaderHandle(adapterHandle);
+                this.updateShader(adapterHandle ? adapterHandle.getAdapter() : null);
                 break;
 
             case "parentvisible":
@@ -14415,6 +14410,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     p.setShaderHandle = function(newHandle){
         this.connectAdapterHandle("shader", newHandle);
+        if(newHandle && newHandle.status == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+            XML3D.debug.logError("Could not find <shader> element of url '" + newHandle.url);
+        }
     };
     p.updateShader = function(adapter){
         var shaderName = this.factory.renderer.shaderManager.createShader(adapter,
@@ -14739,8 +14737,6 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             this.factory.renderer.sceneTreeRemoval(evt);
             return;
         } else if (evt.type == XML3D.events.THIS_REMOVED) {
-            //Clear all references to shader and transform adapters
-            this.clearAdapterHandles();
             return;
         }
         else if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED) && !evt.internalType){
@@ -15294,8 +15290,8 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "uniform vec3 spotLightIntensity[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightVisibility[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightDirection[MAX_SPOTLIGHTS];",
-        "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
-        "uniform float spotLightSoftness[MAX_SPOTLIGHTS];",
+        "uniform float spotLightCosBeamWidth[MAX_SPOTLIGHTS];",
+        "uniform float spotLightCosCutOffAngle[MAX_SPOTLIGHTS];",
         "#endif",
 
         "void main(void) {",
@@ -15349,13 +15345,13 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "    vec4 lDirection = viewMatrix * vec4(spotLightDirection[i], 0.0);",
         "    vec3 D = normalize(lDirection.xyz);",
         "    float angle = dot(L, D);",
-        "    if(angle > spotLightCosFalloffAngle[i]) {",
-        "       float fullAngle = spotLightCosFalloffAngle[i] + spotLightSoftness[i] * (1.0 - spotLightCosFalloffAngle[i]);",
-        "       float softness = 1.0;",
-        "       if (angle < fullAngle)",
-        "           softness = (angle - spotLightCosFalloffAngle[i]) /  (fullAngle -  spotLightCosFalloffAngle[i]);",
-        "       color += (atten*softness*Idiff) * spotLightVisibility[i];",
-        "    }",
+        "    if(angle <= spotLightCosCutOffAngle[i])",
+        "      spot = 0.0;",
+        "    else if (angle >= spotLightCosBeamWidth[i])",
+        "      spot = 1.0;",
+        "    else",
+        "      spot = (angle - spotLightCosCutOffAngle[i]) / (spotLightCosBeamWidth[i] - spotLightCosCutOffAngle[i]);",
+        "    color = color + (spot*atten*Idiff) * spotLightVisibility[i];",
         "  }",
         "#endif",
 
@@ -15468,8 +15464,8 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "uniform vec3 spotLightIntensity[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightVisibility[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightDirection[MAX_SPOTLIGHTS];",
-        "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
-        "uniform float spotLightSoftness[MAX_SPOTLIGHTS];",
+        "uniform float spotLightCosBeamWidth[MAX_SPOTLIGHTS];",
+        "uniform float spotLightCosCutOffAngle[MAX_SPOTLIGHTS];",
         "#endif",
 
         "void main(void) {",
@@ -15532,13 +15528,13 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "    vec4 lDirection = viewMatrix * vec4(spotLightDirection[i], 0.0);",
         "    vec3 D = normalize(lDirection.xyz);",
         "    float angle = dot(L, D);",
-        "    if(angle > spotLightCosFalloffAngle[i]) {",
-        "       float fullAngle = spotLightCosFalloffAngle[i] + spotLightSoftness[i] * (1.0 - spotLightCosFalloffAngle[i]);",
-        "       float softness = 1.0;",
-        "       if (angle < fullAngle)",
-        "           softness = (angle - spotLightCosFalloffAngle[i]) /  (fullAngle -  spotLightCosFalloffAngle[i]);",
-        "       color += atten*softness*(Idiff + Ispec) * spotLightVisibility[i];",
-        "    }",
+        "    if(angle <= spotLightCosCutOffAngle[i])",
+        "      spot = 0.0;",
+        "    else if (angle >= spotLightCosBeamWidth[i])",
+        "      spot = 1.0;",
+        "    else",
+        "      spot = (angle - spotLightCosCutOffAngle[i]) / (spotLightCosBeamWidth[i] - spotLightCosCutOffAngle[i]);",
+        "    color = color + (spot*atten*(Idiff + Ispec)) * spotLightVisibility[i];",
         "  }",
         "#endif",
 
