@@ -4,7 +4,8 @@ var CATEGORY_LIST = {
     basic: { name: "Basics" },
     external : { name: "External References" },
     shader : { name: "Shaders" },
-    xflow  : { name: "Xflow" }
+    xflow : { name: "Xflow" }
+
 
 }
 
@@ -13,18 +14,23 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the directional light shader."},
     {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.xhtml",
         info: "Demonstrates the spot light shader."},
-    {cat: "external", name: "Suzanne", href: "examples/suzanne/suzanne.xhtml",
+    {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.xhtml",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
-    {cat: "external", name: "MeshLab", href: "examples/meshlab/meshlab.xhtml",
+    {cat: "external", name: "MeshLab Format", href: "examples/meshlab/meshlab.xhtml",
         info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
+    {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.xhtml",
+        info: "Demonstrates the usage of external mesh data and shaders with XML files."},
 
     {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.xhtml",
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
-    
+
+    {cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
+        info: "Demonstrates mesh morphing with Xflow"},
     {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
         info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."}
+
 ]
 
 var CURRENT = null;
