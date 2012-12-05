@@ -82,12 +82,10 @@ a:hover
 
 
 #content
-{ text-align: left;
-  width: 900px;
-  padding: 0;
-  margin: 0 20px 0 0;
-  float: left;}
-  
+{
+    border: 0px solid black !important;
+}
+
 #container_footer
 { 
   padding: 8px;
