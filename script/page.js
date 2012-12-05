@@ -14,6 +14,9 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the directional light shader."},
     {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.xhtml",
         info: "Demonstrates the spot light shader."},
+    {cat: "basic", name: "CSS Transforms", href: "examples/cssTransform/css-transform.xhtml",
+        info: "Demonstrates the spot light shader."},
+
     {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.xhtml",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
     {cat: "external", name: "MeshLab Format", href: "examples/meshlab/meshlab.xhtml",
