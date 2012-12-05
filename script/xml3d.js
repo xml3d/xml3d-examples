@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (04.12.2012 14:04:09 MEZ)
+@version: DEVELOPMENT SNAPSHOT (04.12.2012 18:25:20 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (04.12.2012 14:04:09 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (04.12.2012 18:25:20 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -152,35 +152,18 @@ XML3D.createClass = function(ctor, parent, methods) {
         try {
             XML3D.config.configure(xml3ds);
         } catch (e) {
-            debug && XML3D.debug.logError("Error initalizing interfaces: " + e);
+            debug && XML3D.debug.logException(e);
         }
         try {
             XML3D.webgl.configure(xml3ds);
         } catch (e) {
-            debug && XML3D.debug.logError("Error initalizing webgl: " + e);
+            debug && XML3D.debug.logException(e);
         }
 
         // initialize all attached adapters
         for (i in xml3ds) {
-            var adapters = xml3ds[i]._configured.adapters;
-            for (var adapter in adapters) {
-                if (adapters[adapter].onConfigured) {
-                    adapters[adapter].onConfigured();
-                }
-            }
+            XML3D.base.sendAdapterEvent(xml3ds[i], {onConfigured : []});
         }
-
-        var ready = (function(eventType) {
-            var evt = null;
-            if (document.createEvent) {
-                evt = document.createEvent("Events");
-                evt.initEvent(eventType, true, true);
-                document.dispatchEvent(evt);
-            } else if (document.createEventObject) {
-                evt = document.createEventObject();
-                document.fireEvent('on' + eventType, evt);
-            }
-        })('load');
     };
     var onunload = function() {
         if (XML3D.document)
@@ -464,54 +447,66 @@ XML3D.debug = {
         }
         return !XML3D.debug.params.xml3d_nolog;
     },
-    doLog : function(msg, logType) {
+    doLog : function(logType, args) {
         var params = XML3D.debug.params;
         if (params.xml3d_nolog || logType < XML3D.debug.loglevel) {
             return;
         }
-
+        args = Array.prototype.slice.call(args);
         if (window.console) {
             switch (logType) {
             case XML3D.debug.INFO:
-                window.console.info(msg);
+                window.console.info.apply(window.console, args);
                 break;
             case XML3D.debug.WARNING:
-                window.console.warn(msg);
+                window.console.warning.apply(window.console, args);
                 break;
             case XML3D.debug.ERROR:
-                window.console.error(msg);
+                window.console.error.apply(window.console, args);
                 break;
             case XML3D.debug.EXCEPTION:
-                window.console.debug(msg);
+                window.console.error(XML3D.debug.printStackTrace({e: args[0], guess: true}).join('\n'));
                 break;
             case XML3D.debug.DEBUG:
-                window.console.debug(msg);
+                window.console.debug.apply(window.console, args);
                 break;
             default:
                 break;
             }
         }
     },
-    logDebug : function(msg) {
-        XML3D.debug.doLog(msg, XML3D.debug.DEBUG);
+    logDebug : function() {
+        XML3D.debug.doLog(XML3D.debug.DEBUG, arguments);
     },
-    logInfo : function(msg) {
-        XML3D.debug.doLog(msg, XML3D.debug.INFO);
+    logInfo : function() {
+        XML3D.debug.doLog(XML3D.debug.INFO, arguments);
     },
-    logWarning : function(msg) {
-        XML3D.debug.doLog(msg, XML3D.debug.WARNING);
+    logWarning : function() {
+        XML3D.debug.doLog(XML3D.debug.WARNING, arguments);
     },
-    logError : function(msg) {
-        XML3D.debug.doLog(msg, XML3D.debug.ERROR);
+    logError : function() {
+        XML3D.debug.doLog(XML3D.debug.ERROR, arguments);
     },
-    logException : function(msg) {
-        XML3D.debug.doLog(msg, XML3D.debug.EXCEPTION);
+    logException : function() {
+        XML3D.debug.doLog(XML3D.debug.EXCEPTION, arguments);
     },
     assert : function(c, msg) {
         if (!c) {
-            XML3D.debug.doLog("Assertion failed in "
-                    + XML3D.debug.assert.caller.name + ': ' + msg,
-                    XML3D.debug.WARNING);
+            XML3D.debug.doLog(XML3D.debug.WARNING, ["Assertion failed in "
+                    + XML3D.debug.assert.caller.name, msg ]);
+        }
+    },
+    trace  : function(msg, logType) {
+        logType = logType !== undefined ? logType : XML3D.debug.ERROR;
+        if(window.console.trace) {
+            if (msg) {
+                XML3D.debug.doLog(logType, [msg]);
+            }
+            window.console.trace();
+        } else {
+            var stack = XML3D.debug.printStackTrace();
+            msg && stack.splice(0,0,msg);
+            XML3D.debug.doLog(logType, stack);
         }
     }
 };
@@ -712,7 +707,7 @@ XML3D.css.getCSSMatrix = function(node){
         result = new XML3D.css.CSSMatrix(style);
     }
     catch(e){
-        XML3D.debug.logError("Error parsing transform property: " + style)
+        XML3D.debug.logException(e, "Error parsing transform property: " + style);
     }
     return result;
 
@@ -3590,7 +3585,455 @@ quat4.str = function(quat) {
     return '[' + quat[0] + ', ' + quat[1] + ', ' + quat[2] + ', ' + quat[3] + ']'; 
 };
 
-// XML3DVec3
+// Domain Public by Eric Wendelin http://eriwen.com/ (2008)
+//                  Luke Smith http://lucassmith.name/ (2008)
+//                  Loic Dachary <loic@dachary.org> (2008)
+//                  Johan Euphrosine <proppy@aminche.com> (2008)
+//                  Oyvind Sean Kinsey http://kinsey.no/blog (2010)
+//                  Victor Homyakov <victor-homyakov@users.sourceforge.net> (2010)
+
+(function() {
+    /**
+     * Main function giving a function stack trace with a forced or passed in
+     * Error
+     *
+     * @cfg {Error} e The error to create a stacktrace from (optional)
+     * @cfg {Boolean} guess If we should try to resolve the names of anonymous
+     * functions
+     * @return {Array} of Strings with functions, lines, files, and arguments
+     * where possible
+     */
+    function printStackTrace(options) {
+        options = options || {
+            guess : true
+        };
+        var ex = options.e || null, guess = !!options.guess;
+        var p = new printStackTrace.implementation(), result = p.run(ex);
+        return (guess) ? p.guessAnonymousFunctions(result) : result;
+    }
+
+    printStackTrace.implementation = function() {};
+
+    printStackTrace.implementation.prototype = {
+        /**
+         * @param {Error} ex The error to create a stacktrace from (optional)
+         * @param {String} mode Forced mode (optional, mostly for unit tests)
+         */
+        run : function(ex, mode) {
+            ex = ex || this.createException();
+            // examine exception properties w/o debugger
+            // for (var prop in ex) {alert("Ex['" + prop + "']=" + ex[prop]);}
+            mode = mode || this.mode(ex);
+            if (mode === 'other') {
+                return this.other(arguments.callee);
+            } else {
+                return this[mode](ex);
+            }
+        },
+
+        createException : function() {
+            try {
+                this.undef();
+            } catch (e) {
+                return e;
+            }
+        },
+
+        /**
+         * Mode could differ for different exception, e.g. exceptions in Chrome
+         * may or may not have arguments or stack.
+         *
+         * @return {String} mode of operation for the exception
+         */
+        mode : function(e) {
+            if (e['arguments'] && e.stack) {
+                return 'chrome';
+            } else if (e.stack && e.sourceURL) {
+                return 'safari';
+            } else if (typeof e.message === 'string' && typeof window !== 'undefined' && window.opera) {
+                // e.message.indexOf("Backtrace:") > -1 -> opera
+                // !e.stacktrace -> opera
+                if (!e.stacktrace) {
+                    return 'opera9'; // use e.message
+                }
+                // 'opera#sourceloc' in e -> opera9, opera10a
+                if (e.message.indexOf('\n') > -1 && e.message.split('\n').length > e.stacktrace.split('\n').length) {
+                    return 'opera9'; // use e.message
+                }
+                // e.stacktrace && !e.stack -> opera10a
+                if (!e.stack) {
+                    return 'opera10a'; // use e.stacktrace
+                }
+                // e.stacktrace && e.stack -> opera10b
+                if (e.stacktrace.indexOf("called from line") < 0) {
+                    return 'opera10b'; // use e.stacktrace, format differs from
+                                        // 'opera10a'
+                }
+                // e.stacktrace && e.stack -> opera11
+                return 'opera11'; // use e.stacktrace, format differs from
+                                    // 'opera10a', 'opera10b'
+            } else if (e.stack) {
+                return 'firefox';
+            }
+            return 'other';
+        },
+
+        /**
+         * Given a context, function name, and callback function, overwrite it
+         * so that it calls printStackTrace() first with a callback and then
+         * runs the rest of the body.
+         *
+         * @param {Object} context of execution (e.g. window)
+         * @param {String} functionName to instrument
+         * @param {Function} function to call with a stack trace on invocation
+         */
+        instrumentFunction : function(context, functionName, callback) {
+            context = context || window;
+            var original = context[functionName];
+            context[functionName] = function instrumented() {
+                callback.call(this, printStackTrace().slice(4));
+                return context[functionName]._instrumented.apply(this, arguments);
+            };
+            context[functionName]._instrumented = original;
+        },
+
+        /**
+         * Given a context and function name of a function that has been
+         * instrumented, revert the function to it's original (non-instrumented)
+         * state.
+         *
+         * @param {Object} context of execution (e.g. window)
+         * @param {String} functionName to de-instrument
+         */
+        deinstrumentFunction : function(context, functionName) {
+            if (context[functionName].constructor === Function && context[functionName]._instrumented
+                    && context[functionName]._instrumented.constructor === Function) {
+                context[functionName] = context[functionName]._instrumented;
+            }
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Chrome's
+         * stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        chrome : function(e) {
+            var stack = (e.stack + '\n').replace(/^\S[^\(]+?[\n$]/gm, '').replace(/^\s+(at eval )?at\s+/gm, '').replace(/^([^\(]+?)([\n$])/gm,
+                    '{anonymous}()@$1$2').replace(/^Object.<anonymous>\s*\(([^\)]+)\)/gm, '{anonymous}()@$1').split('\n');
+            stack.pop();
+            return stack;
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Safari's
+         * stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        safari : function(e) {
+            return e.stack.replace(/\[native code\]\n/m, '').replace(/^@/gm, '{anonymous}()@').split('\n');
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Firefox's
+         * stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        firefox : function(e) {
+            return e.stack.replace(/(?:\n@:0)?\s+$/m, '').replace(/^[\(@]/gm, '{anonymous}()@').split('\n');
+        },
+
+        opera11 : function(e) {
+            var ANON = '{anonymous}', lineRE = /^.*line (\d+), column (\d+)(?: in (.+))? in (\S+):$/;
+            var lines = e.stacktrace.split('\n'), result = [];
+
+            for ( var i = 0, len = lines.length; i < len; i += 2) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    var location = match[4] + ':' + match[1] + ':' + match[2];
+                    var fnName = match[3] || "global code";
+                    fnName = fnName.replace(/<anonymous function: (\S+)>/, "$1").replace(/<anonymous function>/, ANON);
+                    result.push(fnName + '@' + location + ' -- ' + lines[i + 1].replace(/^\s+/, ''));
+                }
+            }
+
+            return result;
+        },
+
+        opera10b : function(e) {
+            // "<anonymous function: run>([arguments not
+            // available])@file://localhost/G:/js/stacktrace.js:27\n" +
+            // "printStackTrace([arguments not
+            // available])@file://localhost/G:/js/stacktrace.js:18\n" +
+            // "@file://localhost/G:/js/test/functional/testcase1.html:15"
+            var lineRE = /^(.*)@(.+):(\d+)$/;
+            var lines = e.stacktrace.split('\n'), result = [];
+
+            for ( var i = 0, len = lines.length; i < len; i++) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    var fnName = match[1] ? (match[1] + '()') : "global code";
+                    result.push(fnName + '@' + match[2] + ':' + match[3]);
+                }
+            }
+
+            return result;
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Opera 10's
+         * stacktrace string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        opera10a : function(e) {
+            // " Line 27 of linked script
+            // file://localhost/G:/js/stacktrace.js\n"
+            // " Line 11 of inline#1 script in
+            // file://localhost/G:/js/test/functional/testcase1.html: In
+            // function foo\n"
+            var ANON = '{anonymous}', lineRE = /Line (\d+).*script (?:in )?(\S+)(?:: In function (\S+))?$/i;
+            var lines = e.stacktrace.split('\n'), result = [];
+
+            for ( var i = 0, len = lines.length; i < len; i += 2) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    var fnName = match[3] || ANON;
+                    result.push(fnName + '()@' + match[2] + ':' + match[1] + ' -- ' + lines[i + 1].replace(/^\s+/, ''));
+                }
+            }
+
+            return result;
+        },
+
+        // Opera 7.x-9.2x only!
+        opera9 : function(e) {
+            // " Line 43 of linked script
+            // file://localhost/G:/js/stacktrace.js\n"
+            // " Line 7 of inline#1 script in
+            // file://localhost/G:/js/test/functional/testcase1.html\n"
+            var ANON = '{anonymous}', lineRE = /Line (\d+).*script (?:in )?(\S+)/i;
+            var lines = e.message.split('\n'), result = [];
+
+            for ( var i = 2, len = lines.length; i < len; i += 2) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    result.push(ANON + '()@' + match[2] + ':' + match[1] + ' -- ' + lines[i + 1].replace(/^\s+/, ''));
+                }
+            }
+
+            return result;
+        },
+
+        // Safari 5-, IE 9-, and others
+        other : function(curr) {
+            var ANON = '{anonymous}', fnRE = /function\s*([\w\-$]+)?\s*\(/i, stack = [], fn, args, maxStackSize = 10;
+            while (curr && curr['arguments'] && stack.length < maxStackSize) {
+                fn = fnRE.test(curr.toString()) ? RegExp.$1 || ANON : ANON;
+                args = Array.prototype.slice.call(curr['arguments'] || []);
+                stack[stack.length] = fn + '(' + this.stringifyArguments(args) + ')';
+                curr = curr.caller;
+            }
+            return stack;
+        },
+
+        /**
+         * Given arguments array as a String, subsituting type names for
+         * non-string types.
+         *
+         * @param {Arguments} args
+         * @return {Array} of Strings with stringified arguments
+         */
+        stringifyArguments : function(args) {
+            var result = [];
+            var slice = Array.prototype.slice;
+            for ( var i = 0; i < args.length; ++i) {
+                var arg = args[i];
+                if (arg === undefined) {
+                    result[i] = 'undefined';
+                } else if (arg === null) {
+                    result[i] = 'null';
+                } else if (arg.constructor) {
+                    if (arg.constructor === Array) {
+                        if (arg.length < 3) {
+                            result[i] = '[' + this.stringifyArguments(arg) + ']';
+                        } else {
+                            result[i] = '[' + this.stringifyArguments(slice.call(arg, 0, 1)) + '...' + this.stringifyArguments(slice.call(arg, -1)) + ']';
+                        }
+                    } else if (arg.constructor === Object) {
+                        result[i] = '#object';
+                    } else if (arg.constructor === Function) {
+                        result[i] = '#function';
+                    } else if (arg.constructor === String) {
+                        result[i] = '"' + arg + '"';
+                    } else if (arg.constructor === Number) {
+                        result[i] = arg;
+                    }
+                }
+            }
+            return result.join(',');
+        },
+
+        sourceCache : {},
+
+        /**
+         * @return the text from a given URL
+         */
+        ajax : function(url) {
+            var req = this.createXMLHTTPObject();
+            if (req) {
+                try {
+                    req.open('GET', url, false);
+                    // req.overrideMimeType('text/plain');
+                    // req.overrideMimeType('text/javascript');
+                    req.send(null);
+                    // return req.status == 200 ? req.responseText : '';
+                    return req.responseText;
+                } catch (e) {
+                }
+            }
+            return '';
+        },
+
+        /**
+         * Try XHR methods in order and store XHR factory.
+         *
+         * @return <Function> XHR function or equivalent
+         */
+        createXMLHTTPObject : function() {
+            var xmlhttp, XMLHttpFactories = [ function() {
+                return new XMLHttpRequest();
+            }, function() {
+                return new ActiveXObject('Msxml2.XMLHTTP');
+            }, function() {
+                return new ActiveXObject('Msxml3.XMLHTTP');
+            }, function() {
+                return new ActiveXObject('Microsoft.XMLHTTP');
+            } ];
+            for ( var i = 0; i < XMLHttpFactories.length; i++) {
+                try {
+                    xmlhttp = XMLHttpFactories[i]();
+                    // Use memoization to cache the factory
+                    this.createXMLHTTPObject = XMLHttpFactories[i];
+                    return xmlhttp;
+                } catch (e) {
+                }
+            }
+        },
+
+        /**
+         * Given a URL, check if it is in the same domain (so we can get the
+         * source via Ajax).
+         *
+         * @param url <String> source url
+         * @return False if we need a cross-domain request
+         */
+        isSameDomain : function(url) {
+            return typeof location !== "undefined" && url.indexOf(location.hostname) !== -1; // location
+                                                                                                // may
+                                                                                                // not
+                                                                                                // be
+                                                                                                // defined,
+                                                                                                // e.g.
+                                                                                                // when
+                                                                                                // running
+                                                                                                // from
+                                                                                                // nodejs.
+        },
+
+        /**
+         * Get source code from given URL if in the same domain.
+         *
+         * @param url <String> JS source URL
+         * @return <Array> Array of source code lines
+         */
+        getSource : function(url) {
+            // TODO reuse source from script tags?
+            if (!(url in this.sourceCache)) {
+                this.sourceCache[url] = this.ajax(url).split('\n');
+            }
+            return this.sourceCache[url];
+        },
+
+        guessAnonymousFunctions : function(stack) {
+            for ( var i = 0; i < stack.length; ++i) {
+                var reStack = /\{anonymous\}\(.*\)@(.*)/, reRef = /^(.*?)(?::(\d+))(?::(\d+))?(?: -- .+)?$/, frame = stack[i], ref = reStack.exec(frame);
+
+                if (ref) {
+                    var m = reRef.exec(ref[1]);
+                    if (m) { // If falsey, we did not get any file/line
+                                // information
+                        var file = m[1], lineno = m[2], charno = m[3] || 0;
+                        if (file && this.isSameDomain(file) && lineno) {
+                            var functionName = this.guessAnonymousFunction(file, lineno, charno);
+                            stack[i] = frame.replace('{anonymous}', functionName);
+                        }
+                    }
+                }
+            }
+            return stack;
+        },
+
+        guessAnonymousFunction : function(url, lineNo, charNo) {
+            var ret;
+            try {
+                ret = this.findFunctionName(this.getSource(url), lineNo);
+            } catch (e) {
+                ret = 'getSource failed with url: ' + url + ', exception: ' + e.toString();
+            }
+            return ret;
+        },
+
+        findFunctionName : function(source, lineNo) {
+            // FIXME findFunctionName fails for compressed source
+            // (more than one function on the same line)
+            // TODO use captured args
+            // function {name}({args}) m[1]=name m[2]=args
+            var reFunctionDeclaration = /function\s+([^(]*?)\s*\(([^)]*)\)/;
+            // {name} = function ({args}) TODO args capture
+            // /['"]?([0-9A-Za-z_]+)['"]?\s*[:=]\s*function(?:[^(]*)/
+            var reFunctionExpression = /['"]?([0-9A-Za-z_]+)['"]?\s*[:=]\s*function\b/;
+            // {name} = eval()
+            var reFunctionEvaluation = /['"]?([0-9A-Za-z_]+)['"]?\s*[:=]\s*(?:eval|new Function)\b/;
+            // Walk backwards in the source lines until we find
+            // the line which matches one of the patterns above
+            var code = "", line, maxLines = Math.min(lineNo, 20), m, commentPos;
+            for ( var i = 0; i < maxLines; ++i) {
+                // lineNo is 1-based, source[] is 0-based
+                line = source[lineNo - i - 1];
+                commentPos = line.indexOf('//');
+                if (commentPos >= 0) {
+                    line = line.substr(0, commentPos);
+                }
+                // TODO check other types of comments? Commented code may lead to false positive
+                if (line) {
+                    code = line + code;
+                    m = reFunctionExpression.exec(code);
+                    if (m && m[1]) {
+                        return m[1];
+                    }
+                    m = reFunctionDeclaration.exec(code);
+                    if (m && m[1]) {
+                        //return m[1] + "(" + (m[2] || "") + ")";
+                        return m[1];
+                    }
+                    m = reFunctionEvaluation.exec(code);
+                    if (m && m[1]) {
+                        return m[1];
+                    }
+                }
+            }
+            return '(?)';
+        }
+    };
+    XML3D.debug.printStackTrace = printStackTrace;
+}());// XML3DVec3
 
 (function($) {
     // Is native?
@@ -4650,17 +5093,39 @@ XML3D.base.Adapter.prototype.connectAdapterHandle = function(key, adapterHandle)
         this.connectedAdapterHandles = {};
         this._bindedAdapterHandleCallback = adapterHandleCallback.bind(this);
     }
+
+    this.disconnectAdapterHandle(key);
+
+    if(adapterHandle) {
+        this.connectedAdapterHandles[key] = adapterHandle;
+        this.connectedAdapterHandles[key].addListener(this._bindedAdapterHandleCallback);
+    }
+    else
+        delete this.connectedAdapterHandles[key];
+
+};
+
+/**
+ * Disconnects the adapter handle from the given key.
+ * @param {string} key - the key that was provided when this adapter handle was connected
+ */
+XML3D.base.Adapter.prototype.disconnectAdapterHandle = function(key){
+    if (this.connectedAdapterHandles && this.connectedAdapterHandles[key]) {
+        this.connectedAdapterHandles[key].removeListener(this._bindedAdapterHandleCallback);
+        delete this.connectedAdapterHandles[key];
+    }
+};
+
+/**
+ * Disconnects all adapter handles.
+ */
+XML3D.base.Adapter.prototype.clearAdapterHandles = function(){
     for(var i in this.connectedAdapterHandles){
         this.connectedAdapterHandles[i].removeListener(this._bindedAdapterHandleCallback);
     }
-    if(adapterHandle)
-        this.connectedAdapterHandles[key] = adapterHandle;
-    else
-        delete this.connectedAdapterHandles[key];
-    for(var i in this.connectedAdapterHandles){
-        this.connectedAdapterHandles[i].addListener(this._bindedAdapterHandleCallback);
-    }
-}
+
+    this.connectedAdapterHandles = {};
+};
 
 /**
 * Get the connected AdapterHandle of a certain key.
@@ -4670,7 +5135,7 @@ XML3D.base.Adapter.prototype.connectAdapterHandle = function(key, adapterHandle)
 */
 XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key){
     return this.connectedAdapterHandles && this.connectedAdapterHandles[key];
-}
+};
 
 /**
  * Get the connected adapter of a certain key.
@@ -4681,7 +5146,7 @@ XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key){
 XML3D.base.Adapter.prototype.getConnectedAdapter = function(key){
     var handle = this.getConnectedAdapterHandle(key);
     return handle && handle.getAdapter();
-}
+};
 
 
 /**
@@ -4696,7 +5161,7 @@ function adapterHandleCallback(evt){
             this.notifyChanged(subEvent);
         }
     }
-}
+};
 
 
 
@@ -4733,7 +5198,7 @@ XML3D.base.NodeAdapter.prototype.notifyChanged = function(e) {
 XML3D.base.NodeAdapter.prototype.getAdapterHandle = function(uri){
     return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
         this.factory.aspect, this.factory.canvasId);
-}
+};
 /**
  * notifies all adapter that refer to this adapter through AdapterHandles.
  * @param {number,string} hint with type of change
@@ -4742,7 +5207,7 @@ XML3D.base.NodeAdapter.prototype.notifyOppositeAdapters = function(type){
     type = type || XML3D.events.ADAPTER_HANDLE_CHANGED;
     return XML3D.base.resourceManager.notifyNodeAdapterChange(this.node,
         this.factory.aspect, this.factory.canvasId, type);
-}
+};
 
 
 /**
@@ -4816,6 +5281,34 @@ XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
         adapter.init();
     }
     return adapter;
+};
+
+/**
+ * This function sends single or multiple adapter events by calling functions
+ * specified in events parameter for each adapter associated with the node.
+ *
+ * events parameter is used as a dictionary where each key is used as name of a
+ * adapter function to call, and corresponding value is a list of arguments
+ * (i.e. must be an array). For example sendAdapterEvent(node, {method : [1,2,3]})
+ * will call function 'method' with arguments 1,2,3 for each adapter of the node.
+ *
+ * @param {Object} node
+ * @param {Object} events
+ * @return {Boolean} false if node is not configured.
+ */
+XML3D.base.sendAdapterEvent = function(node, events) {
+    if (!node || node._configured === undefined)
+        return false;
+    var adapters = node._configured.adapters;
+    for (var adapter in adapters) {
+        for (var event in events) {
+            var eventHandler = adapters[adapter][event];
+            if (eventHandler) {
+                eventHandler.apply(adapters[adapter], events[event]);
+            }
+        }
+    }
+    return true;
 };
 
 }());
@@ -5716,7 +6209,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             try {
                 adapters[a].notifyChanged(evt);
             } catch (e) {
-                XML3D.debug.logError(e);
+                XML3D.debug.logException(e);
             }
         }
     };
@@ -6617,7 +7110,7 @@ XML3D.classInfo['float'] = {
     // TODO: Handle style for float
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.FloatArrayValueHandler},
     _term: undefined
 };
@@ -6630,7 +7123,7 @@ XML3D.classInfo['float2'] = {
     // TODO: Handle style for float2
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float2ArrayValueHandler},
     _term: undefined
 };
@@ -6643,7 +7136,7 @@ XML3D.classInfo['float3'] = {
     // TODO: Handle style for float3
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float3ArrayValueHandler},
     _term: undefined
 };
@@ -6656,7 +7149,7 @@ XML3D.classInfo['float4'] = {
     // TODO: Handle style for float4
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float4ArrayValueHandler},
     _term: undefined
 };
@@ -6669,7 +7162,7 @@ XML3D.classInfo['float4x4'] = {
     // TODO: Handle style for float4x4
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float4x4ArrayValueHandler},
     _term: undefined
 };
@@ -6682,7 +7175,7 @@ XML3D.classInfo['int'] = {
     // TODO: Handle style for int
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.IntArrayValueHandler},
     _term: undefined
 };
@@ -6695,7 +7188,7 @@ XML3D.classInfo['int4'] = {
     // TODO: Handle style for int4
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.IntArrayValueHandler},
     _term: undefined
 };
@@ -6708,7 +7201,7 @@ XML3D.classInfo['bool'] = {
     // TODO: Handle style for bool
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.BoolArrayValueHandler},
     _term: undefined
 };
@@ -6721,7 +7214,7 @@ XML3D.classInfo['texture'] = {
     // TODO: Handle style for texture
     name : {a: XML3D.StringAttributeHandler},
     param : {a: XML3D.BoolAttributeHandler, params: false},
-    seqnr : {a: XML3D.FloatAttributeHandler, params: 0.0},
+    key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     type : {a: XML3D.EnumAttributeHandler, params: {e: XML3D.TextureTypes, d: 0}},
     filterMin : {a: XML3D.EnumAttributeHandler, params: {e: XML3D.FilterTypes, d: 2}},
     filterMag : {a: XML3D.EnumAttributeHandler, params: {e: XML3D.FilterTypes, d: 2}},
@@ -6970,7 +7463,7 @@ var DataEntry = Xflow.DataEntry;
 Object.defineProperty(DataEntry.prototype, "type", {
     /** @param {Xflow.DATA_TYPE} v */
     set: function(v){
-        throw "type is read-only";
+        throw new Error("type is read-only");
     },
     /** @return {Xflow.DATA_TYPE} */
     get: function(){ return this._type; }
@@ -7198,7 +7691,7 @@ var GraphNode = Xflow.GraphNode;
 Xflow.InputNode = function(graph){
     Xflow.GraphNode.call(this, graph);
     this._name = "";
-    this._seqnr = 0;
+    this._key = 0;
     this._data = null;
     this._param = false;
 };
@@ -7220,14 +7713,14 @@ Object.defineProperty(InputNode.prototype, "name", {
     /** @return {string} */
     get: function(){ return this._name; }
 });
-Object.defineProperty(InputNode.prototype, "seqnr", {
+Object.defineProperty(InputNode.prototype, "key", {
     /** @param {number} v */
     set: function(v){
-        this._seqnr = v;
+        this._key = v;
         notifyParentsOnChanged(this, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
     },
     /** @return {number} */
-    get: function(){ return this._seqnr; }
+    get: function(){ return this._key; }
 });
 Object.defineProperty(InputNode.prototype, "param", {
     /** @param {boolean} v */
@@ -7360,7 +7853,7 @@ Object.defineProperty(DataNode.prototype, "filterType", {
 
 Object.defineProperty(DataNode.prototype, "filterMapping", {
     /** @param {Xflow.Mapping} v */
-    set: function(v){ throw "filterMapping is readonly!";
+    set: function(v){ throw new Error("filterMapping is readonly!");
     },
     /** @return {Xflow.Mapping} */
     get: function(){ return this._filterMapping; }
@@ -7377,14 +7870,14 @@ Object.defineProperty(DataNode.prototype, "computeOperator", {
 });
 Object.defineProperty(DataNode.prototype, "computeInputMapping", {
     /** @param {Xflow.Mapping} v */
-    set: function(v){ throw "computeInputMapping is readonly!";
+    set: function(v){ throw new Error("computeInputMapping is readonly!");
     },
     /** @return {Xflow.Mapping} */
     get: function(){ return this._computeInputMapping; }
 });
 Object.defineProperty(DataNode.prototype, "computeOutputMapping", {
     /** @param {Xflow.Mapping} v */
-    set: function(v){ throw "computeOutputMapping is readonly!";
+    set: function(v){ throw new Error("computeOutputMapping is readonly!");
     },
     /** @return {Xflow.Mapping} */
     get: function(){ return this._computeOutputMapping; }
@@ -7645,7 +8138,7 @@ OrderMapping.parse = function(string, dataNode){
 
 
 Object.defineProperty(OrderMapping.prototype, "length", {
-    set: function(v){ throw "length is read-only";
+    set: function(v){ throw new Error("length is read-only");
     },
     get: function(){ return this._name.length; }
 });
@@ -7750,7 +8243,7 @@ NameMapping.parse = function(string, dataNode)
 }
 
 Object.defineProperty(NameMapping.prototype, "length", {
-    set: function(v){ throw "length is read-only";
+    set: function(v){ throw new Error("length is read-only");
     },
     get: function(){ return this._srcNames.length; }
 });
@@ -8323,7 +8816,7 @@ function mappingNotifyOwner(mapping){
     }
 
     ChannelNode.prototype.notifyDataChange = function(inputNode){
-        var key = inputNode._name + ";" + inputNode._seqnr;
+        var key = inputNode._name + ";" + inputNode._key;
         if(this.inputSlots[key])
             this.inputSlots[key].setDataEntry(inputNode._data);
     }
@@ -8396,8 +8889,8 @@ function mappingNotifyOwner(mapping){
                         channelNode.inputChannels.addProtoNames(child._name, child._name);
                         Xflow.nameset.add(channelNode.protoNames, child._name);
                     }
-                    var key = child._name + ";" + child._seqnr;
-                    channelNode.inputSlots[key] = new Xflow.DataSlot(child._data, child._seqnr);
+                    var key = child._name + ";" + child._key;
+                    channelNode.inputSlots[key] = new Xflow.DataSlot(child._data, child._key);
 
                 }
             }
@@ -8521,7 +9014,7 @@ function mappingNotifyOwner(mapping){
             }
             for(var i = 0; i < owner._children.length; ++i){
                 if((child = owner._children[i]) && !child._channelNode){
-                    var key = child._name + ";" + child._seqnr;
+                    var key = child._name + ";" + child._key;
                     channelNode.inputChannels.addDataEntry(child._name, channelNode.inputSlots[key],
                         child._param, substitution);
                 }
@@ -8858,14 +9351,14 @@ Xflow.Request = Request;
 
 Object.defineProperty(Request.prototype, "dataNode", {
     set: function(v){
-       throw "dataNode is readonly"
+       throw new Error("dataNode is readonly");
     },
     get: function(){ return this._dataNode; }
 });
 
 Object.defineProperty(Request.prototype, "filter", {
     set: function(v){
-        throw "filter is read-only"
+        throw new Error("filter is read-only");
     },
     get: function(){ return this._filter; }
 });
@@ -8938,7 +9431,7 @@ var Result = Xflow.Result;
 
 Object.defineProperty(Result.prototype, "outputNames", {
     set: function(v){
-       throw "outputNames is readonly";
+       throw new Error("outputNames is readonly");
     },
     get: function(){ return this._outputNames; }
 });
@@ -10473,7 +10966,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         this.xflowInputNode = XML3D.data.xflowGraph.createInputNode();
         this.xflowInputNode.name = this.node.name;
         this.xflowInputNode.data = buffer;
-        this.xflowInputNode.seqnr = this.node.seqnr;
+        this.xflowInputNode.key = this.node.key;
         this.xflowInputNode.param = this.node.param;
     }
 
@@ -10494,8 +10987,8 @@ XML3D.data.DataAdapter.prototype.toString = function() {
             else if(attr == "name"){
                 this.xflowInputNode.name = this.node.name;
             }
-            else if(attr == "seqnr"){
-                this.xflowInputNode.seqnr = this.node.seqnr;
+            else if(attr == "key"){
+                this.xflowInputNode.key = this.node.key;
             }
             else if(attr == "param"){
                 this.xflowInputNode.param = this.node.param;
@@ -10817,37 +11310,41 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         "bool" : Uint8Array
     };
 
-    function createXflowBuffer(data){
+    function createXflowInputs(dataNode, name, jsonData){
         var v = null;
-        var first = data.seq[0];
-        var value = first.value;
-        if(TYPED_ARRAY_MAP[data.type]){
-            var v = new (TYPED_ARRAY_MAP[data.type])(value);
-            var type = XML3D.data.BUFFER_TYPE_TABLE[data.type];
+
+        if(!TYPED_ARRAY_MAP[jsonData.type])
+            return;
+
+        for(var i = 0; i < jsonData.seq.length; ++i){
+            var entry = jsonData.seq[i];
+            var value = entry.value;
+            var key = entry.key;
+
+            var v = new (TYPED_ARRAY_MAP[jsonData.type])(value);
+            var type = XML3D.data.BUFFER_TYPE_TABLE[jsonData.type];
             var buffer = new Xflow.BufferEntry(type, v);
-            return buffer;
+
+            var inputNode = XML3D.data.xflowGraph.createInputNode();
+            inputNode.data = buffer;
+            inputNode.name = name;
+            inputNode.key = key;
+            dataNode.appendChild(inputNode);
+
         }
-        return null;
     }
 
     function createXflowNode(jsonData){
         if (jsonData.format != "xml3d-json")
-            throw "Unknown JSON format: " + jsonData.format;
+            throw new Error("Unknown JSON format: " + jsonData.format);
         if (jsonData.version != "0.4.0")
-            throw "Unknown JSON version: " + jsonData.version;
+            throw new Error("Unknown JSON version: " + jsonData.version);
 
         var node = XML3D.data.xflowGraph.createDataNode();
 
         var entries = jsonData.data;
-        for(var e in entries) {
-
-            var buffer = createXflowBuffer(entries[e]);
-            if(buffer){
-                var inputNode = XML3D.data.xflowGraph.createInputNode();
-                inputNode.data = buffer;
-                inputNode.name = e;
-                node.appendChild(inputNode);
-            }
+        for(var name in entries) {
+            createXflowInputs(node, name, entries[name]);
         }
         return node;
     }
@@ -10860,7 +11357,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         try{
             this.xflowDataNode = createXflowNode(jsonData);
         } catch (e) {
-            XML3D.debug.logError("Failed to process XML3D json file: " + e);
+            XML3D.debug.logException(e, "Failed to process XML3D json file");
         }
 
     };
@@ -11205,7 +11702,6 @@ XML3D.webgl.MAXFPS = 30;
 
         } catch (e) {
             XML3D.debug.logException(e);
-            throw e;
         }
 
     };
@@ -11537,7 +12033,7 @@ XML3D.webgl.stopEvent = function(ev) {
             var msg = "GL error " + textErr + " occured.";
             if (text !== undefined)
                 msg += " " + text;
-            XML3D.debug.logError(msg);
+            XML3D.debug.trace(msg);
         }
     };
 
@@ -12923,7 +13419,7 @@ var Renderer = function(handler, width, height) {
             changed : true,
             point: { length: 0, adapter: [], intensity: [], position: [], attenuation: [], visibility: [] },
             directional: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [] },
-            spot: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [], position: [], beamWidth: [], cutOffAngle: [] }
+            spot: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [], position: [], falloffAngle: [], softness: [] }
 	};
 
     this.drawableObjects = new Array();
@@ -13093,7 +13589,7 @@ Renderer.prototype.recompileShader = function(shaderAdapter) {
 Renderer.prototype.changeLightData = function(lightType, field, offset, newValue) {
     var data = this.lights[lightType][field];
     if (!data) return;
-    if(field=="beamWidth" || field=="cutOffAngle") offset/=3; //some parameters are scalar
+    if(field=="falloffAngle" || field=="softness") offset/=3; //some parameters are scalar
     Array.set(data, offset, newValue);
     this.lights.changed = true;
 };
@@ -13317,8 +13813,8 @@ Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, 
         parameters["spotLightIntensity[0]"] = lights.spot.intensity;
         parameters["spotLightVisibility[0]"] = lights.spot.visibility;
         parameters["spotLightDirection[0]"] = lights.spot.direction;
-        parameters["spotLightCosBeamWidth[0]"] = lights.spot.beamWidth.map(Math.cos);
-        parameters["spotLightCosCutOffAngle[0]"] = lights.spot.cutOffAngle.map(Math.cos);
+        parameters["spotLightCosFalloffAngle[0]"] = lights.spot.falloffAngle.map(Math.cos);
+        parameters["spotLightSoftness[0]"] = lights.spot.softness;
         shader.needsLights = false;
     }
 
@@ -13626,7 +14122,7 @@ Renderer.prototype.readPixelDataFromBuffer = function(glX, glY, buffer){
 
         return data;
     } catch (e) {
-        XML3D.debug.logError(e);
+        XML3D.debug.logException(e);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         return null;
     }
@@ -13749,7 +14245,7 @@ Renderer.prototype.notifyDataChanged = function() {
         this.textureAdapter.notifyChanged(evt);
     };
 
-    var staticAttributes = ["position", "direction", "intensity", "attenuation", "beamWidth", "cutOffAngle"];
+    var staticAttributes = ["position", "direction", "intensity", "attenuation", "softness", "falloffAngle"];
 
     /**
      * Adapter for <lightshader>
@@ -13771,9 +14267,9 @@ Renderer.prototype.notifyDataChanged = function() {
     /** @const */
     var LIGHT_DEFAULT_ATTENUATION = vec3.create([0,0,1]);
     /** @const */
-    var SPOTLIGHT_DEFAULT_BEAMWIDTH = 1.570796;
+    var SPOTLIGHT_DEFAULT_FALLOFFANGLE = Math.PI / 4.0;
     /** @const */
-    var SPOTLIGHT_DEFAULT_CUTOFFANGLE = 2.356194;
+    var SPOTLIGHT_DEFAULT_SOFTNESS = 0.0;
 
     /**
      *
@@ -13820,13 +14316,13 @@ Renderer.prototype.notifyDataChanged = function() {
         var dataTable = this.computeRequest.getResult().getOutputMap();
         var intensity = dataTable["intensity"] ? dataTable["intensity"].getValue() : LIGHT_DEFAULT_INTENSITY;
         var attenuation = dataTable["attenuation"] ? dataTable["attenuation"].getValue() : LIGHT_DEFAULT_ATTENUATION;
-        var beamWidth = dataTable["beamWidth"] ? dataTable["beamWidth"].getValue() : [SPOTLIGHT_DEFAULT_BEAMWIDTH];
-        var cutOffAngle = dataTable["cutOffAngle"] ? dataTable["cutOffAngle"].getValue() : [SPOTLIGHT_DEFAULT_CUTOFFANGLE];
+        var falloffAngle = dataTable["falloffAngle"] ? dataTable["falloffAngle"].getValue() : [SPOTLIGHT_DEFAULT_FALLOFFANGLE];
+        var softness = dataTable["softness"] ? dataTable["softness"].getValue() : [SPOTLIGHT_DEFAULT_SOFTNESS];
 
         Array.set(spot.intensity, offset, [intensity[0]*i, intensity[1]*i, intensity[2]*i]);
         Array.set(spot.attenuation, offset, attenuation);
-        Array.set(spot.beamWidth, offset/3, [beamWidth[0]]);
-        Array.set(spot.cutOffAngle, offset/3, [cutOffAngle[0]]);
+        Array.set(spot.falloffAngle, offset/3, falloffAngle);
+        Array.set(spot.softness, offset/3, softness);
     };
 
     /**
@@ -14737,6 +15233,8 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             this.factory.renderer.sceneTreeRemoval(evt);
             return;
         } else if (evt.type == XML3D.events.THIS_REMOVED) {
+            //Clear all references to shader and transform adapters
+            this.clearAdapterHandles();
             return;
         }
         else if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED) && !evt.internalType){
@@ -15290,8 +15788,8 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "uniform vec3 spotLightIntensity[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightVisibility[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightDirection[MAX_SPOTLIGHTS];",
-        "uniform float spotLightCosBeamWidth[MAX_SPOTLIGHTS];",
-        "uniform float spotLightCosCutOffAngle[MAX_SPOTLIGHTS];",
+        "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
+        "uniform float spotLightSoftness[MAX_SPOTLIGHTS];",
         "#endif",
 
         "void main(void) {",
@@ -15345,13 +15843,13 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "    vec4 lDirection = viewMatrix * vec4(spotLightDirection[i], 0.0);",
         "    vec3 D = normalize(lDirection.xyz);",
         "    float angle = dot(L, D);",
-        "    if(angle <= spotLightCosCutOffAngle[i])",
-        "      spot = 0.0;",
-        "    else if (angle >= spotLightCosBeamWidth[i])",
-        "      spot = 1.0;",
-        "    else",
-        "      spot = (angle - spotLightCosCutOffAngle[i]) / (spotLightCosBeamWidth[i] - spotLightCosCutOffAngle[i]);",
-        "    color = color + (spot*atten*Idiff) * spotLightVisibility[i];",
+        "    if(angle > spotLightCosFalloffAngle[i]) {",
+        "       float fullAngle = spotLightCosFalloffAngle[i] + spotLightSoftness[i] * (1.0 - spotLightCosFalloffAngle[i]);",
+        "       float softness = 1.0;",
+        "       if (angle < fullAngle)",
+        "           softness = (angle - spotLightCosFalloffAngle[i]) /  (fullAngle -  spotLightCosFalloffAngle[i]);",
+        "       color += (atten*softness*Idiff) * spotLightVisibility[i];",
+        "    }",
         "  }",
         "#endif",
 
@@ -15464,8 +15962,8 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "uniform vec3 spotLightIntensity[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightVisibility[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightDirection[MAX_SPOTLIGHTS];",
-        "uniform float spotLightCosBeamWidth[MAX_SPOTLIGHTS];",
-        "uniform float spotLightCosCutOffAngle[MAX_SPOTLIGHTS];",
+        "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
+        "uniform float spotLightSoftness[MAX_SPOTLIGHTS];",
         "#endif",
 
         "void main(void) {",
@@ -15528,13 +16026,13 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "    vec4 lDirection = viewMatrix * vec4(spotLightDirection[i], 0.0);",
         "    vec3 D = normalize(lDirection.xyz);",
         "    float angle = dot(L, D);",
-        "    if(angle <= spotLightCosCutOffAngle[i])",
-        "      spot = 0.0;",
-        "    else if (angle >= spotLightCosBeamWidth[i])",
-        "      spot = 1.0;",
-        "    else",
-        "      spot = (angle - spotLightCosCutOffAngle[i]) / (spotLightCosBeamWidth[i] - spotLightCosCutOffAngle[i]);",
-        "    color = color + (spot*atten*(Idiff + Ispec)) * spotLightVisibility[i];",
+        "    if(angle > spotLightCosFalloffAngle[i]) {",
+        "       float fullAngle = spotLightCosFalloffAngle[i] + spotLightSoftness[i] * (1.0 - spotLightCosFalloffAngle[i]);",
+        "       float softness = 1.0;",
+        "       if (angle < fullAngle)",
+        "           softness = (angle - spotLightCosFalloffAngle[i]) /  (fullAngle -  spotLightCosFalloffAngle[i]);",
+        "       color += atten*softness*(Idiff + Ispec) * spotLightVisibility[i];",
+        "    }",
         "  }",
         "#endif",
 
