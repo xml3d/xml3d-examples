@@ -223,7 +223,7 @@ a:hover{
 .controls{
     width: 800px;
     border: 1px solid #ccc;
-    margin: 0 auto;
+    margin: 0 auto 8px auto;
     padding: 16px;
 
 }
