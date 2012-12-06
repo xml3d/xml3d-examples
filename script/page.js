@@ -34,8 +34,12 @@ var EXAMPLE_LIST = [
     {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
         info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},
     {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.xhtml",
-        info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"}
-
+        info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"},
+    /*
+    {cat: "xflow", name: "Xflow Skinning", href: "examples/gangnamStyle/gangnam-style.xhtml",
+        info: "Demonstrates Xflow Skinning Gangnam Style!"},*/
+    {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.xhtml",
+        info: "Demonstrates Xflow Skinning Gangnam Style!"}
 ]
 
 var CURRENT = null;

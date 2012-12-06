@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (04.12.2012 18:25:20 MEZ)
+@version: DEVELOPMENT SNAPSHOT (06.12.2012 16:09:15 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (04.12.2012 18:25:20 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (06.12.2012 16:09:15 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -7958,15 +7958,22 @@ DataNode.prototype.setFilter = function(filterString){
     filterString = filterString || "";
     var newType = Xflow.DATA_FILTER_TYPE.RENAME;
     var newMapping = null;
-    var result = filterString.trim().match(filterParser);
-    if(result){
-        var type = result[1].trim();
-        switch(type){
-            case "keep": newType = Xflow.DATA_FILTER_TYPE.KEEP; break;
-            case "remove": newType = Xflow.DATA_FILTER_TYPE.REMOVE; break;
-            case "rename": newType = Xflow.DATA_FILTER_TYPE.RENAME; break;
+    if(filterString){
+        var result = filterString.trim().match(filterParser);
+        if(result){
+            var type = result[1].trim();
+            switch(type){
+                case "keep": newType = Xflow.DATA_FILTER_TYPE.KEEP; break;
+                case "remove": newType = Xflow.DATA_FILTER_TYPE.REMOVE; break;
+                case "rename": newType = Xflow.DATA_FILTER_TYPE.RENAME; break;
+                default:
+                    XML3D.debug.logError("Unknown filter type:" + type);
+            }
+            newMapping = Xflow.Mapping.parse(result[2], this);
         }
-        newMapping = Xflow.Mapping.parse(result[2], this);
+        else{
+            XML3D.debug.logError("Could not parse filter '" + filterString + "'");
+        }
     }
     if(!newMapping){
         newMapping = new Xflow.OrderMapping(this);
@@ -8111,6 +8118,7 @@ Mapping.parse = function(string, dataNode){
     results = string.trim().match(nameMappingParser);
     if(results)
         return NameMapping.parse(results[1], dataNode);
+    XML3D.debug.logError("Cannot parse name mapping '" + string + "'");
     return null;
 }
 
@@ -8168,13 +8176,13 @@ OrderMapping.prototype.isEmpty = function(){
 
 var orderMappingParser = /^([^:,{}]+)(,[^:{},]+)*$/;
 
-OrderMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, substitution, filterType, callback){
+OrderMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, destSubstitution, srcSubstitution, filterType, callback){
     for(var i in sourceMap.map){
         var idx = this._names.indexOf(i);
         if(filterType == Xflow.DATA_FILTER_TYPE.RENAME ||
             ( filterType == Xflow.DATA_FILTER_TYPE.KEEP && idx != -1) ||
             (filterType == Xflow.DATA_FILTER_TYPE.REMOVE && idx == -1))
-            callback(destMap, i, sourceMap, i, substitution);
+            callback(destMap, i, sourceMap, i, destSubstitution, srcSubstitution);
     }
 };
 OrderMapping.prototype.getScriptInputName = function(index, destName){
@@ -8303,21 +8311,21 @@ NameMapping.prototype.filterNameset = function(nameset, filterType)
 
 }
 
-NameMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, substitution, filterType, callback)
+NameMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, destSubstitution, srcSubstitution, filterType, callback)
 {
     if(filterType == Xflow.DATA_FILTER_TYPE.REMOVE){
         for(var i in sourceMap.map)
             if(this._srcNames.indexOf(i) == -1)
-                callback(destMap, i, sourceMap, i, substitution);
+                callback(destMap, i, sourceMap, i, destSubstitution, srcSubstitution);
     }
     else{
         if(filterType == Xflow.DATA_FILTER_TYPE.RENAME){
             for(var i in sourceMap.map)
                 if(this._srcNames.indexOf(i) == -1)
-                    callback(destMap, i, sourceMap, i, substitution);
+                    callback(destMap, i, sourceMap, i, destSubstitution, srcSubstitution);
         }
         for(var i in this._destNames){
-            callback(destMap, this._destNames[i], sourceMap, this._srcNames[i], substitution);
+            callback(destMap, this._destNames[i], sourceMap, this._srcNames[i], destSubstitution, srcSubstitution);
         }
     }
 };
@@ -8926,12 +8934,12 @@ function mappingNotifyOwner(mapping){
     function setFinalOutputProtoNames(channelNode){
         var dataNode = channelNode.owner;
         dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, channelNode.protoInputChannels,
-            null, dataNode._filterType, setChannelMapProtoName);
+            null, null, dataNode._filterType, setChannelMapProtoName);
 
         if(dataNode._protoNode){
             var protoOutput = dataNode._protoNode._channelNode.finalOutputChannels;
             dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, protoOutput,
-                channelNode.protoNames, dataNode._filterType, setChannelMapProtoProtoName);
+                channelNode.protoNames, null, dataNode._filterType, setChannelMapProtoProtoName);
         }
     }
 
@@ -9057,19 +9065,19 @@ function mappingNotifyOwner(mapping){
     function setSubNodeFinalOutputChannels(subNode, channelNode, substitution){
         var dataNode = channelNode.owner;
         dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, channelNode.protoInputChannels,
-            substitution, dataNode._filterType, setChannelMapChannel);
+            substitution, substitution, dataNode._filterType, setChannelMapChannel);
 
         if(subNode.protoSubNode){
             var protoChannelNode = subNode.protoSubNode.owner;
             var protoOutput = protoChannelNode.finalOutputChannels;
             dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, protoOutput,
-                subNode.protoSubNode.substitution, dataNode._filterType, setChannelMapChannel);
+                substitution, subNode.protoSubNode.substitution, dataNode._filterType, setChannelMapChannel);
         }
     }
 
-    function setChannelMapChannel(destMap, destName, srcMap, srcName, substitution){
-        var channel = srcMap.getChannel(srcName, substitution);
-        destMap.addChannel(destName, channel, substitution);
+    function setChannelMapChannel(destMap, destName, srcMap, srcName, destSub, srcSub){
+        var channel = srcMap.getChannel(srcName, srcSub);
+        destMap.addChannel(destName, channel, destSub);
     }
 
     function markChannelsAsDone(channelNode, substitution){
@@ -10405,18 +10413,16 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
                     //This bone has a parent bone
                     if(!computed[p]){
                         //The parent bone's transformation matrix hasn't been computed yet
-                        while(parent[p] >= 0 && !computed[parent[p]]) {
-                            //The current bone has a parent and its transform hasn't been computed yet
-                            p = parent[p];
+                        while(parent[p] >= 0 && !computed[parent[p]]) p = parent[p];
 
-                            if(parent[p] >= 0)
-                                mat4.multiplyOffset(result, p*16, xform, p*16, result, parent[p]*16);
-                            else
-                                for(var j = 0; j < 16; j++) {
-                                    result[p*16+j] = xform[p*16+j];
-                                }
-                            computed[p] = true;
-                        }
+                        if(parent[p] >= 0)
+                            mat4.multiplyOffset(result, p*16, xform, p*16, result, parent[p]*16);
+                        else
+                            for(var j = 0; j < 16; j++) {
+                                result[p*16+j] = xform[p*16+j];
+                            }
+                        computed[p] = true;
+                        continue;
                     }
                     else {
                         mat4.multiplyOffset(result, i*16, xform, i*16, result,  p*16);
