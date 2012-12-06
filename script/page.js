@@ -32,7 +32,9 @@ var EXAMPLE_LIST = [
     {cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
         info: "Demonstrates mesh morphing with Xflow"},
     {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
-        info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."}
+        info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},
+    {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.xhtml",
+        info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"}
 
 ]
 

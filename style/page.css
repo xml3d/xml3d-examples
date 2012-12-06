@@ -214,8 +214,38 @@ a:hover{
     display: block;
 }
 
-
-
 #footer {
 
+}
+
+/* SCENE CONTROL */
+
+.controls{
+    width: 800px;
+    border: 1px solid #ccc;
+    margin: 0 auto;
+    padding: 16px;
+
+}
+
+.controls label{
+    float: left;
+    width: 150px;
+}
+.controls .slider{
+    float: left;
+    width: 400px;
+}
+.controls .info{
+    float: left;
+    width: 200px;
+    padding-left: 20px;
+}
+.controls .option{
+    padding: 8px;
+}
+.controls .option:after{
+    content: " ";
+    display: block;
+    clear: both;
 }
