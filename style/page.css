@@ -45,6 +45,10 @@ a:hover{
     margin-left: 0;
 }
 
+iframe{
+    border: 0px;
+}
+
 /* HEADER */
 
 #header {
@@ -216,6 +220,11 @@ a:hover{
 
 #footer {
 
+}
+
+.socialButtons{
+    text-align: center;
+    padding: 8px;
 }
 
 /* SCENE CONTROL */

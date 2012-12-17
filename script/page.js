@@ -93,6 +93,10 @@ function initPage(){
     else
         header.find("h3").hide();
 
+    document.title = "XML3D: " + CURRENT.name;
+
+    buildSocialLinks();
+
 }
 
 function buildIndex(){
@@ -155,6 +159,20 @@ function buildTestList(){
     }
 
     return naviList;
+}
+
+function buildSocialLinks(){
+    var url = encodeURIComponent(document.URL);
+    var socialButtons = $('<div class="socialButtons" ></div>');
+    $("#content").append(socialButtons);
+
+    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url +'&amp;send=false&amp;layout=button_count&amp;width=100&amp;show_faces=false&amp;font=arial&amp;colorscheme=light&amp;action=like&amp;height=21&amp;appId=0" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100px; height:21px;" allowTransparency="true"></iframe>';
+    socialButtons.append($(facebook));
+
+    var twitter = '<a href="https://twitter.com/share" class="twitter-share-button">Tweet</a>' +
+        '<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>';
+
+    socialButtons.append($(twitter));
 }
 
 
