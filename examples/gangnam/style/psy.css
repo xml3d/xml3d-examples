@@ -17,3 +17,16 @@ body {
  color: white;
  font-size:30pt
 }
+
+.xml3d{
+    border: none !important;
+}
+
+#content{
+    border: none !important;
+}
+
+object{
+    display: block;
+    margin: 0 auto;
+}

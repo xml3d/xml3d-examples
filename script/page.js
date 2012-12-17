@@ -41,7 +41,9 @@ var EXAMPLE_LIST = [
     {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.xhtml",
         info: "Demonstrates Xflow Prototypes."},
     {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
-        info: "Demonstrates Xflow Skinning."}
+        info: "Demonstrates Xflow Skinning."},
+     {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.xhtml",
+    info: "Another Xflow Skinning Demonstration - Gangnam Style!"}
 ]
 
 var CURRENT = null;
