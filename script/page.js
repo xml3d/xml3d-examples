@@ -16,6 +16,10 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the spot light shader."},
     {cat: "basic", name: "CSS Transforms", href: "examples/cssTransform/css-transform.xhtml",
         info: "Demonstrates the spot light shader."},
+    {cat: "basic", name: "Video Texture", href: "examples/video/video.xhtml",
+        info: "Demonstrates video textures."},
+    {cat: "basic", name: "Webcam Integration", href: "examples/webcam/webcam.xhtml",
+        info: "Demonstrates webcam as a source of a video texture."},
 
     {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.xhtml",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
