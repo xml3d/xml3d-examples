@@ -227,6 +227,10 @@ iframe{
     padding: 8px;
 }
 
+div.socialButtons * {
+    padding: 2px;
+}
+
 /* SCENE CONTROL */
 
 .controls{
@@ -257,4 +261,12 @@ iframe{
     content: " ";
     display: block;
     clear: both;
+}
+
+.ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: 0;
+    z-index: 2;
 }

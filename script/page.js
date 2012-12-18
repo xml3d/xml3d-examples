@@ -93,10 +93,10 @@ function initPage(){
     else
         header.find("h3").hide();
 
-    document.title = "XML3D: " + CURRENT.name;
+    document.title = "XML3D: " + (CURRENT ? CURRENT.name : "Index");
 
     buildSocialLinks();
-
+    addGitHubRibbon();
 }
 
 function buildIndex(){
@@ -166,7 +166,7 @@ function buildSocialLinks(){
     var socialButtons = $('<div class="socialButtons" ></div>');
     $("#content").append(socialButtons);
 
-    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url +'&amp;send=false&amp;layout=button_count&amp;width=100&amp;show_faces=false&amp;font=arial&amp;colorscheme=light&amp;action=like&amp;height=21&amp;appId=0" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:100px; height:21px;" allowTransparency="true"></iframe>';
+    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url +'&amp;send=false&amp;layout=button_count&amp;width=100&amp;show_faces=false&amp;font=arial&amp;colorscheme=light&amp;action=like&amp;height=21&amp;appId=0" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:101px; height:21px;" allowTransparency="true"></iframe>';
     socialButtons.append($(facebook));
 
     var twitter = '<a href="https://twitter.com/share" class="twitter-share-button">Tweet</a>' +
@@ -175,7 +175,10 @@ function buildSocialLinks(){
     socialButtons.append($(twitter));
 }
 
-
+function addGitHubRibbon() {
+    var code = '<a href="https://github.com/xml3d/xml3d-examples/"><img class="ribbon" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/></a>'
+    $('body').append(code);
+}
 
 
 
