@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (14.12.2012 09:47:08 MEZ)
+@version: DEVELOPMENT SNAPSHOT (18.12.2012 12:25:38 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (14.12.2012 09:47:08 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (18.12.2012 12:25:38 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -5691,9 +5691,13 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         var response = c_cachedDocuments[url].response;
         var mimetype = c_cachedDocuments[url].mimetype;
 
-        if(!response) return;
-
         var fullUrl = url + (fragment ? "#" + fragment : "");
+        if (!response) {
+            // In the case the loaded document is not supported we still need to decrement counter object
+            invalidateHandles(fullUrl);
+            return;
+        }
+
         var data = null;
         if (mimetype == "application/json") {
             // TODO: Select subset of data according to fragment
@@ -6483,7 +6487,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
                     return f;
                 if (!this.hasAttribute(id) || f === undefined)
                     return null;
-                return eval("c = function onclick(event){\n  " + this.getAttribute(id) + "\n}");
+                return eval("crx = function onclick(event){\n  " + this.getAttribute(id) + "\n}");
             },
             set : function(value) {
                 f = (typeof value == 'function') ? value : undefined;
@@ -9809,7 +9813,7 @@ function parseFunction(func){
     return result;
 }
 
-var c_bracketPattern = /([^+\-*/\s\[]+)(\[)/;
+var c_bracketPattern = /([a-zA-Z_$][\w$]*)(\[)/;
 
 function replaceArrayAccess(code, args, operator, operatorData){
     var result = "";
@@ -9856,8 +9860,7 @@ function createOperatorInlineLoop(operator, operatorData){
     body = replaceArrayAccess(body, funcData.args, operator, operatorData);
     code += body + "\n  }\n}";
 
-    var inlineFunc = null;
-    eval("inlineFunc = " + code + ";");
+    var inlineFunc = eval("(" + code + ")");
     return inlineFunc;
 }
 
@@ -11329,7 +11332,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         if (node.src)
             this.createVideoFromURL(node.src);
     };
-    XML3D.createClass(VideoDataAdapter, XML3D.data.DataAdapter);
+    XML3D.createClass(VideoDataAdapter, XML3D.base.NodeAdapter);
 
     /**
      * Creates a new video object
@@ -11868,13 +11871,24 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.updatePickObjectByPoint = function(canvasX, canvasY) {
         if (this._pickingDisabled)
             return null;
+
         if(this.needPickingDraw)
             this.renderer.renderSceneToPickingBuffer();
+
+        /** Temporary workaround: this function is called when drawable objects are not yet
+         *  updated. Thus, the renderer.render() updates the objects after the picking buffer
+         *  has been updated. In that case, the picking buffer needs to be updated again.
+         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
+         *  need any updates, i.e. when needDraw is false.
+         *  A better solution would be to separate drawable objects updating from rendering
+         *  and to update the objects either during render() or renderSceneToPickingBuffer().
+         */
+        if(!this.needDraw)
+            this.needPickingDraw = false;
         
         var glY = this.canvasToGlY(canvasY);
         
         this.currentPickObj = this.renderer.getDrawableFromPickingBuffer(canvasX, glY);
-        this.needPickingDraw = false;
         
         return this.currentPickObj;
     };
@@ -15308,7 +15322,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 that.updateData.call(that, obj);
                 obj.mesh.update = emptyFunction;
             };
-            this.factory.renderer.requestRedraw("Mesh data changed.", false);
+            this.factory.renderer.requestRedraw("Mesh data changed.");
         };
     };
 
