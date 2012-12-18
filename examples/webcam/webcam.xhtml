@@ -10,7 +10,7 @@
     <title>XML3D Examples</title>
     <script type="text/javascript">
         // http://www.html5rocks.com/en/tutorials/getusermedia/intro/
-
+	<![CDATA[
         window.URL = window.URL || window.webkitURL;
         navigator.getUserMedia  =
                 navigator.getUserMedia || navigator.webkitGetUserMedia ||
@@ -23,24 +23,33 @@
                 XML3D.debug.logError("No webcam element");
                 return;
             }
-
             // audio: true does not work with chrome
+            if ($.browser.mozilla && ($.browser.version < 18)) {
+                $("#fail").text("Sorry: WebRTC API is not supported in Firefox < 18.");
+                return;
+            }
             if (navigator.getUserMedia) {
-                navigator.getUserMedia(
-                        {video: true, audio: true}, function(stream) {
+                navigator.getUserMedia({video: true, audio: true},
+                        function(stream) {
                             XML3D.debug.logInfo("Accessing WebCam");
                             video.src = window.URL.createObjectURL(stream);
-                        }, function (e) {
+                        },
+                        function (e) {
+                            var code = e.code || -1;
+                            if (code == 1) {
+                                $("#fail").text("You declined the access to your webcam. Reload the page if you changed your opinion.");
+                            } else {
+                                $("#fail").text("Could not access the video of your webcam.");
+                            }
                             XML3D.debug.logError("Cannot access WebCam");
-                            //video.src = 'fallbackvideo.webm';
                         });
             } else {
+                $("#fail").text("Your browser does not support the WebRTC API required to access your webcam.");
                 XML3D.debug.logError("No getUserMedia");
-                //video.src = 'fallbackvideo.webm';
             }
         }
-
-        window.onload = activateWebCam;
+		$(document).ready(activateWebCam);
+    ]]>
     </script>
   </head>
   <body>
@@ -55,8 +64,6 @@
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
               <texture name="diffuseTexture">
-                <!--<img src="Winter.jpg"/>-->
-                <!--<img src="right.png"/>-->
                 <video id="webcam"></video>
               </texture>
             </shader>
@@ -80,6 +87,11 @@
             </mesh>
           </group>
         </xml3d>
+        <div class="description">
+            A video texture that uses the webcam as input stream. To see the stream, you have to agree to access your webcam.
+            <div style="color: red;" id="fail"></div>
+        </div>
+
       </div>
     </div>
   </body>
