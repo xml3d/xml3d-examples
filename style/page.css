@@ -186,7 +186,8 @@ iframe{
     border: 1px solid #ccc;
     background: #eee;
     padding: 8px;
-    margin-bottom: 8px;
+    margin: 8px;
+    border-radius: 8px;
 }
 
 #content .xml3d{

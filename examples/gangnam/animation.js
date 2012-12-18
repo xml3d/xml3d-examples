@@ -31,7 +31,7 @@
 		var atts = { id: "ytPlayer" };
 		// All of the magic handled by SWFObject (http://code.google.com/p/swfobject/)
 		swfobject.embedSWF("http://www.youtube.com/v/" + videoID + "?version=3&enablejsapi=1", 
-                   "videoDiv", "480", "295", "9", null, null, params, atts);
+                   "videoDiv", "560", "215", "9", null, null, params, atts);
         //$("#curtain").delay(500).fadeOut(1000);
 	};
 
