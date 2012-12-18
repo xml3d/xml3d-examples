@@ -7,20 +7,36 @@
 		<link href="style/psy.css" media="all" rel="stylesheet" type="text/css"/>
         <!-- Scripts -->
 		<script src="../../script/xml3d.js" type="text/javascript"/>
+        <script src="../../script/xml3d-motion.js" type="text/javascript"/>
 		<script src=" http://ajax.googleapis.com/ajax/libs/swfobject/2.1/swfobject.js" type="text/javascript"/>
 		<script src="../../script/jquery-1.8.1.min.js" type="text/javascript"/>
 		<script src="animation.js" type="text/javascript"/>
-        <script type="text/javascript" src="../../script/page.js"></script>        
-
+        <script src="../../script/page.js" type="text/javascript" />
+        <script type="text/javascript">
+            window.addEventListener('load', function() {
+                var controller = new XMOT.ExamineController(document.getElementById("camera1"));
+                var xml3d = document.getElementById("canvas");
+                xml3d.addEventListener("mousedown", function(e) {
+                    controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+                }, false);
+                window.addEventListener("mouseup", function() {
+                    controller.stop();
+                }, false);
+                window.addEventListener("mousemove", function(e) {
+                    controller.doAction({x: e.clientX, y: e.clientY});
+                }, false);
+            }, false);
+        </script>
     </head>
     <body>
     <div id="overall">
     <div id="content">
         <div id="myDiv">
-            <xml3d activeView="#defaultView" class="xml3d"
+            <xml3d id="canvas" activeView="#defaultView" class="xml3d"
                 style="width:800px;height:600px;" xmlns="http://www.xml3d.org/2009/xml3d">
                 <defs>
                     <transform id="t_Armature_001" rotation="-1.0 0.0 0.0 1.5707964"/>
+                    <transform id="t_camera1" translation="0 3 -1" rotation="1 0 0 -1.57"/>
                     <shader id="blackMaterial" script="urn:xml3d:shader:matte">
                         <float3 name="diffuseColor">0.0 0.0 0.0</float3>
                     </shader>
@@ -39,7 +55,9 @@
                         </group>
                     </group>
                 </group>
-                <view id="defaultView" orientation="1 0 0 -1.5708" position="0 3 -1"/>
+                <group id="camera1" transform="#t_camera1">
+                    <view id="defaultView"/>
+                </group>
             </xml3d>
 			<span class="ben">iBen</span>
 			<div id="videoDiv"/>
