@@ -8,6 +8,29 @@
     <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
     <script type="text/javascript" src="../../script/page.js"></script>
     <title>XML3D Examples</title>
+    <script type="text/javascript">
+        var anim = {};
+
+        function initAnim() {
+            anim.xfm = document.getElementById("myxfm");
+            anim.lastTime = (new Date()).getTime();
+            anim.rotAngle = 0.0;
+            anim.intervalID = window.setInterval(function () {
+                var currentTime = (new Date).getTime();
+                var delta = currentTime - anim.lastTime;
+                anim.rotAngle += (30 * delta) / 1000.0;
+                anim.xfm.setAttribute("rotation", "1.0 0.0 1.0 "+(anim.rotAngle * Math.PI / 180));
+                anim.lastTime = currentTime;
+            }, 20);
+            var video = document.getElementById("myvideo");
+            video.addEventListener('ended', function() {
+                if (anim.intervalID === undefined)
+                    return;
+                window.clearInterval(anim.intervalID);
+                anim.xfm.setAttribute("rotation", "0 1 0 3.14159");
+            });
+        }
+    </script>
   </head>
   <body>
     <div id="overall">
@@ -15,32 +38,134 @@
         <h1>Video Texture</h1>
 
         <xml3d id="MyXml3d" style="width: 640px; height: 480px; border: 1px solid gray" activeView="#myview" class="xml3d"
-               xmlns="http://www.xml3d.org/2009/xml3d">
+               xmlns="http://www.xml3d.org/2009/xml3d" onload="initAnim()">
           <defs>
             <shader id="ex4_2_texShader" script="urn:xml3d:shader:phong">
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
               <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
-                <video src="Firefox.ogv"/>
+                <video src="Firefox.ogv" id="myvideo"/>
               </texture>
             </shader>
+            <transform id="myxfm" rotation="1 0 1 0"/>
           </defs>
-          <view id="myview" position="0 0 -8" orientation="0 1 0 3.14159" fieldOfView="0.7854" />
-          <group style="shader: url(#ex4_2_texShader)" >
+          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldOfView="0.7854" />
+          <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
             <mesh type="triangles">
-              <int name="index">0 1 2  1 2 3</int>
+              <int name="index">
+                0  1  2      0  2  3    <!-- front -->
+                4  5  6      4  6  7    <!-- back -->
+                8  9  10     8  10 11   <!-- top -->
+                12 13 14     12 14 15   <!-- bottom -->
+                16 17 18     16 18 19   <!-- right -->
+                20 21 22     20 22 23    <!-- left -->
+              </int>
               <float3 name="position">
-                -1 -0.75 -6
-                1 -0.75 -6
-                -1  0.75 -6
-                1  0.75 -6
+                <!-- Front face -->
+                -1.0 -1.0  1.0
+                 1.0 -1.0  1.0
+                 1.0  1.0  1.0
+                -1.0  1.0  1.0
+
+                <!-- Back face -->
+                -1.0 -1.0 -1.0
+                -1.0  1.0 -1.0
+                 1.0  1.0 -1.0
+                 1.0 -1.0 -1.0
+
+                <!-- Top face -->
+                -1.0  1.0 -1.0
+                -1.0  1.0  1.0
+                 1.0  1.0  1.0
+                 1.0  1.0 -1.0
+
+                <!-- Bottom face -->
+                -1.0 -1.0 -1.0
+                 1.0 -1.0 -1.0
+                 1.0 -1.0  1.0
+                -1.0 -1.0  1.0
+
+                <!-- Right face -->
+                 1.0 -1.0 -1.0
+                 1.0  1.0 -1.0
+                 1.0  1.0  1.0
+                 1.0 -1.0  1.0
+
+                <!-- Left face -->
+                -1.0 -1.0 -1.0
+                -1.0 -1.0  1.0
+                -1.0  1.0  1.0
+                -1.0  1.0 -1.0
               </float3>
               <float2 name="texcoord">
-                1.0 0.0
-                0.0 0.0
-                1.0 1.0
-                0.0 1.0
+                <!-- Front -->
+                0.0  0.0
+                1.0  0.0
+                1.0  1.0
+                0.0  1.0
+                <!-- Back -->
+                0.0  0.0
+                1.0  0.0
+                1.0  1.0
+                0.0  1.0
+                <!-- Top -->
+                0.0  0.0
+                1.0  0.0
+                1.0  1.0
+                0.0  1.0
+                <!-- Bottom -->
+                0.0  0.0
+                1.0  0.0
+                1.0  1.0
+                0.0  1.0
+                <!-- Right -->
+                0.0  0.0
+                1.0  0.0
+                1.0  1.0
+                0.0  1.0
+                <!-- Left -->
+                0.0  0.0
+                1.0  0.0
+                1.0  1.0
+                0.0  1.0
               </float2>
+              <float3 name="normal">
+                <!-- Front -->
+                 0.0  0.0  1.0
+                 0.0  0.0  1.0
+                 0.0  0.0  1.0
+                 0.0  0.0  1.0
+
+                <!-- Back -->
+                 0.0  0.0 -1.0
+                 0.0  0.0 -1.0
+                 0.0  0.0 -1.0
+                 0.0  0.0 -1.0
+
+                <!-- Top -->
+                 0.0  1.0  0.0
+                 0.0  1.0  0.0
+                 0.0  1.0  0.0
+                 0.0  1.0  0.0
+
+                <!-- Bottom -->
+                 0.0 -1.0  0.0
+                 0.0 -1.0  0.0
+                 0.0 -1.0  0.0
+                 0.0 -1.0  0.0
+
+                <!-- Right -->
+                 1.0  0.0  0.0
+                 1.0  0.0  0.0
+                 1.0  0.0  0.0
+                 1.0  0.0  0.0
+
+                <!-- Left -->
+                -1.0  0.0  0.0
+                -1.0  0.0  0.0
+                -1.0  0.0  0.0
+                -1.0  0.0  0.0
+              </float3>
             </mesh>
           </group>
         </xml3d>
