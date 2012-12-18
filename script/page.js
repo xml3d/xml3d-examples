@@ -3,22 +3,51 @@ var CATEGORY_LIST = {
     unknown : { name : "???" },
     basic: { name: "Basics" },
     external : { name: "External References" },
-    shader : { name: "Shaders" }
+    shader : { name: "Shaders" },
+    xflow : { name: "Xflow" }
+
 
 }
 
 var EXAMPLE_LIST = [
     {cat: "basic", name: "Directional Light", href: "examples/directionalLight/index.xhtml",
         info: "Demonstrates the directional light shader."},
-    {cat: "external", name: "Suzanne", href: "examples/suzanne/suzanne.xhtml",
+    {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.xhtml",
+        info: "Demonstrates the spot light shader."},
+    {cat: "basic", name: "CSS Transforms", href: "examples/cssTransform/css-transform.xhtml",
+        info: "Demonstrates the spot light shader."},
+    {cat: "basic", name: "Video Texture", href: "examples/video/video.xhtml",
+        info: "Demonstrates video textures."},
+    {cat: "basic", name: "Webcam Integration", href: "examples/webcam/webcam.xhtml",
+        info: "Demonstrates webcam as a source of a video texture."},
+
+    {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.xhtml",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
-    {cat: "external", name: "MeshLab", href: "examples/meshlab/meshlab.xhtml",
+    {cat: "external", name: "MeshLab Format", href: "examples/meshlab/meshlab.xhtml",
         info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
+    {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.xhtml",
+        info: "Demonstrates the usage of external mesh data and shaders with XML files."},
 
     {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.xhtml",
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
-        info: "Demonstrates the usage of custom shaders to implement an eyelight shader."}
+        info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
+
+    {cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
+        info: "Demonstrates mesh morphing with Xflow"},
+    {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
+        info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},
+    {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.xhtml",
+        info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"},
+    /*
+    {cat: "xflow", name: "Xflow Skinning", href: "examples/gangnamStyle/gangnam-style.xhtml",
+        info: "Demonstrates Xflow Skinning Gangnam Style!"},*/
+    {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.xhtml",
+        info: "Demonstrates Xflow Prototypes."},
+    {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
+        info: "Demonstrates Xflow Skinning."},
+     {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.xhtml",
+    info: "Another Xflow Skinning Demonstration - Gangnam Style!"}
 ]
 
 var CURRENT = null;
@@ -64,6 +93,10 @@ function initPage(){
     else
         header.find("h3").hide();
 
+    document.title = "XML3D: " + (CURRENT ? CURRENT.name : "Index");
+
+    buildSocialLinks();
+    addGitHubRibbon();
 }
 
 function buildIndex(){
@@ -128,7 +161,24 @@ function buildTestList(){
     return naviList;
 }
 
+function buildSocialLinks(){
+    var url = encodeURIComponent(document.URL);
+    var socialButtons = $('<div class="socialButtons" ></div>');
+    $("#content").append(socialButtons);
 
+    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url +'&amp;send=false&amp;layout=button_count&amp;width=100&amp;show_faces=false&amp;font=arial&amp;colorscheme=light&amp;action=like&amp;height=21&amp;appId=0" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:101px; height:21px;" allowTransparency="true"></iframe>';
+    socialButtons.append($(facebook));
+
+    var twitter = '<a href="https://twitter.com/share" class="twitter-share-button">Tweet</a>' +
+        '<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>';
+
+    socialButtons.append($(twitter));
+}
+
+function addGitHubRibbon() {
+    var code = '<a href="https://github.com/xml3d/xml3d-examples/"><img class="ribbon" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/></a>'
+    $('body').append(code);
+}
 
 
 

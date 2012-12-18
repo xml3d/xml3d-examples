@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <!-- Style -->
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+  <!-- Scripts -->
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+  <script type="text/javascript" src="../../script/jquery-ui-1.8.23.min.js"></script>
+  <script type="text/javascript" src="../../script/page.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <title>XML3D Examples</title>
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+    <h1>Xflow Sequential Morphing</h1>
+    <input type="checkbox" id="check"/><label for="check">Animate</label>
+
+    <xml3d id="MyXml3d" class="xml3d"
+           width="600px" height="400px"
+           xmlns="http://www.xml3d.org/2009/xml3d"
+        >
+      <view position="0 0 40"/>
+      <defs>
+
+        <!-- Shaders -->
+
+        <shader id="GroundShader" script="urn:xml3d:shader:phong">
+          <float name="transparency" >0.5</float>
+          <float3 name="specularColor">0.025 0.025 0.025</float3>
+          <float name="shininess">0.1</float>
+          <float name="ambientIntensity">0.3</float>
+          <float3 name="diffuseColor">1 1 1</float3>
+        </shader>
+        <shader id="ObjectShader" script="urn:xml3d:shader:phong">
+          <float3 name="specularColor">0.55 0.55 0.55</float3>
+          <float name="shininess">0.6</float>
+          <float name="ambientIntensity">0.3</float>
+          <float3 name="diffuseColor">1.5 1.0 0.2</float3>
+        </shader>
+        <lightshader id="light1" script="urn:xml3d:lightshader:point">
+          <float3 name="intensity">1.0 1.0 1.0</float3>
+          <float3 name="attenuation">1 1 0</float3>
+        </lightshader>
+
+        <!-- Xflow Computations -->
+
+        <data id="morphedMesh" compute="normal = xflow.normalize(normal)">
+          <data compute="normal = xflow.lerpSeq(normal, key)">
+            <data compute="position = xflow.lerpSeq(position, key)">
+              <data src="mesh.xml#base"/>
+              <data src="mesh.xml#animation"/>
+              <float name="key" id="morphKey">0</float>
+            </data>
+          </data>
+        </data>
+
+      </defs>
+
+      <!-- Scene Graph -->
+
+      <group shader="#ObjectShader" style="transform: translate3d(0px, -5px, 0px)" >
+        <mesh type="triangles" src="#morphedMesh"/>
+      </group>
+
+      <group shader="#GroundShader"
+             style="transform: translate3d(0px, -10px, 0px) scale3d(20px, 20px, 20px) rotate3d(1, 0, 0, -90deg)" >
+        <mesh src="mesh.xml#ground"/>
+      </group>
+
+      <group style="transform: translate3d(0px, 40px, 40px)" >
+        <light shader="#light1" intensity="30"/>
+      </group>
+
+    </xml3d>
+
+
+    <!-- Java Script to animate scene -->
+    <script type="text/javascript">
+      var shouldAnimate = false;
+
+      $(function () {
+        $("#check").button();
+        $("#check").click(function (e) {
+          shouldAnimate = e.target.checked;
+          animate();
+        });
+      });
+      var anim_i = 0;
+
+      function animate() {
+        var target = document.getElementById("morphKey");
+        ++anim_i;
+        var numFrames = 10;
+        var time = anim_i / 40;
+        target.childNodes[0].nodeValue = time;
+        if (time >= numFrames)
+          anim_i = 0;
+
+        if (shouldAnimate)
+          window.requestAnimFrame(animate);
+      }
+    </script>
+
+    <div class="description">
+      Sequential morphing of different shapes with Xflow.<br/>
+      You will find all shape data stores in sequences inside the external <i>mesh.xml</i> file.
+    </div>
+  </div>
+</div>
+</body>
+</html>

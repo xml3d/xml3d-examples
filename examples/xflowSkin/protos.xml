@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xml3d xmlns="http://www.xml3d.org/2009/xml3d" >
+
+    <proto id="skinning" >
+       <data compute="normal = xflow.skinDirection(normal, boneIdx, boneWeight, boneXform)">
+          <data compute="position = xflow.skinPosition(position, boneIdx, boneWeight, boneXform)" >
+            <float3 param="true" name="position" ></float3>
+            <float3 param="true" name="normal" ></float3>
+            <int4   param="true" name="boneIdx" ></int4>
+            <float4 param="true" name="boneWeight" ></float4>
+            <int    param="true" name="boneParent" ></int>
+                
+            <data compute="boneXform = xflow.mul(bindPose, pose)">
+              <data compute="pose = xflow.forwardKinematics(boneParent, pose)" >
+                <data compute="pose = xflow.createTransform({translation: trans, rotation: rot})">
+                  <data compute="trans = xflow.lerpSeq(translation, key)">
+                    <data compute="rot = xflow.slerpSeq(rotation, key)" >
+                        <float3 param="true" name="translation" ></float3>
+                        <float4 param="true" name="rotation" ></float4>
+                        <float  param="true" name="key" >0</float>
+                        <int    param="true" name="boneParent" ></int>
+                    </data>
+                  </data>
+                </data>
+              </data>
+              <data compute="bindPose = xflow.forwardKinematicsInv(boneParent, bindPose)" >
+                <data compute="bindPose = xflow.createTransformInv({translation: bindTranslation, rotation: bindRotation})">
+                    <float3 param="true" name="bindTranslation" ></float3>
+                    <float4 param="true" name="bindRotation" ></float4>
+                    <int    param="true" name="boneParent" ></int>
+                </data>
+              </data>
+            </data>
+          </data>
+        </data>
+    </proto>
+  
+</xml3d>

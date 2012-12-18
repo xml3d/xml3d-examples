@@ -1,0 +1,138 @@
+html
+{ height: 100%;}
+
+*
+{ margin: 0;
+  padding: 0;}
+
+body
+{ font: normal 14px sans-serif;
+  background: #A4A4A4;
+  color: #5D5D5D;}
+
+p
+{ padding: 0 0 20px 0;
+  line-height: 1.7em;}
+  
+img
+{ border: 0;}
+
+h1, h2, h3, h4, h5, h6 
+{ font: bold 175% 'liberation sans', arial, sans-serif;
+  color: #43423F;
+  margin: 0 0 15px 0;
+  padding: 15px 0 5px 0;}
+
+h2
+{ font: bold 165% 'liberation sans', arial, sans-serif;}
+
+h3
+{ font: bold 125% 'liberation sans', arial, sans-serif;
+  padding: 0 0 5px 0;
+  color: #2091FF;}
+
+h4, h5, h6
+{ margin: 0;
+  padding: 0 0 5px 0;
+  font: bold 110% 'liberation sans', arial, sans-serif;
+  color: #5ABD21;
+  line-height: 1.5em;}
+
+h5, h6
+{ font: italic 95% arial, sans-serif;
+  color: #888;
+  padding-bottom: 15px;}
+
+h6
+{ color: #362C20;}
+
+a, a:hover
+{ background: transparent;
+  outline: none;
+  text-decoration: underline;
+  color: #2091FF;}
+
+a:hover
+{ text-decoration: underline;
+  color: #5D5D5D;}
+
+
+#main, #banner, #menubar, #site_content, #container_footer, #container_header
+{ margin-left: auto; 
+  margin-right: auto;}
+
+#main
+{ width: 920px;
+  background: #f8f8f8;
+  padding-bottom: 20px;
+  }
+
+.rounded_container {
+  border: 1px solid #777;
+  border-radius: 10px;
+}
+
+#site_content
+{ width: 880px;
+  overflow: hidden;
+  margin: 0 auto;
+  padding: 0;
+  background: #f8f8f8;
+  } 
+
+
+#content
+{
+    border: 0px solid black !important;
+}
+
+#container_footer
+{ 
+  padding: 8px;
+  margin-top: 10px;
+  border-radius: 10px;
+  width: 904px;
+  background-color: #eee;
+  font-size: 75%;
+  opacity: 0.75;
+  }
+
+img.float_left {
+  float: left;
+}
+
+img.centered {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+p.biblio {
+  padding-left: 15px;
+}
+
+div#trackerdiv {
+    margin-top: 30px;
+}
+
+div#controls {
+    height: 40px;
+    margin-top: 10px;
+    margin-bottong: 5px;
+}
+
+.control_caption {
+    font-weight: bold;
+    font-size: 14px;
+    
+}
+
+div#controls div {
+    margin-left: 20px;
+    margin-top: 3px;
+}
+    
+.control_button {
+    padding: 3px;
+    
+}

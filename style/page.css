@@ -45,6 +45,10 @@ a:hover{
     margin-left: 0;
 }
 
+iframe{
+    border: 0px;
+}
+
 /* HEADER */
 
 #header {
@@ -182,7 +186,8 @@ a:hover{
     border: 1px solid #ccc;
     background: #eee;
     padding: 8px;
-    margin-bottom: 8px;
+    margin: 8px;
+    border-radius: 8px;
 }
 
 #content .xml3d{
@@ -214,8 +219,55 @@ a:hover{
     display: block;
 }
 
-
-
 #footer {
 
+}
+
+.socialButtons{
+    text-align: center;
+    padding: 8px;
+}
+
+div.socialButtons * {
+    padding: 2px;
+}
+
+/* SCENE CONTROL */
+
+.controls{
+    width: 800px;
+    border: 1px solid #ccc;
+    margin: 0 auto 8px auto;
+    padding: 16px;
+
+}
+
+.controls label{
+    float: left;
+    width: 150px;
+}
+.controls .slider{
+    float: left;
+    width: 400px;
+}
+.controls .info{
+    float: left;
+    width: 200px;
+    padding-left: 20px;
+}
+.controls .option{
+    padding: 8px;
+}
+.controls .option:after{
+    content: " ";
+    display: block;
+    clear: both;
+}
+
+.ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: 0;
+    z-index: 2;
 }
