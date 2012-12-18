@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (18.12.2012 12:25:38 MEZ)
+@version: 4.3
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (18.12.2012 12:25:38 MEZ)';
+XML3D.version = '4.3';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -11871,16 +11871,16 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.updatePickObjectByPoint = function(canvasX, canvasY) {
         if (this._pickingDisabled)
             return null;
-
+        
         if(this.needPickingDraw)
-            this.renderer.renderSceneToPickingBuffer();
-
-        /** Temporary workaround: this function is called when drawable objects are not yet
+            this.renderer.renderSceneToPickingBuffer();   
+        
+        /** Temporary workaround: this function is called when drawable objects are not yet 
          *  updated. Thus, the renderer.render() updates the objects after the picking buffer
-         *  has been updated. In that case, the picking buffer needs to be updated again.
-         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
+         *  has been updated. In that case, the picking buffer needs to be updated again. 
+         *  Thus, we only set needPickingDraw to false when we are sure that objects don't 
          *  need any updates, i.e. when needDraw is false.
-         *  A better solution would be to separate drawable objects updating from rendering
+         *  A better solution would be to separate drawable objects updating from rendering 
          *  and to update the objects either during render() or renderSceneToPickingBuffer().
          */
         if(!this.needDraw)
@@ -15510,10 +15510,10 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
 }());// Adapter for <group>
 (function() {
-    
+
 	var eventTypes = {onclick:1, ondblclick:1,
 			ondrop:1, ondragenter:1, ondragleave:1};
-	
+
     var GroupRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.processListeners();
@@ -15554,7 +15554,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
         return null;
     }
-    
+
     p.updateTransformAdapter = function() {
         var transformHref = this.node.transform;
         this.connectAdapterHandle("transform", this.getAdapterHandle(transformHref));
@@ -15593,9 +15593,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             this.propagateTransform(evt);
             return;
         }
-        
+
         var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
-        
+
         switch (target) {
         case "shader":
             evt.internalType = "parentshader";
@@ -15603,7 +15603,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             this.notifyChildren(evt);
             this.factory.renderer.requestRedraw("Group shader changed.", false);
             break;
-            
+
         case "parentshader":
             this.parentShaderHandle = null;
             if (!this.getShaderHandle()) { // This node's shader would override parent shaders
@@ -15611,7 +15611,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             }
             this.parentShaderHandle = evt.newValue;
             break;
-            
+
         case "transform":
             //This group is now linked to a different transform node. We need to notify all
             //of its children with the new transformation matrix
@@ -15620,9 +15620,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             this.propagateTransform(evt);
 
             break;
-        
+
         //TODO: this will change once the wrapped events are sent to all listeners of a node
-        case "parenttransform":  
+        case "parenttransform":
             var parentValue = downstreamValue = evt.newValue;
             this.parentTransform = evt.newValue;
 
@@ -15630,16 +15630,16 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             var matrix = this.getLocalMatrixInternal();
             if (matrix)
                 downstreamValue = mat4.multiply(parentValue, matrix, mat4.create());
-            
+
             evt.newValue = downstreamValue;
             this.notifyChildren(evt);
             // Reset event value
             evt.newValue = parentValue;
             break;
-            
+
         case "visible":
             //TODO: improve visibility handling
-            //If this node is set visible=false then it overrides the parent node 
+            //If this node is set visible=false then it overrides the parent node
             if (this.parentVisible == false)
                 break;
             else {
@@ -15648,20 +15648,20 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 this.notifyChildren(evt);
                 delete evt.internalType;
                 delete evt.newValue;
-                this.factory.renderer.requestRedraw("Group visibility changed.", true);    
+                this.factory.renderer.requestRedraw("Group visibility changed.", true);
             }
             break;
-        
+
         case "parentvisible":
             this.parentVisible = evt.newValue;
-            //If this node is set visible=false then it overrides the parent node 
+            //If this node is set visible=false then it overrides the parent node
             if (this.node.visible == false)
                 break;
             else
                 this.notifyChildren(evt);
-            
+
             break;
-            
+
         default:
             XML3D.debug.logWarning("Unhandled mutation event in group adapter for parameter '"+target+"'");
             break;
@@ -15673,7 +15673,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         var child = this.node.firstElementChild;
         while (child) {
             var adapter = this.factory.getAdapter(child);
-            adapter.notifyChanged(evt);
+            adapter && adapter.notifyChanged(evt);
             child = child.nextElementSibling;
         }
     };
@@ -15728,7 +15728,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 adapter.destroy();
             child = child.nextElementSibling;
         }
-        
+
         this.isValid = false;
     };
 
@@ -15745,7 +15745,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         }
         return bbox;
     };
-  
+
     p.getLocalMatrix = function() {
         var m = new window.XML3DMatrix();
         var matrix = this.getLocalMatrixInternal();
@@ -15753,9 +15753,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             m._data.set(matrix);
         return m;
     };
-    
+
     var tmpIdMat = mat4.create();
-    
+
     p.getWorldMatrix = function() {
         var m = new window.XML3DMatrix();
 
