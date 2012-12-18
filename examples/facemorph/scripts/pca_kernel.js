@@ -32,7 +32,7 @@ function changePCAMatrix(changeTo) {
 
 Xflow.registerOperator("genWithWeights", {
     outputs: [{type: 'float3', name: 'position'}],
-    params:  [{type: 'float3', source: 'reference'}, 
+    params:  [{type: 'float3', source: 'tangent'}, 
               {type: 'float', source: 'pc1'},
               {type: 'float', source: 'pc2'},
               {type: 'float', source: 'pc3'},
@@ -40,8 +40,8 @@ Xflow.registerOperator("genWithWeights", {
               {type: 'float', source: 'pc5'},
               {type: 'float', source: 'pc6'}],
     
-    //The parameter "position" is an array holding the vertex positions of the mean mesh computed in the PCA
-    evaluate: function(position, reference, pc1, pc2, pc3, pc4, pc5, pc6) {
+    //The parameter "position" is the output array holding the vertex positions of the mesh computed by applying the PCA
+    evaluate: function(position, tangent, pc1, pc2, pc3, pc4, pc5, pc6) {
         var weights = [pc1[0], pc2[0], pc3[0], pc4[0], pc5[0], pc6[0]];
         
         //Compute the new positions using the PCA
@@ -54,7 +54,9 @@ Xflow.registerOperator("genWithWeights", {
             }
             
             //Add the result of the above multiplication (times the mean) to the mean
-            position[i] = reference[i] + res*reference[i];
+            //'tangent' is actually the mean vertex position, it's stored in a field called 'tangent' only because of 
+            //attribute naming limitations in release 4.3. This will be fixed for 4.4
+            position[i] = tangent[i] + res*tangent[i];
         }
 
     }

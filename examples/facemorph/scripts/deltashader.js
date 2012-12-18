@@ -4,7 +4,7 @@ XML3D.shaders.register("deltashader", {
     vertex : [
         "attribute vec3 position;",
         "attribute vec3 normal;",
-        "attribute vec3 reference;",
+        "attribute vec3 tangent;",
 
         "varying vec3 fragNormal;",
         "varying vec3 fragVertexPosition;",
@@ -19,7 +19,7 @@ XML3D.shaders.register("deltashader", {
         "void main(void) {",
         "    fragNormal = normalize(normalMatrix * normal);",
         "    fragVertexPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;",
-        "    fragReference = reference;",
+        "    fragReference = tangent;",
         "    fragModelPosition = position;",
         "    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
         "}"
