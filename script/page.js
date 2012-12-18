@@ -166,13 +166,12 @@ function buildSocialLinks(){
     var socialButtons = $('<div class="socialButtons" ></div>');
     $("#content").append(socialButtons);
 
-    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url +'&amp;send=false&amp;layout=button_count&amp;width=100&amp;show_faces=false&amp;font=arial&amp;colorscheme=light&amp;action=like&amp;height=21&amp;appId=0" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:101px; height:21px;" allowTransparency="true"></iframe>';
-    socialButtons.append($(facebook));
-
-    var twitter = '<a href="https://twitter.com/share" class="twitter-share-button">Tweet</a>' +
+    var twitter = '<a href="https://twitter.com/share" class="twitter-share-button" data-hashtags="xml3d">Tweet</a>' +
         '<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>';
-
     socialButtons.append($(twitter));
+
+    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url + '&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=light&amp;action=like&amp;height=35" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:450px; height:35px;" allowTransparency="true"></iframe>';
+    socialButtons.append($(facebook));
 }
 
 function addGitHubRibbon() {

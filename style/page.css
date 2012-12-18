@@ -226,10 +226,12 @@ iframe{
 .socialButtons{
     text-align: center;
     padding: 8px;
+    height: 10px;
 }
 
 div.socialButtons * {
     padding: 2px;
+    float: left;
 }
 
 /* SCENE CONTROL */
