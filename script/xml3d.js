@@ -5281,10 +5281,10 @@ XML3D.base.IFactory.prototype.canvasId;
  * @param {string} mimetype The mimetype this factory is compatible to
  * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
  */
-XML3D.base.AdapterFactory = function(aspect, mimetype, canvasId) {
+XML3D.base.AdapterFactory = function(aspect, mimetypes, canvasId) {
     this.aspect = aspect;
     this.canvasId = canvasId || 0;
-    this.mimetype = mimetype;
+    this.mimetypes = typeof mimetypes == "string" ? [ mimetypes] : mimetypes;
 
     XML3D.base.registerFactory(this);
 };
@@ -5307,7 +5307,7 @@ XML3D.base.AdapterFactory.prototype.createAdapter = function(obj) {
  * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
  */
 XML3D.base.NodeAdapterFactory = function(aspect, canvasId) {
-    XML3D.base.AdapterFactory.call(this, aspect, "application/xml", canvasId);
+    XML3D.base.AdapterFactory.call(this, aspect, ["text/xml","application/xml"], canvasId);
 };
 XML3D.createClass(XML3D.base.NodeAdapterFactory, XML3D.base.AdapterFactory);
 
@@ -5491,12 +5491,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      */
     XML3D.base.registerFactory = function(factory) {
         var canvasId = factory.canvasId;
-        var mimetype = factory.mimetype;
         if(!c_factories[canvasId])
-            c_factories[canvasId] = {};
-        if (!c_factories[canvasId][mimetype])
-            c_factories[canvasId][mimetype] = [];
-        c_factories[canvasId][mimetype].push(factory);
+            c_factories[canvasId] = [];
+        c_factories[canvasId].push(factory);
     };
 
     /**
@@ -5725,8 +5722,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         for ( var adapterType in c_cachedAdapterHandles[url]) {
             for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
                 var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
-                var factories = c_factories[canvasId];
-                if (!handle.hasAdapter() && factories[mimetype]) {
+                if (!handle.hasAdapter()) {
                     updateHandle(handle, adapterType, canvasId, mimetype, data);
                     loadComplete(canvasId, url);
                 }
@@ -5761,9 +5757,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     function updateHandle(handle, adapterType, canvasId, mimetype, data){
         var factories = c_factories[canvasId];
 
-        for ( var i = 0; i < factories[mimetype].length; ++i) {
-            var fac = factories[mimetype][i];
-            if (fac.aspect == adapterType) {
+        for ( var i = 0; i < factories.length; ++i) {
+            var fac = factories[i];
+            if (fac.aspect == adapterType && fac.mimetypes.indexOf(mimetype) != -1) {
                 var adapter = fac.getAdapter ? fac.getAdapter(data) : fac.createAdapter(data);
                 if (adapter) {
                     handle.setAdapter(adapter, XML3D.base.AdapterHandle.STATUS.READY);
