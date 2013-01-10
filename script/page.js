@@ -47,7 +47,9 @@ var EXAMPLE_LIST = [
     {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
         info: "Demonstrates Xflow Skinning."},
      {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.xhtml",
-    info: "Another Xflow Skinning Demonstration - Gangnam Style!"}
+    info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
+     {cat: "xflow", name: "Xflow Keyframe Animation", href: "examples/xflowTransforms/xflow-transforms.xhtml",
+    info: "Demonstrates Xflow to animate transformations."}
 ]
 
 var CURRENT = null;
