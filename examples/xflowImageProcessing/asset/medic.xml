@@ -5,7 +5,7 @@
  Shaders 
 
  -->
-  <shader script="urn:xml3d:shader:phong" id="shader_medic_red">
+  <shader script="urn:xml3d:shader:phongvs" id="shader_medic_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -15,7 +15,7 @@
       <img src="medic_red.jpg" />
     </texture>
   </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_medic_backpack_red">
+  <shader script="urn:xml3d:shader:phongvs" id="shader_medic_backpack_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.2 0.2 0.2</float3>
     <float name="ambientIntensity">1</float>
@@ -25,7 +25,7 @@
       <img src="medic_backpack_red.jpg" />
     </texture>
   </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_medic_head">
+  <shader script="urn:xml3d:shader:phongvs" id="shader_medic_head">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -35,7 +35,7 @@
       <img src="medic_head.jpg" />
     </texture>
   </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+  <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_r">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -45,7 +45,7 @@
       <img src="eye-iris-blue.jpg" />
     </texture>
   </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+  <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_l">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>

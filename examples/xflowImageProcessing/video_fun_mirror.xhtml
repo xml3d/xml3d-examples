@@ -76,19 +76,19 @@
             </data>
           </data>
 
-          <shader id="texture1" script="urn:xml3d:shader:phong">
+          <shader id="texture1" script="urn:xml3d:shader:phongvs">
             <float3 name="diffuseColor">1.5 1.5 1.5</float3>
             <float name="ambientIntensity">1.0</float>
             <data src="#kernels" filter="rename({diffuseTexture:outlineImage})" />
           </shader>
 
-          <shader id="texture2" script="urn:xml3d:shader:phong">
+          <shader id="texture2" script="urn:xml3d:shader:phongvs">
             <float3 name="diffuseColor">1.5 1.5 1.5</float3>
             <float name="ambientIntensity">1.0</float>
             <data src="#kernels" filter="rename({diffuseTexture:funMirrorImage})" />
           </shader>
 
-          <shader id="texture3" script="urn:xml3d:shader:phong">
+          <shader id="texture3" script="urn:xml3d:shader:phongvs">
             <float3 name="diffuseColor">1.5 1.5 1.5</float3>
             <float name="ambientIntensity">1.0</float>
             <data src="#kernels" filter="rename({diffuseTexture:popartImage})" />

@@ -12,6 +12,7 @@
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="ARMarkerDetector.js"></script>
     <script type="text/javascript" src="ar_asset_xflow.js"></script>
+    <script type="text/javascript" src="phongvs.js"></script>
 </head>
 
 <body>
@@ -76,7 +77,7 @@
             <data src="#ardata"/>
         </data>
 
-        <shader id="Phong" script="urn:xml3d:shader:phong">
+        <shader id="Phong" script="urn:xml3d:shader:phongvs">
             <float3 name="diffuseColor">0.5 0.0 0.0</float3>
             <float name="ambientIntensity">0.6</float>
         </shader>

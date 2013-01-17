@@ -22,19 +22,19 @@
                 </texture>
             </data>
 
-            <shader id="texture1" script="urn:xml3d:shader:phong">
+            <shader id="texture1" script="urn:xml3d:shader:phongvs">
                 <float3 name="diffuseColor">1.5 1.5 1.5</float3>
                 <float name="ambientIntensity">1.0</float>
                 <data src="#images" filter="rename({diffuseTexture:image})"></data>
             </shader>
 
-            <shader id="texture2" script="urn:xml3d:shader:phong">
+            <shader id="texture2" script="urn:xml3d:shader:phongvs">
                 <float3 name="diffuseColor">1.5 1.5 1.5</float3>
                 <float name="ambientIntensity">1.0</float>
                 <data src="#images" filter="rename({diffuseTexture:grayscale})"></data>
             </shader>
 
-            <!--<shader id="texture3" script="urn:xml3d:shader:phong">-->
+            <!--<shader id="texture3" script="urn:xml3d:shader:phongvs">-->
                 <!--<float3 name="diffuseColor">1.5 1.5 1.5</float3>-->
                 <!--<float name="ambientIntensity">1.0</float>-->
                 <!--<texture name="diffuseTexture">-->
