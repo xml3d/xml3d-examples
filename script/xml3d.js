@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (17.01.2013 14:53:13 MEZ)
+@version: DEVELOPMENT SNAPSHOT (17.01.2013 16:55:30 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (17.01.2013 14:53:13 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (17.01.2013 16:55:30 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -12181,6 +12181,22 @@ Xflow.registerOperator("selectTransform", {
             result[13] = 0;
             result[14] = 0;
             result[15] = 1;
+        }
+    }
+});
+Xflow.registerOperator("selectBool", {
+    outputs: [ {type: 'bool', name : 'result', customAlloc: true} ],
+    params:  [ {type: 'int', source : 'index'},
+               {type: 'bool', source: 'value'} ],
+    alloc: function(sizes, index, value) {
+        sizes['result'] = 1;
+    },
+    evaluate: function(result, index, value) {
+        var i = index[0];
+        if (i < value.length) {
+            result[0] = value[i];
+        } else {
+            result[0] = false;
         }
     }
 });

@@ -43,6 +43,7 @@ XML3D.shaders.register("phongvs", {
         "uniform float transparency;",
         "uniform mat4 viewMatrix;",
         "uniform bool useVertexColor;",
+        "uniform bool visibility;",
 
         "#if HAS_EMISSIVETEXTURE",
         "uniform sampler2D emissiveTexture;",
@@ -84,6 +85,7 @@ XML3D.shaders.register("phongvs", {
         "#endif",
 
         "void main(void) {",
+        "  if (!visibility) discard;",
         "  float alpha =  max(0.0, 1.0 - transparency);",
         "  vec3 objDiffuse = diffuseColor;",
         "  if(useVertexColor)",
@@ -152,7 +154,6 @@ XML3D.shaders.register("phongvs", {
         "    }",
         "  }",
         "#endif",
-
         "  gl_FragColor = vec4(color, alpha);",
         "}"
     ].join("\n"),
@@ -178,9 +179,9 @@ XML3D.shaders.register("phongvs", {
         transparency    : 0.0,
         shininess       : 0.2,
         ambientIntensity: 0.0,
-        useVertexColor : false
+        useVertexColor : false,
+        visibility : true
     },
-
     samplers: {
         diffuseTexture : null,
         emissiveTexture : null,

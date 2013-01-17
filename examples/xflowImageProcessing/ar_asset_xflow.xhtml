@@ -37,7 +37,7 @@
 
         <data id="ardata">
             <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
-                <data compute="transforms, visibility = xflow.ARMarkerDetector(arvideo, markers)">
+                <data compute="transforms, visibilities = xflow.ARMarkerDetector(arvideo, markers)">
                     <int name="markers">
                         <!--0 2-->
                         <!--11 10 9 7 6 5-->
@@ -52,32 +52,42 @@
             </data>
         </data>
 
-        <data id="T1" compute="transform = xflow.selectTransform(index, transforms)">
-            <int name="index">0</int>
-            <data src="#ardata"/>
+        <data id="TV1" compute="transform = xflow.selectTransform(index, transforms)">
+            <data compute="visibilityX = xflow.selectBool(index, visibilities)">
+                <int name="index">0</int>
+                <data src="#ardata"/>
+            </data>
         </data>
 
-        <data id="T2" compute="transform = xflow.selectTransform(index, transforms)">
-            <int name="index">1</int>
-            <data src="#ardata"/>
+        <data id="TV2" compute="transform = xflow.selectTransform(index, transforms)">
+            <data compute="visibility = xflow.selectBool(index, visibilities)">
+                <int name="index">1</int>
+                <data src="#ardata"/>
+            </data>
         </data>
 
-        <data id="T3" compute="transform = xflow.selectTransform(index, transforms)">
-            <int name="index">2</int>
-            <data src="#ardata"/>
+        <data id="TV3" compute="transform = xflow.selectTransform(index, transforms)">
+            <data compute="visibility = xflow.selectBool(index, visibilities)">
+                <int name="index">2</int>
+                <data src="#ardata"/>
+            </data>
         </data>
 
-        <data id="T4" compute="transform = xflow.selectTransform(index, transforms)">
-            <int name="index">3</int>
-            <data src="#ardata"/>
+        <data id="TV4" compute="transform = xflow.selectTransform(index, transforms)">
+            <data compute="visibility = xflow.selectBool(index, visibilities)">
+                <int name="index">3</int>
+                <data src="#ardata"/>
+            </data>
         </data>
 
-        <data id="T5" compute="transform = xflow.selectTransform(index, transforms)">
-            <int name="index">4</int>
-            <data src="#ardata"/>
+        <data id="TV5" compute="transform = xflow.selectTransform(index, transforms)">
+            <data compute="visibility = xflow.selectBool(index, visibilities)">
+                <int name="index">4</int>
+                <data src="#ardata"/>
+            </data>
         </data>
 
-        <shader id="Phong" script="urn:xml3d:shader:phongvs">
+        <shader id="Phong" script="urn:xml3d:shader:phong">
             <float3 name="diffuseColor">0.5 0.0 0.0</float3>
             <float name="ambientIntensity">0.6</float>
         </shader>
@@ -103,7 +113,7 @@
     </defs>
 
     <!-- Engineer -->
-    <group id="Engineer" transform="#T1">
+    <group id="Engineer" transform="#TV1">
         <defs>
             <transform id="Engineer_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
         </defs>
@@ -132,7 +142,7 @@
     </group>
 
     <!-- Heavy -->
-    <group id="Heavy" transform="#T2">
+    <group id="Heavy" transform="#TV2">
         <defs>
             <transform id="Heavy_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
         </defs>
@@ -170,7 +180,7 @@
     </group>
 
     <!-- Sniper -->
-    <group id="Sniper" transform="#T3">
+    <group id="Sniper" transform="#TV3">
         <defs>
             <transform id="Sniper_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
         </defs>
@@ -220,7 +230,7 @@
     </group>
 
     <!-- Medic -->
-    <group id="Medic" transform="#T4">
+    <group id="Medic" transform="#TV4">
         <defs>
             <transform id="Medic_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
         </defs>
@@ -264,7 +274,7 @@
     </group>
 
     <!-- Scout -->
-    <group id="Scout" transform="#T5">
+    <group id="Scout" transform="#TV5">
         <defs>
             <transform id="Scout_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
         </defs>
@@ -300,7 +310,6 @@
             </group>
         </group>
     </group>
-
 
     </xml3d>
 </div>

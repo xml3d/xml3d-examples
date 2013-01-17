@@ -206,6 +206,8 @@ function setupApp() {
             bgContext.putImageData(data, 0, 0);
         }
 
+        return;
+
         if (values.visibility) {
             var visibility = values.visibility;
             for (var i = 0; i < visibility.length; ++i) {
