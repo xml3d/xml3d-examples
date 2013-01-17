@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: 4.3
+@version: DEVELOPMENT SNAPSHOT (17.01.2013 14:53:13 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = '4.3';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (17.01.2013 14:53:13 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -1607,7 +1607,8 @@ XML3D.css.convertCssToMat4 = function(cssMatrix, m){
     matrix[14] = cssMatrix.m43;
     matrix[15] = cssMatrix.m44;
     return matrix;
-}/*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
+}
+/*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
 
 /**
 * This file contains code that may be under the following license:
@@ -4085,7 +4086,185 @@ quat4.str = function(quat) {
         }
     };
     XML3D.debug.printStackTrace = printStackTrace;
-}());// XML3DVec3
+}());// Ported from Stefan Gustavson's java implementation
+// http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
+// Read Stefan's excellent paper for details on how this code works.
+//
+// Sean McCullough banksean@gmail.com
+
+/**
+ * You can pass in a random number generator object if you like.
+ * It is assumed to have a random() method.
+ */
+var SimplexNoise = function(r) {
+	if (r == undefined) r = Math;
+  this.grad3 = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0], 
+                                 [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1], 
+                                 [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]]; 
+  this.p = [];
+  for (var i=0; i<256; i++) {
+	  this.p[i] = Math.floor(r.random()*256);
+  }
+  // To remove the need for index wrapping, double the permutation table length 
+  this.perm = []; 
+  for(var i=0; i<512; i++) {
+		this.perm[i]=this.p[i & 255];
+	} 
+
+  // A lookup table to traverse the simplex around a given point in 4D. 
+  // Details can be found where this table is used, in the 4D noise method. 
+  this.simplex = [ 
+    [0,1,2,3],[0,1,3,2],[0,0,0,0],[0,2,3,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,2,3,0], 
+    [0,2,1,3],[0,0,0,0],[0,3,1,2],[0,3,2,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,3,2,0], 
+    [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0], 
+    [1,2,0,3],[0,0,0,0],[1,3,0,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,3,0,1],[2,3,1,0], 
+    [1,0,2,3],[1,0,3,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,0,3,1],[0,0,0,0],[2,1,3,0], 
+    [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0], 
+    [2,0,1,3],[0,0,0,0],[0,0,0,0],[0,0,0,0],[3,0,1,2],[3,0,2,1],[0,0,0,0],[3,1,2,0], 
+    [2,1,0,3],[0,0,0,0],[0,0,0,0],[0,0,0,0],[3,1,0,2],[0,0,0,0],[3,2,0,1],[3,2,1,0]]; 
+};
+
+SimplexNoise.prototype.dot = function(g, x, y) { 
+	return g[0]*x + g[1]*y;
+};
+
+SimplexNoise.prototype.noise = function(xin, yin) { 
+  var n0, n1, n2; // Noise contributions from the three corners 
+  // Skew the input space to determine which simplex cell we're in 
+  var F2 = 0.5*(Math.sqrt(3.0)-1.0); 
+  var s = (xin+yin)*F2; // Hairy factor for 2D 
+  var i = Math.floor(xin+s); 
+  var j = Math.floor(yin+s); 
+  var G2 = (3.0-Math.sqrt(3.0))/6.0; 
+  var t = (i+j)*G2; 
+  var X0 = i-t; // Unskew the cell origin back to (x,y) space 
+  var Y0 = j-t; 
+  var x0 = xin-X0; // The x,y distances from the cell origin 
+  var y0 = yin-Y0; 
+  // For the 2D case, the simplex shape is an equilateral triangle. 
+  // Determine which simplex we are in. 
+  var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords 
+  if(x0>y0) {i1=1; j1=0;} // lower triangle, XY order: (0,0)->(1,0)->(1,1) 
+  else {i1=0; j1=1;}      // upper triangle, YX order: (0,0)->(0,1)->(1,1) 
+  // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and 
+  // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where 
+  // c = (3-sqrt(3))/6 
+  var x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords 
+  var y1 = y0 - j1 + G2; 
+  var x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords 
+  var y2 = y0 - 1.0 + 2.0 * G2; 
+  // Work out the hashed gradient indices of the three simplex corners 
+  var ii = i & 255; 
+  var jj = j & 255; 
+  var gi0 = this.perm[ii+this.perm[jj]] % 12; 
+  var gi1 = this.perm[ii+i1+this.perm[jj+j1]] % 12; 
+  var gi2 = this.perm[ii+1+this.perm[jj+1]] % 12; 
+  // Calculate the contribution from the three corners 
+  var t0 = 0.5 - x0*x0-y0*y0; 
+  if(t0<0) n0 = 0.0; 
+  else { 
+    t0 *= t0; 
+    n0 = t0 * t0 * this.dot(this.grad3[gi0], x0, y0);  // (x,y) of grad3 used for 2D gradient 
+  } 
+  var t1 = 0.5 - x1*x1-y1*y1; 
+  if(t1<0) n1 = 0.0; 
+  else { 
+    t1 *= t1; 
+    n1 = t1 * t1 * this.dot(this.grad3[gi1], x1, y1); 
+  }
+  var t2 = 0.5 - x2*x2-y2*y2; 
+  if(t2<0) n2 = 0.0; 
+  else { 
+    t2 *= t2; 
+    n2 = t2 * t2 * this.dot(this.grad3[gi2], x2, y2); 
+  } 
+  // Add contributions from each corner to get the final noise value. 
+  // The result is scaled to return values in the interval [-1,1]. 
+  return 70.0 * (n0 + n1 + n2); 
+};
+
+// 3D simplex noise 
+SimplexNoise.prototype.noise3d = function(xin, yin, zin) { 
+  var n0, n1, n2, n3; // Noise contributions from the four corners 
+  // Skew the input space to determine which simplex cell we're in 
+  var F3 = 1.0/3.0; 
+  var s = (xin+yin+zin)*F3; // Very nice and simple skew factor for 3D 
+  var i = Math.floor(xin+s); 
+  var j = Math.floor(yin+s); 
+  var k = Math.floor(zin+s); 
+  var G3 = 1.0/6.0; // Very nice and simple unskew factor, too 
+  var t = (i+j+k)*G3; 
+  var X0 = i-t; // Unskew the cell origin back to (x,y,z) space 
+  var Y0 = j-t; 
+  var Z0 = k-t; 
+  var x0 = xin-X0; // The x,y,z distances from the cell origin 
+  var y0 = yin-Y0; 
+  var z0 = zin-Z0; 
+  // For the 3D case, the simplex shape is a slightly irregular tetrahedron. 
+  // Determine which simplex we are in. 
+  var i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords 
+  var i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords 
+  if(x0>=y0) { 
+    if(y0>=z0) 
+      { i1=1; j1=0; k1=0; i2=1; j2=1; k2=0; } // X Y Z order 
+      else if(x0>=z0) { i1=1; j1=0; k1=0; i2=1; j2=0; k2=1; } // X Z Y order 
+      else { i1=0; j1=0; k1=1; i2=1; j2=0; k2=1; } // Z X Y order 
+    } 
+  else { // x0<y0 
+    if(y0<z0) { i1=0; j1=0; k1=1; i2=0; j2=1; k2=1; } // Z Y X order 
+    else if(x0<z0) { i1=0; j1=1; k1=0; i2=0; j2=1; k2=1; } // Y Z X order 
+    else { i1=0; j1=1; k1=0; i2=1; j2=1; k2=0; } // Y X Z order 
+  } 
+  // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z), 
+  // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and 
+  // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where 
+  // c = 1/6.
+  var x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords 
+  var y1 = y0 - j1 + G3; 
+  var z1 = z0 - k1 + G3; 
+  var x2 = x0 - i2 + 2.0*G3; // Offsets for third corner in (x,y,z) coords 
+  var y2 = y0 - j2 + 2.0*G3; 
+  var z2 = z0 - k2 + 2.0*G3; 
+  var x3 = x0 - 1.0 + 3.0*G3; // Offsets for last corner in (x,y,z) coords 
+  var y3 = y0 - 1.0 + 3.0*G3; 
+  var z3 = z0 - 1.0 + 3.0*G3; 
+  // Work out the hashed gradient indices of the four simplex corners 
+  var ii = i & 255; 
+  var jj = j & 255; 
+  var kk = k & 255; 
+  var gi0 = this.perm[ii+this.perm[jj+this.perm[kk]]] % 12; 
+  var gi1 = this.perm[ii+i1+this.perm[jj+j1+this.perm[kk+k1]]] % 12; 
+  var gi2 = this.perm[ii+i2+this.perm[jj+j2+this.perm[kk+k2]]] % 12; 
+  var gi3 = this.perm[ii+1+this.perm[jj+1+this.perm[kk+1]]] % 12; 
+  // Calculate the contribution from the four corners 
+  var t0 = 0.6 - x0*x0 - y0*y0 - z0*z0; 
+  if(t0<0) n0 = 0.0; 
+  else { 
+    t0 *= t0; 
+    n0 = t0 * t0 * this.dot(this.grad3[gi0], x0, y0, z0); 
+  }
+  var t1 = 0.6 - x1*x1 - y1*y1 - z1*z1; 
+  if(t1<0) n1 = 0.0; 
+  else { 
+    t1 *= t1; 
+    n1 = t1 * t1 * this.dot(this.grad3[gi1], x1, y1, z1); 
+  } 
+  var t2 = 0.6 - x2*x2 - y2*y2 - z2*z2; 
+  if(t2<0) n2 = 0.0; 
+  else { 
+    t2 *= t2; 
+    n2 = t2 * t2 * this.dot(this.grad3[gi2], x2, y2, z2); 
+  } 
+  var t3 = 0.6 - x3*x3 - y3*y3 - z3*z3; 
+  if(t3<0) n3 = 0.0; 
+  else { 
+    t3 *= t3; 
+    n3 = t3 * t3 * this.dot(this.grad3[gi3], x3, y3, z3); 
+  } 
+  // Add contributions from each corner to get the final noise value. 
+  // The result is scaled to stay just inside [-1,1] 
+  return 32.0*(n0 + n1 + n2 + n3); 
+};// XML3DVec3
 
 (function($) {
     // Is native?
@@ -6956,6 +7135,14 @@ new (function() {
         return new window.XML3DMatrix();
     };
 
+    methods.videoPlay = function() {
+        XML3D.base.sendAdapterEvent(this, {play: []});
+    };
+
+    methods.videoPause = function() {
+        XML3D.base.sendAdapterEvent(this, {pause: []});
+    };
+
     methods.dataGetOutputFieldNames = function() {
         XML3D.debug.logError(this.nodeName + "::getOutputFieldNames is not implemeted yet.");
         return null;
@@ -6967,6 +7154,50 @@ new (function() {
         return null;
     };
     methods.protoGetResult = methods.dataGetResult;
+
+
+    function createValues(result, names) {
+        var values = {};
+        for (var i in names) {
+            var name = names[i];
+            var data = result.getOutputData(name) && result.getOutputData(name).getValue();
+            if (data)
+                values[name] = data;
+        }
+        return values;
+    };
+
+    /** Register data listener for data fields specified by names.
+     *
+     * @param names   single name or array of names that are monitored.
+     * @param callback function that is called when selected data are changed.
+     * @return {Boolean}
+     */
+    methods.dataAddOutputFieldListener = function(names, callback) {
+        if (!names)
+            return false;
+
+        // check if names is a single string, and convert it to array then
+        var typeOfNames = Object.prototype.toString.call(names).slice(8, -1);
+        if (typeOfNames === "String") {
+            names = [names];
+        }
+        if (names.length == 0)
+            return false;
+
+        var request = XML3D.base.callAdapterFunc(this, {
+            getComputeRequest : [names, function(request, changeType) {
+                callback(createValues(request.getResult(), names));
+            }
+            ]});
+        if (request.length == 0)
+            return false;
+        var result = request[0].getResult();
+        var values = createValues(result, names);
+        if (Object.keys(values).length)
+            callback(values);
+        return true;
+    };
 
     // Export to xml3d namespace
     XML3D.extend(XML3D.methods, methods);
@@ -7070,6 +7301,7 @@ XML3D.classInfo['data'] = {
     filter : {a: XML3D.StringAttributeHandler},
     getResult : {m: XML3D.methods.dataGetResult},
     getOutputFieldNames : {m: XML3D.methods.dataGetOutputFieldNames},
+    addOutputFieldListener : {m: XML3D.methods.dataAddOutputFieldListener},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
     _term: undefined
@@ -7369,6 +7601,9 @@ XML3D.classInfo['video'] = {
     onended : {a: XML3D.EventAttributeHandler},
     onerror : {a: XML3D.EventAttributeHandler},
     src : {a: XML3D.StringAttributeHandler},
+    play : {m: XML3D.methods.videoPlay},
+    pause : {m: XML3D.methods.videoPause},
+    autoplay : {a: XML3D.BoolAttributeHandler, params: false},
     _term: undefined
 };
 /**
@@ -7555,9 +7790,9 @@ Xflow.EXTRACT = {
  * @constructor
  */
 Xflow.SamplerConfig = function(){
-    this.filterMin = 0;
-    this.filterMag = 0;
-    this.filterMip = 0;
+    this.minFilter = 0;
+    this.magFilter = 0;
+    this.mipFilter = 0;
     this.wrapS = 0;
     this.wrapT = 0;
     this.wrapU = 0;
@@ -7566,6 +7801,33 @@ Xflow.SamplerConfig = function(){
     this.colorG = 0;
     this.colorB = 0;
     this.generateMipMap = 0;
+};
+Xflow.SamplerConfig.prototype.setDefaults = function() {
+    // FIXME Generate this from the spec ?
+    this.minFilter = WebGLRenderingContext.LINEAR;
+    this.magFilter = WebGLRenderingContext.LINEAR;
+    this.mipFilter = WebGLRenderingContext.NEAREST;
+    this.wrapS = WebGLRenderingContext.CLAMP_TO_EDGE;
+    this.wrapT = WebGLRenderingContext.CLAMP_TO_EDGE;
+    this.wrapU = WebGLRenderingContext.CLAMP_TO_EDGE;
+    this.textureType = WebGLRenderingContext.TEXTURE_2D;
+    this.colorR = 0;
+    this.colorG = 0;
+    this.colorB = 0;
+    this.generateMipMap = 0;
+};
+Xflow.SamplerConfig.prototype.set = function(other) {
+    this.minFilter = other.minFilter;
+    this.magFilter = other.magFilter;
+    this.mipFilter = other.mipFilter;
+    this.wrapS = other.wrapS;
+    this.wrapT = other.wrapT;
+    this.wrapU = other.wrapU;
+    this.textureType = other.textureType;
+    this.colorR = other.colorR;
+    this.colorG = other.colorG;
+    this.colorB = other.colorB;
+    this.generateMipMap = other.generateMipMap;
 };
 var SamplerConfig = Xflow.SamplerConfig;
 
@@ -7673,6 +7935,44 @@ BufferEntry.prototype.isEmpty = function(){
 // Xflow.TextureEntry
 //----------------------------------------------------------------------------------------------------------------------
 
+var tmpCanvas = null;
+var tmpContext = null;
+
+/** Xflow.toImageData converts ImageData-like objects to real ImageData
+ *
+ * @param imageData
+ * @return {*}
+ */
+Xflow.toImageData = function(imageData) {
+    if (imageData instanceof ImageData)
+        return imageData;
+    if (!imageData.data)
+        throw new Error("no data property");
+    if (!imageData.width)
+        throw new Error("no width property");
+    if (!imageData.height)
+        throw new Error("no height property");
+    if (!tmpContext) {
+        tmpCanvas = document.createElement('canvas');
+        tmpContext = tmpCanvas.getContext('2d');
+    }
+    var newImageData = tmpContext.createImageData(imageData.width, imageData.height);
+    for (var i = 0; i < imageData.data.length; ++i) {
+        var v = imageData.data[i];
+        if (v > 255)
+            v = 255;
+        if (v < 0)
+            v = 0;
+        newImageData.data[i] = v;
+    }
+    return newImageData;
+};
+
+
+// TextureEntry data conversion order
+// image -> canvas -> context -> -> imageData
+// Note: don't use TextureEntry's width and height properties, they are deprecated and cause issues with video loading
+// Instead use getWidth and getHeight methods
 
 /**
  * @constructor
@@ -7681,8 +7981,10 @@ BufferEntry.prototype.isEmpty = function(){
  */
 Xflow.TextureEntry = function(image){
     Xflow.DataEntry.call(this, Xflow.DATA_TYPE.TEXTURE);
-    this._image = image;
     this._samplerConfig = new SamplerConfig();
+    this._formatType = null; // null | 'ImageData' | 'number' | 'float32' | 'float64'
+    this._updateImage(image);
+
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_NEW);
 };
 XML3D.createClass(Xflow.TextureEntry, Xflow.DataEntry);
@@ -7692,18 +7994,180 @@ TextureEntry.prototype.isEmpty = function(){
     return !this._image;
 };
 
-/** @param {Object} v */
-TextureEntry.prototype.setImage = function(v){
-    this._image = v;
-    notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
-}
+TextureEntry.prototype.isLoading = function() {
+    var image = this._image;
+    if (!image)
+        return false;
+    var nodeName = image.nodeName.toLowerCase();
+    if (nodeName == 'img')
+        return !image.complete;
+    if (nodeName == 'canvas')
+        return this._image.width <= 0 || this._image.height <= 0;
+    if (nodeName == 'video')
+        // readyState == 0 is HAVE_NOTHING
+        return image.readyState == 0 || this._image.videoWidth <= 0 || this._image.videoHeight <= 0;
+    return false;
+};
 
-/** @return {Object} */
-TextureEntry.prototype.getImage = function(){
+TextureEntry.prototype._updateImage = function(image) {
+    this._image = image;
+    this._context = null;
+    this._imageData = null;
+    if (this._image) {
+        var nodeName = this._image.nodeName.toLowerCase();
+        if (nodeName == 'video') {
+            this.width = this._image.videoWidth;
+            this.height = this._image.videoHeight;
+        } else {
+            this.width = this._image.width;
+            this.height = this._image.height;
+        }
+        if (nodeName == 'canvas') {
+            this._canvas = this._image;
+            this._copyImageToCtx = false;
+        } else {
+            this._canvas = null;
+            this._copyImageToCtx = true;
+        }
+    } else {
+        this.width = 0;
+        this.height = 0;
+        this._canvas = null;
+    }
+};
+
+/** Create new image
+ *
+ * @param width
+ * @param height
+ * @param formatType
+ * @param samplerConfig
+ * @return {Image|Canvas}
+ */
+TextureEntry.prototype.createImage = function(width, height, formatType, samplerConfig) {
+    if (!this._image || this.getWidth() != width || this.getHeight() != height || this._formatType != formatType) {
+        if (!width || !height)
+            throw new Error("Width or height is not specified");
+        // create dummy image
+        var img = document.createElement('canvas');
+        img.width = width;
+        img.height = height;
+        img.complete = true;
+
+        this._formatType = formatType;
+        if (!samplerConfig) {
+            samplerConfig = new Xflow.SamplerConfig();
+            samplerConfig.setDefaults();
+        }
+        this._samplerConfig.set(samplerConfig);
+        this.setImage(img);
+    } else {
+        this.notifyChanged();
+    }
     return this._image;
-}
+};
+
+/** @param {Object} v */
+TextureEntry.prototype.setImage = function(v) {
+    this._updateImage(v);
+    notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
+};
+
+TextureEntry.prototype.setFormatType = function(t) {
+    this._formatType = t;
+};
+
+TextureEntry.prototype.getFormatType = function() {
+    return this._formatType;
+};
+
+TextureEntry.prototype.getWidth = function() {
+    if (!this._image)
+        return 0;
+    return this._image.videoWidth || this._image.width || 0;
+};
+
+TextureEntry.prototype.getHeight = function() {
+    if (!this._image)
+        return 0;
+    return this._image.videoHeight || this._image.height || 0;
+};
+
+TextureEntry.prototype._flush = function() {
+    if (this._imageData) {
+        if (this._imageData instanceof ImageData) {
+            this._context.putImageData(this._imageData, 0, 0);
+            this._imageData = null;
+        } else {
+            var imageData = Xflow.toImageData(this._imageData);
+            this._context.putImageData(imageData, 0, 0);
+            this._imageData = null;
+        }
+    }
+    if (this._canvas) {
+        this._canvas.complete = true; // for compatibility with img element
+        this._image = this._canvas;
+    }
+};
 
 /** @return {Object} */
+TextureEntry.prototype.getImage = function() {
+    this._flush();
+    return this._image;
+};
+
+TextureEntry.prototype.getCanvas = function() {
+    if (!this._canvas) {
+        this._canvas = document.createElement('canvas');
+        this._canvas.width = this.getWidth();
+        this._canvas.height = this.getHeight();
+        this._canvas.complete = false; // for compatibility with img element
+    } else
+        this._flush();
+    return this._canvas;
+};
+
+TextureEntry.prototype.getContext2D = function() {
+    if (!this._context) {
+        var canvas = this.getCanvas();
+        this._context = canvas.getContext("2d");
+        if (!this._context)
+            throw new Error("Could not create 2D context.");
+        if (this._copyImageToCtx) {
+            this._context.drawImage(this._image, 0, 0);
+            this._copyImageToCtx = false;
+        }
+    } else
+        this._flush();
+    return this._context;
+};
+
+
+/** @return {ImageData} */
+TextureEntry.prototype.getValue = function() {
+    if (!this._image)
+        return null;
+    if (!this._imageData && !this.isLoading()) {
+        var ctx = this.getContext2D();
+        this._imageData = ctx.getImageData(0, 0, this.getWidth(), this.getHeight())
+        if (this._formatType == 'float32') {
+            this._imageData = {
+                data : new Float32Array(this._imageData.data),
+                width : this._imageData.width,
+                height : this._imageData.height
+            };
+        } else if (this._formatType == 'float64') {
+            this._imageData = {
+                data : new Float64Array(this._imageData.data),
+                width : this._imageData.width,
+                height : this._imageData.height
+            };
+        }
+    }
+    return this._imageData;
+};
+
+/** @return {SamplerConfig} */
 TextureEntry.prototype.getSamplerConfig = function(){
     return this._samplerConfig;
 };
@@ -7713,7 +8177,27 @@ TextureEntry.prototype.getLength = function(){
     return 1;
 };
 
+/** @return {number} */
+TextureEntry.prototype.getIterateCount = function() {
+    return 1;
+};
 
+//TextureEntry.prototype.finish = function() {
+//    if (this._imageData && this._context) {
+//        if (this._imageData instanceof ImageData) {
+//            // Do we need to do this always ?
+//            // Better mark canvas dirty !
+//            this._context.putImageData(this._imageData, 0, 0);
+//            this._imageData = null;
+//        } else {
+//            // FIXME What to do here ?
+//        }
+//    }
+//    if (this._canvas) {
+//        this._canvas.complete = true; // for compatibility with img element
+//        this._image = this._canvas;
+//    }
+//};
 
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.DataChangeNotifier
@@ -7752,7 +8236,8 @@ function notifyListeners(dataEntry, notification){
         dataEntry._listeners[i].notify(dataEntry, notification);
     }
 };
-})();(function(){
+})();
+(function(){
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -8228,7 +8713,8 @@ function removeMappingOwner(mapping){
 };
 
 
-})();(function(){
+})();
+(function(){
 
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.Mapping
@@ -8481,7 +8967,8 @@ function mappingNotifyOwner(mapping){
         mapping._owner.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
 };
 
-})();(function(){
+})();
+(function(){
 
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.DataSlot
@@ -9240,6 +9727,7 @@ Xflow.ProcessNode = function(channelNode, operator, substitution){
     this.outputDataSlots = {};
     this.processed = false;
     this.valid = false;
+    this.loading = false;
     this.useCount = 0;
 
     this.children = [];
@@ -9261,19 +9749,32 @@ ProcessNode.prototype.clear = function(){
         this.inputChannels[name].removeListener(this.channelListener);
     }
 }
-
+/**
+ *
+ */
 ProcessNode.prototype.process = function(){
     if(!this.processed){
+        this.loading = false;
+        this.valid = true;
         for(var i = 0; i < this.children.length; ++i){
             this.children[i].process();
+            if(this.children[i].loading){
+                this.loading = true;
+                return;
+            }
         }
         this.processed = true;
+        if(isInputLoading(this.operator, this.inputChannels)){
+            this.loading = true;
+            return;
+        }
         if(!checkInput(this.operator, this.owner.owner._computeInputMapping, this.inputChannels)){
             this.valid = false;
             return;
         }
         this.applyOperator();
     }
+
 }
 
 function constructProcessNode(processNode, channelNode, operator, substitution){
@@ -9294,6 +9795,18 @@ function synchronizeInputChannels(processNode, channelNode, dataNode, substituti
             processNode.inputChannels[sourceName] = channel;
         }
     }
+}
+
+function isInputLoading(operator, inputChannels){
+    for(var i in operator.params){
+        var entry = operator.params[i];
+        var channel = inputChannels[entry.source];
+        if(!channel) continue;
+        var dataEntry = channel.getDataEntry();
+        if(!dataEntry) continue;
+        if(dataEntry.isLoading && dataEntry.isLoading()) return true;
+    }
+    return false;
 }
 
 function checkInput(operator, inputMapping, inputChannels){
@@ -9391,19 +9904,21 @@ RequestNode.prototype.synchronize = function(){
 
 RequestNode.prototype.getResult = function(resultType){
     this.synchronize();
-    if(!this.owner.loading)
+    this.loading = this.owner.loading;
+    if(!this.loading)
         doRequestNodeProcessing(this);
     var result = null;
     if(resultType == Xflow.RESULT_TYPE.COMPUTE){
         result = getRequestComputeResult(this);
     }
-    result.loading = this.owner.loading;
+    result.loading = this.loading;
     return result;
 }
 
 RequestNode.prototype.setStructureOutOfSync = function(){
     this.outOfSync = true;
     this.processed = false;
+    this.loading = false;
     for(var type in this.results){
         this.results[type].notifyChanged(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
     }
@@ -9443,8 +9958,14 @@ function synchronizeRequestChannels(requestNode, channelNode){
 
 function doRequestNodeProcessing(requestNode){
     if(!requestNode.processed){
+        requestNode.loading = false;
+        requestNode.processed = true;
         for(var i = 0; i < requestNode.children.length; ++i){
             requestNode.children[i].process();
+            if(requestNode.children[i].loading){
+                requestNode.loading = true;
+                return;
+            }
         }
     }
 }
@@ -9546,7 +10067,8 @@ ComputeRequest.prototype.onResultChanged = function(notification){
     this.notify(notification);
 }
 
-})();(function(){
+})();
+(function(){
 
 /**
  * @constructor
@@ -9615,7 +10137,8 @@ XML3D.createClass(Xflow.ComputeResult, Xflow.Result);
 var ComputeResult = Xflow.ComputeResult;
 
 
-})();(function(){
+})();
+(function(){
 
 
 
@@ -9695,7 +10218,8 @@ Xflow.nameset.intersection = function(nameSetA, nameSetB){
 
 
 
-})();(function(){
+})();
+(function(){
 
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.registerOperator && Xflow.getOperator
@@ -9873,23 +10397,55 @@ function allocateOutput(operator, inputData, output, operatorData){
         var d = operator.outputs[i];
         var entry = output[d.name].dataEntry;
 
-        var size = (d.customAlloc ? c_sizes[d.name] : operatorData.iterateCount) * entry.getTupleSize();
+        if (entry.type == Xflow.DATA_TYPE.TEXTURE) {
+            // texture entry
+            if (d.customAlloc)
+            {
+                var texParams = c_sizes[d.name];
+                var newWidth = texParams.imageFormat.width;
+                var newHeight = texParams.imageFormat.height;
+                var newFormatType = texParams.imageFormat.type;
+                var newSamplerConfig = texParams.samplerConfig;
+                entry.createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
+            } else if (d.sizeof) {
+                var srcEntry = null;
+                for (var j in operator.mapping) {
+                    if (operator.mapping[j].source == d.sizeof) {
+                        srcEntry = inputData[operator.mapping[j].paramIdx];
+                        break;
+                    }
+                }
+                if (srcEntry) {
+                    var newWidth = Math.max(srcEntry.width, 1);
+                    var newHeight = Math.max(srcEntry.height, 1);
+                    var newFormatType = d.formatType || srcEntry.getFormatType();
+                    var newSamplerConfig = d.samplerConfig || srcEntry.getSamplerConfig();
+                    entry.createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
+                }
+                else
+                    throw new Error("Unknown texture input parameter '" + d.sizeof+"' in operator '"+operator.name+"'");
+            } else
+                throw new Error("Cannot create texture. Use customAlloc or sizeof parameter attribute");
+        } else {
+            // buffer entry
+            var size = (d.customAlloc ? c_sizes[d.name] : operatorData.iterateCount) * entry.getTupleSize();
 
-        if( !entry._value || entry._value.length != size){
-            switch(entry.type){
-                case Xflow.DATA_TYPE.FLOAT:
-                case Xflow.DATA_TYPE.FLOAT2:
-                case Xflow.DATA_TYPE.FLOAT3:
-                case Xflow.DATA_TYPE.FLOAT4:
-                case Xflow.DATA_TYPE.FLOAT4X4: entry.setValue(new Float32Array(size)); break;
-                case Xflow.DATA_TYPE.INT:
-                case Xflow.DATA_TYPE.INT4:
-                case Xflow.DATA_TYPE.BOOL: entry.setValue(new Int32Array(size)); break;
-                default: XML3D.debug.logWarning("Could not allocate output buffer of TYPE: " + entry.type);
+            if( !entry._value || entry._value.length != size){
+                switch(entry.type){
+                    case Xflow.DATA_TYPE.FLOAT:
+                    case Xflow.DATA_TYPE.FLOAT2:
+                    case Xflow.DATA_TYPE.FLOAT3:
+                    case Xflow.DATA_TYPE.FLOAT4:
+                    case Xflow.DATA_TYPE.FLOAT4X4: entry.setValue(new Float32Array(size)); break;
+                    case Xflow.DATA_TYPE.INT:
+                    case Xflow.DATA_TYPE.INT4:
+                    case Xflow.DATA_TYPE.BOOL: entry.setValue(new Int32Array(size)); break;
+                    default: XML3D.debug.logWarning("Could not allocate output buffer of TYPE: " + entry.type);
+                }
             }
-        }
-        else{
-            entry.notifyChanged();
+            else{
+                entry.notifyChanged();
+            }
         }
     }
 }
@@ -9899,7 +10455,8 @@ function assembleFunctionArgs(operator, inputData, outputData){
     for(var i in operator.outputs){
         var d = operator.outputs[i];
         var entry = outputData[d.name].dataEntry;
-        args.push(entry ? entry._value : null);
+        var value = entry ? entry.getValue() : null;
+        args.push(value);
     }
     addInputToArgs(args, inputData);
     return args;
@@ -9907,7 +10464,9 @@ function assembleFunctionArgs(operator, inputData, outputData){
 
 function addInputToArgs(args, inputData){
     for(var i = 0; i < inputData.length; ++i){
-        args.push(inputData[i] ? inputData[i]._value : null);
+        var entry = inputData[i];
+        var value = entry ? entry.getValue() : null;
+        args.push(value);
     }
 }
 
@@ -9947,9 +10506,15 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
     else{
         applyDefaultOperation(this.operator, inputData, this.outputDataSlots, this._operatorData);
     }
+    for (i in this.outputDataSlots) {
+        var entry = this.outputDataSlots[i].dataEntry;
+        if (entry.finish)
+            entry.finish();
+    }
 }
 
-})();Xflow.registerOperator("morph", {
+})();
+Xflow.registerOperator("morph", {
     outputs: [{type: 'float3', name: 'result'}],
     params:  [
         { type: 'float3', source: 'value' },
@@ -9982,6 +10547,7 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
 
         return true;
     },
+
     evaluate_core: function(result, value1, value2){
         result[0] = value1[0] - value2[0];
         result[1] = value1[1] - value2[1];
@@ -10890,6 +11456,734 @@ quat4.slerpOffset = function(quat, offset1, quat2, offset2, t, dest, destOffset,
     dest[izd] = c1*quat[iz1] + c2*quat2[iz2];
     dest[iwd] = c1*quat[iw1] + c2*quat2[iw2];
 };
+Xflow.registerOperator("noiseImage", {
+    outputs: [ {type: 'texture', name : 'image', customAlloc: true} ],
+    params:  [ {type: 'int', source: 'width'},
+               {type: 'int', source:'height'},
+               {type: 'float2', source: 'scale'},
+               {type: 'float', source: 'minFreq'},
+               {type: 'float', source: 'maxFreq'} ],
+    alloc: function(sizes, width, height, scale, minFreq, maxFreq) {
+        var samplerConfig = new Xflow.SamplerConfig;
+        samplerConfig.setDefaults();
+        sizes['image'] = {
+            imageFormat : {width: width[0], height :height[0]},
+            samplerConfig : samplerConfig
+        };
+    },
+    evaluate: function(image, width, height, scale, minFreq, maxFreq) {
+        width = width[0];
+        height = height[0];
+        minFreq = minFreq[0];
+        maxFreq = maxFreq[0];
+
+        var id = image;
+        var pix = id.data;
+        this.noise = this.noise || new SimplexNoise();
+        var noise = this.noise;
+
+        var useTurbulence = minFreq != 0.0 && maxFreq != 0.0 && minFreq < maxFreq;
+
+        var snoise = function(x,y) {
+            return noise.noise(x, y); // noise.noise returns values in range [-1,1]
+            //return 2.0 * noise.noise(x, y) - 1.0; // this code is for noise value in range [0,1]
+        };
+
+        var turbulence = function(minFreq, maxFreq, s, t) {
+            var value = 0;
+            for (var f = minFreq; f < maxFreq; f *= 2)
+            {
+                value += Math.abs(snoise(s * f, t * f))/f;
+            }
+            return value;
+        };
+
+        for (var y = 0; y < height; ++y)
+        {
+            var t = y / height * scale[1];
+            var invWidth = 1.0 / width;
+
+            for (var x = 0; x < width; ++x)
+            {
+                var s = x * invWidth * scale[0];
+                var v = useTurbulence ? turbulence(minFreq, maxFreq, s, t) : snoise(s, t);
+                var offset = (x * width + y) * 4;
+                pix[offset] =  Math.floor(v * 255);
+                pix[offset+1] = Math.floor(v * 255);
+                pix[offset+2] = Math.floor(v * 255);
+                pix[offset+3] = 255;
+            }
+        }
+
+        /* Fill with green color
+        for (var y = 0; y < height; ++y)
+        {
+            for (var x = 0; x < width; ++x)
+            {
+                var offset = (x * width + y) * 4;
+                pix[offset] =  0
+                pix[offset+1] = 255;
+                pix[offset+2] = 0;
+                pix[offset+3] = 255;
+            }
+        }
+        */
+
+        return true;
+    }
+});
+// Code portions from http://www.html5rocks.com/en/tutorials/canvas/imagefilters/
+(function() {
+    Xflow.Filters = {};
+
+    var tmpCanvas = null;
+    var tmpCtx = null;
+
+    Xflow.Filters.createImageData = function(w,h) {
+        if (!tmpCanvas)
+            tmpCanvas = document.createElement('canvas');
+        if (!tmpCtx)
+            tmpCtx = tmpCanvas.getContext('2d');
+        return tmpCtx.createImageData(w, h);
+    };
+
+    Xflow.Filters.createImageDataFloat32 = function(w, h) {
+        return {width: w, height: h, data: new Float32Array(w * h * 4)};
+    };
+
+    Xflow.Filters.grayscale = function(inpixels, outpixels, args) {
+            var s = inpixels.data;
+            var d = outpixels.data;
+            for (var i=0; i<s.length; i+=4) {
+                var r = s[i];
+                var g = s[i+1];
+                var b = s[i+2];
+                var a = s[i+3];
+                // CIE luminance for the RGB
+                // The human eye is bad at seeing red and blue, so we de-emphasize them.
+                var v = 0.2126*r + 0.7152*g + 0.0722*b;
+                d[i] = d[i+1] = d[i+2] = v
+                d[i+3] = a;
+            }
+            return inpixels;
+    };
+
+    Xflow.Filters.convolute = function(inpixels, outpixels, weights, opaque) {
+            var side = Math.round(Math.sqrt(weights.length));
+            var halfSide = Math.floor(side/2);
+            var src = inpixels.data;
+            var sw = inpixels.width;
+            var sh = inpixels.height;
+            // pad output by the convolution matrix
+            var w = sw;
+            var h = sh;
+            var dst = outpixels.data;
+            // go through the destination image pixels
+            var alphaFac = opaque ? 1 : 0;
+            for (var y=0; y<h; y++) {
+                for (var x=0; x<w; x++) {
+                    var sy = y;
+                    var sx = x;
+                    var dstOff = (y*w+x)*4;
+                    // calculate the weighed sum of the source image pixels that
+                    // fall under the convolution matrix
+                    var r=0, g=0, b=0, a=0;
+                    for (var cy=0; cy<side; cy++) {
+                        for (var cx=0; cx<side; cx++) {
+                            var scy = sy + cy - halfSide;
+                            var scx = sx + cx - halfSide;
+                            if (scy >= 0 && scy < sh && scx >= 0 && scx < sw) {
+                                var srcOff = (scy*sw+scx)*4;
+                                var wt = weights[cy*side+cx];
+                                r += src[srcOff] * wt;
+                                g += src[srcOff+1] * wt;
+                                b += src[srcOff+2] * wt;
+                                a += src[srcOff+3] * wt;
+                            }
+                        }
+                    }
+                    dst[dstOff] = r;
+                    dst[dstOff+1] = g;
+                    dst[dstOff+2] = b;
+                    dst[dstOff+3] = a + alphaFac*(255-a);
+                }
+            }
+            return outpixels;
+        };
+/*
+    Xflow.Filters.convoluteFloat32 = function(pixels, weights, opaque) {
+        var side = Math.round(Math.sqrt(weights.length));
+        var halfSide = Math.floor(side / 2);
+
+        var src = pixels.data;
+        var sw = pixels.width;
+        var sh = pixels.height;
+
+        var w = sw;
+        var h = sh;
+        var output = {
+            width: w, height: h, data: new Float32Array(w * h * 4)
+        };
+        var dst = output.data;
+
+        var alphaFac = opaque ? 1 : 0;
+
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                var sy = y;
+                var sx = x;
+                var dstOff = (y * w + x) * 4;
+                var r = 0, g = 0, b = 0, a = 0;
+                for (var cy = 0; cy < side; cy++) {
+                    for (var cx = 0; cx < side; cx++) {
+                        var scy = Math.min(sh - 1, Math.max(0, sy + cy - halfSide));
+                        var scx = Math.min(sw - 1, Math.max(0, sx + cx - halfSide));
+                        var srcOff = (scy * sw + scx) * 4;
+                        var wt = weights[cy * side + cx];
+                        r += src[srcOff] * wt;
+                        g += src[srcOff + 1] * wt;
+                        b += src[srcOff + 2] * wt;
+                        a += src[srcOff + 3] * wt;
+                    }
+                }
+                dst[dstOff] = r;
+                dst[dstOff + 1] = g;
+                dst[dstOff + 2] = b;
+                dst[dstOff + 3] = a + alphaFac * (255 - a);
+            }
+        }
+        return output;
+    }
+*/
+}());
+
+function float4(x,y,z,w) {
+    var v = new Float32Array(4);
+    switch (arguments.length) {
+        case 0:
+            v[0] = 0;
+            v[1] = 0;
+            v[2] = 0;
+            v[3] = 0;
+            break;
+        case 1:
+            v[0] = x;
+            v[1] = x;
+            v[2] = x;
+            v[3] = x;
+            break;
+        case 2:
+            v[0] = x;
+            v[1] = y;
+            v[2] = 0;
+            v[3] = 0;
+            break;
+        case 3:
+            v[0] = x;
+            v[1] = y;
+            v[2] = z;
+            v[3] = 0;
+            break;
+        default:
+            v[0] = x;
+            v[1] = y;
+            v[2] = z;
+            v[3] = w;
+    }
+    return v;
+}
+
+function hypot(a, b)
+{
+    return Math.sqrt(a*a + b*b);
+}
+
+function hypot4(a, b)
+{
+    return float4(hypot(a[0], b[0]),
+                  hypot(a[1], b[1]),
+                  hypot(a[2], b[2]),
+                  hypot(a[3], b[3]));
+}
+
+function hypot4To(r, a, b)
+{
+    r[0] = hypot(a[0], b[0]);
+    r[1] = hypot(a[1], b[1]);
+    r[2] = hypot(a[2], b[2]);
+    r[3] = hypot(a[3], b[3]);
+}
+
+function getTexel2D(imagedata, x, y) {
+    var offset = (y * imagedata.width + x) * 4;
+    var data = imagedata.data;
+    var color = new Float32Array(4);
+    color[0] = data[offset] / 255.0;
+    color[1] = data[offset+1] / 255.0;
+    color[2] = data[offset+2] / 255.0;
+    color[3] = data[offset+3] / 255.0;
+    return color;
+}
+
+function getTexel2DTo(color, imagedata, x, y) {
+    var offset = (y * imagedata.width + x) * 4;
+    var data = imagedata.data;
+    color[0] = data[offset] / 255.0;
+    color[1] = data[offset+1] / 255.0;
+    color[2] = data[offset+2] / 255.0;
+    color[3] = data[offset+3] / 255.0;
+    return color;
+}
+
+function setTexel2D(imagedata, x, y, color) {
+    var offset = (y * imagedata.width + x) * 4;
+    var data = imagedata.data;
+    data[offset] = color[0] * 255.0 ;
+    data[offset+1] = color[1] * 255.0;
+    data[offset+2] = color[2] * 255.0;
+    data[offset+3] = color[3] * 255.0;
+}
+
+Xflow.registerOperator("sobelImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
+    params:  [ {type: 'texture', source : 'image'} ],
+    evaluate: function(result, image) {
+        var width = image.width;
+        var height = image.height;
+
+        // Sobel filter, AnySL method
+        var gx = float4(0.0);
+        var gy = float4(0.0);
+        var i00 = float4();
+        var i00 = float4();
+        var i10 = float4();
+        var i20 = float4();
+        var i01 = float4();
+        var i11 = float4();
+        var i21 = float4();
+        var i02 = float4();
+        var i12 = float4();
+        var i22 = float4();
+        var color = float4();
+
+        for (var y = 0; y < height; ++y)
+        {
+            for (var x = 0; x < width; ++x)
+            {
+                /* Read each texel component and calculate the filtered value using neighbouring texel components */
+                if ( x >= 1 && x < (width-1) && y >= 1 && y < height - 1)
+                {
+                    getTexel2DTo(i00, image, x-1, y-1);
+                    getTexel2DTo(i10, image, x, y-1);
+                    getTexel2DTo(i20, image, x+1, y-1);
+                    getTexel2DTo(i01, image, x-1, y);
+                    getTexel2DTo(i11, image, x, y);
+                    getTexel2DTo(i21, image, x+1, y);
+                    getTexel2DTo(i02, image, x-1, y+1);
+                    getTexel2DTo(i12, image, x, y+1);
+                    getTexel2DTo(i22, image, x+1, y+1);
+
+                    gx[0] = i00[0] + 2 * i10[0] + i20[0] - i02[0]  - 2 * i12[0] - i22[0];
+                    gx[1] = i00[1] + 2 * i10[1] + i20[1] - i02[1]  - 2 * i12[1] - i22[1];
+                    gx[2] = i00[2] + 2 * i10[2] + i20[2] - i02[2]  - 2 * i12[2] - i22[2];
+
+                    gy[0] = i00[0] - i20[0]  + 2*i01[0] - 2*i21[0] + i02[0]  -  i22[0];
+                    gy[1] = i00[1] - i20[1]  + 2*i01[1] - 2*i21[1] + i02[1]  -  i22[1];
+                    gy[2] = i00[2] - i20[2]  + 2*i01[2] - 2*i21[2] + i02[2]  -  i22[2];
+
+                    /* taking root of sums of squares of Gx and Gy */
+                    hypot4To(color, gx, gy);
+                    color[0]/=2;
+                    color[1]/=2;
+                    color[2]/=2;
+                    color[3]=1.0;
+                    setTexel2D(result, x, y, color);
+                }
+            }
+        }
+
+
+
+// Sobel filter with separate steps
+//
+//        var vertical = Xflow.Filters.createImageDataFloat32(width, height);
+//        Xflow.Filters.convolute(result, vertical,
+//            [ -1, 0, 1,
+//              -2, 0, 2,
+//              -1, 0, 1 ]);
+//        var horizontal = Xflow.Filters.createImageDataFloat32(width, height);
+//        Xflow.Filters.convolute(result, horizontal,
+//            [ -1, -2, -1,
+//               0,  0,  0,
+//               1,  2,  1 ]);
+//
+//        for (var i=0; i<result.data.length; i+=4) {
+//            // make the vertical gradient red
+//            var v = Math.abs(vertical.data[i]);
+//            result.data[i] = v;
+//            // make the horizontal gradient green
+//            var h = Math.abs(horizontal.data[i]);
+//            result.data[i+1] = h;
+//            // and mix in some blue for aesthetics
+//            result.data[i+2] = (v+h)/4;
+//            result.data[i+3] = 255; // opaque alpha
+//        }
+
+        /* Copy image
+        var destpix = result.data;
+        var srcpix = image.data;
+
+        for (var y = 0; y < height; ++y)
+        {
+            for (var x = 0; x < width; ++x)
+            {
+                var offset = (y * width + x) * 4;
+                destpix[offset] =  srcpix[offset];
+                destpix[offset+1] = srcpix[offset+1];
+                destpix[offset+2] = srcpix[offset+2];
+                destpix[offset+3] = srcpix[offset+3];
+            }
+        }
+        */
+        return true;
+    }
+});
+Xflow.registerOperator("grayscaleImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
+    params:  [ {type: 'texture', source : 'image'} ],
+    evaluate: function(result, image) {
+        var width = image.width;
+        var height = image.height;
+
+        var s = image.data;
+        var d = result.data;
+        for (var i = 0; i < s.length; i += 4) {
+            var r = s[i];
+            var g = s[i + 1];
+            var b = s[i + 2];
+            var a = s[i + 3];
+            // CIE luminance for the RGB
+            // The human eye is bad at seeing red and blue, so we de-emphasize them.
+            var v = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            d[i] = d[i + 1] = d[i + 2] = v
+            d[i + 3] = a;
+        }
+        return true;
+    }
+});
+Xflow.registerOperator("sepiaImage", {
+    outputs: [ {type: 'texture', name : 'result', customAlloc: true} ],
+    params:  [ {type: 'texture', name : 'image'} ],
+    alloc: function(sizes, image) {
+        var samplerConfig = new Xflow.SamplerConfig;
+        samplerConfig.setDefaults();
+        sizes['result'] = {
+            imageFormat : {width: Math.max(image.width, 1), height: Math.max(image.height, 1)},
+            samplerConfig : samplerConfig
+        };
+    },
+    evaluate: function(result, image) {
+        var s = image.data;
+        var d = result.data;
+        var r = 0, g = 0, b = 0;
+        for(var i = 0 ; i < s.length; i += 4) {
+            r = (s[i] * 0.393 + s[i+1] * 0.769 + s[i+2] * 0.189);
+            g = (s[i] * 0.349 + s[i+1] * 0.686 + s[i+2] * 0.168);
+            b = (s[i] * 0.272 + s[i+1] * 0.534 + s[i+2] * 0.131);
+            if (r>255) r = 255;
+            if (g>255) g = 255;
+            if (b>255) b = 255;
+            if (r<0) r = 0;
+            if (g<0) g = 0;
+            if (b<0) b = 0;
+            d[i] = r;
+            d[i+1] = g;
+            d[i+2] = b;
+            d[i+3] = 255;
+        }
+        return true;
+    }
+});
+Xflow.registerOperator("clampImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image', formatType: 'ImageData'} ],
+    params:  [ {type: 'texture', source : 'image'},
+               {type: 'float', source : 'min'},
+               {type: 'float', source : 'max'}
+             ],
+    evaluate: function(result, image, min, max) {
+        var inpix = image.data;
+        var outpix = result.data;
+        var minv = min[0];
+        var maxv = max[0];
+        var len = image.data.length;
+        for (var i = 0 ; i < len; i++) {
+            var val = inpix[i];
+            if (val < minv) val = minv;
+            if (val > maxv) val = maxv;
+            outpix[i] = val;
+        }
+        return true;
+    }
+});
+// Code portions from http://www.html5rocks.com/en/tutorials/canvas/imagefilters/
+
+(function() {
+
+    function convolute(inpixels, outpixels, weights, opaque) {
+        var side = Math.round(Math.sqrt(weights.length));
+        var halfSide = Math.floor(side/2);
+        var src = inpixels.data;
+        var sw = inpixels.width;
+        var sh = inpixels.height;
+        // pad output by the convolution matrix
+        var w = sw;
+        var h = sh;
+        var dst = outpixels.data;
+        // go through the destination image pixels
+        var alphaFac = opaque ? 1 : 0;
+        for (var y=0; y<h; y++) {
+            for (var x=0; x<w; x++) {
+                var sy = y;
+                var sx = x;
+                var dstOff = (y*w+x)*4;
+                // calculate the weighed sum of the source image pixels that
+                // fall under the convolution matrix
+                var r=0, g=0, b=0, a=0;
+                for (var cy=0; cy<side; cy++) {
+                    for (var cx=0; cx<side; cx++) {
+                        var scy = sy + cy - halfSide;
+                        var scx = sx + cx - halfSide;
+                        if (scy >= 0 && scy < sh && scx >= 0 && scx < sw) {
+                            var srcOff = (scy*sw+scx)*4;
+                            var wt = weights[cy*side+cx];
+                            r += src[srcOff] * wt;
+                            g += src[srcOff+1] * wt;
+                            b += src[srcOff+2] * wt;
+                            a += src[srcOff+3] * wt;
+                        }
+                    }
+                }
+                dst[dstOff] = r;
+                dst[dstOff+1] = g;
+                dst[dstOff+2] = b;
+                dst[dstOff+3] = a + alphaFac*(255-a);
+            }
+        }
+        return outpixels;
+    };
+
+    Xflow.registerOperator("convoluteImage", {
+        outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
+        params:  [
+            {type: 'texture', source : 'image'},
+            {type: 'float', source : 'kernel'}
+        ],
+        evaluate: function(result, image, kernel) {
+            convolute(image, result, kernel, true);
+            return true;
+        }
+    });
+
+    Xflow.registerOperator("convoluteImageToFloat", {
+        outputs: [ {type: 'texture', name : 'result', sizeof: 'image', formatType : 'float32'} ],
+        params:  [
+            {type: 'texture', source : 'image'},
+            {type: 'float', source : 'kernel'}
+        ],
+        evaluate: function(result, image, kernel) {
+            convolute(image, result, kernel, true);
+            return true;
+        }
+    });
+
+})();
+// Based on: http://web.archive.org/web/20100310063925/http://dem.ocracy.org/libero/photobooth/
+
+Xflow.registerOperator("funMirrorImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
+    params:  [ {type: 'texture', source : 'image'},
+               {type: 'float', source : 'time'} ],
+    evaluate: function(result, image, time) {
+        var width = result.width;
+        var height = result.height;
+        var time = time[0];
+
+        var s = image.data;
+        var d = result.data;
+
+        for (var y = 0; y < height; ++y) {
+            for (var x = 0; x < width; ++x) {
+
+                /*original coordinates*/
+                // [0.0 ,1.0] x [0.0, 1.0]
+                var coordX = x / width;
+                var coordY = y / height;
+
+                // [-1.0 ,1.0] x [-1.0, 1.0]
+                var normCoordX = 2.0 * coordX - 1.0;
+                var normCoordY = 2.0 * coordY - 1.0;
+
+                /*go to polar coordinates*/
+                var r = Math.sqrt(normCoordX*normCoordX + normCoordY*normCoordY); // length(normCoord)
+                var phi = Math.atan2(normCoordY, normCoordX);
+
+                /*squeeze and vary it over time*/
+                r = Math.pow(r, 1.0/1.8) * time;
+
+                /*back to cartesian coordinates*/
+                normCoordX = r * Math.cos(phi);
+                normCoordY = r * Math.sin(phi);
+                // [0.0 ,1.0] x [0.0, 1.0]
+                coordX = normCoordX / 2.0 + 0.5;
+                coordY = normCoordY / 2.0 + 0.5;
+
+                var sX = Math.round(coordX * width);
+                var sY = Math.round(coordY * height);
+
+                var i = (sY * width + sX)*4;
+                var r = s[i];
+                var g = s[i + 1];
+                var b = s[i + 2];
+                var a = s[i + 3];
+
+                /*color the fragment with calculated texture*/
+                var i = (y * width + x)*4;
+                d[i] = r;
+                d[i + 1] = g;
+                d[i + 2] = b;
+                d[i + 3] = a;
+            }
+        }
+        return true;
+    }
+});
+// Based on http://kodemongki.blogspot.de/2011/06/kameraku-custom-shader-effects-example.html
+Xflow.registerOperator("popartImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
+    params:  [ {type: 'texture', source : 'image'},
+        {type: 'float', source : 'time'} ],
+    evaluate: function(result, image, time) {
+        var width = image.width;
+        var height = image.height;
+
+        var s = image.data;
+        var d = result.data;
+        for (var i = 0; i < s.length; i += 4) {
+            var r = s[i] / 255;
+            var g = s[i + 1] / 255;
+            var b = s[i + 2] / 255;
+            var a = s[i + 3] / 255;
+
+            var y = 0.3 * r + 0.59 * g + 0.11 * b;
+            y = y < 0.3 ? 0.0 : (y < 0.6 ? 0.5 : 1.0);
+            if (y == 0.5) {
+                d[i]   = 0.8 * 255;
+                d[i+1] = 0;
+                d[i+2] = 0;
+            } else if (y == 1.0) {
+                d[i]   = 0.9 * 255;
+                d[i+1] = 0.9 * 255;
+                d[i+2] = 0;
+            } else {
+                d[i] = 0;
+                d[i+1] = 0;
+                d[i+2] = 0;
+            }
+            d[i+3] = s[i+3];
+        }
+        return true;
+    }
+});
+Xflow.registerOperator("magnitudeImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image1'} ],
+    params:  [
+        {type: 'texture', source : 'image1'},
+        {type: 'texture', source : 'image2'}
+    ],
+    evaluate: function(result, image1, image2) {
+        var inpix1 = image1.data;
+        var inpix2 = image2.data;
+        var outpix = result.data;
+
+        var len = inpix1.length;
+        for (var i = 0 ; i < len; i+=1) {
+            var val1 = inpix1[i];
+            var val2 = inpix2[i];
+            outpix[i] = Math.sqrt(val1*val1 + val2*val2);
+        }
+        return true;
+    }
+});
+Xflow.registerOperator("flipVerticalImage", {
+    outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
+    params:  [ {type: 'texture', source : 'image'} ],
+    evaluate: function(result, image) {
+        var width = image.width;
+        var height = image.height;
+
+        var destpix = result.data;
+        var srcpix = image.data;
+
+        for (var y = 0; y < height; ++y) {
+            for (var x = 0; x < width; ++x) {
+                var rowOffset = y * width;
+                var srcOffset = (rowOffset + x) * 4;
+                var dstOffset = (rowOffset + ((width-1) - x)) * 4;
+                destpix[dstOffset] =  srcpix[srcOffset];
+                destpix[dstOffset+1] = srcpix[srcOffset+1];
+                destpix[dstOffset+2] = srcpix[srcOffset+2];
+                destpix[dstOffset+3] = srcpix[srcOffset+3];
+            }
+        }
+        return true;
+    }
+});
+Xflow.registerOperator("selectTransform", {
+    outputs: [ {type: 'float4x4', name : 'result', customAlloc: true} ],
+    params:  [ {type: 'int', source : 'index'},
+               {type: 'float4x4', source: 'transform'} ],
+    alloc: function(sizes, index, transform) {
+        sizes['result'] = 1;
+    },
+    evaluate: function(result, index, transform) {
+        var i = 16 * index[0];
+        if (i < transform.length && i+15 < transform.length) {
+            result[0] = transform[i+0];
+            result[1] = transform[i+1];
+            result[2] = transform[i+2];
+            result[3] = transform[i+3];
+            result[4] = transform[i+4];
+            result[5] = transform[i+5];
+            result[6] = transform[i+6];
+            result[7] = transform[i+7];
+            result[8] = transform[i+8];
+            result[9] = transform[i+9];
+            result[10] = transform[i+10];
+            result[11] = transform[i+11];
+            result[12] = transform[i+12];
+            result[13] = transform[i+13];
+            result[14] = transform[i+14];
+            result[15] = transform[i+15];
+        } else {
+            result[0] = 1;
+            result[1] = 0;
+            result[2] = 0;
+            result[3] = 0;
+            result[4] = 0;
+            result[5] = 1;
+            result[6] = 0;
+            result[7] = 0;
+            result[8] = 0;
+            result[9] = 0;
+            result[10] = 1;
+            result[11] = 0;
+            result[12] = 0;
+            result[13] = 0;
+            result[14] = 0;
+            result[15] = 1;
+        }
+    }
+});
 XML3D.data = {
     toString : function() {
         return "data";
@@ -11325,6 +12619,8 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         XML3D.data.DataAdapter.call(this, factory, node);
         this.textureEntry = null;
         this.video = null;
+        this._ticking = false;
+        this._boundTick = this._tick.bind(this);
         if (node.src)
             this.createVideoFromURL(node.src);
     };
@@ -11338,18 +12634,15 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     VideoDataAdapter.prototype.createVideoFromURL = function(url) {
         var that = this;
         var uri = new XML3D.URI(url).getAbsoluteURI(this.node.ownerDocument.documentURI);
-        this.video = XML3D.base.resourceManager.getVideo(uri, /* autoplay= */true,
+        this.video = XML3D.base.resourceManager.getVideo(uri, false,
             {
                 canplaythrough : function(event, video) {
                     XML3D.util.dispatchCustomEvent(that.node, 'canplaythrough', true, true, null);
-                    video.play();
-                    function tick() {
-                        window.requestAnimFrame(tick, XML3D.webgl.MAXFPS);
-                        if (that.textureEntry) {
-                            that.textureEntry.setImage(video);
-                        }
-                    }
-                    tick();
+                    if (that.node.autoplay)
+                        video.play();
+                    else
+                        video.pause();
+                    that._startVideoRefresh();
                 },
                 ended : function(event, video) {
                     XML3D.util.dispatchCustomEvent(that.node, 'ended', true, true, null);
@@ -11363,6 +12656,32 @@ XML3D.data.DataAdapter.prototype.toString = function() {
                 }
             }
         );
+        if (this.textureEntry)
+            this.textureEntry.setImage(this.video);
+    };
+
+    VideoDataAdapter.prototype.play = function() {
+        if (this.video)
+            this.video.play();
+    };
+
+    VideoDataAdapter.prototype.pause = function() {
+        if (this.video)
+            this.video.pause();
+    };
+
+    VideoDataAdapter.prototype._startVideoRefresh = function() {
+        if (!this._ticking)
+            this._tick();
+    };
+
+    VideoDataAdapter.prototype._tick = function() {
+        this._ticking = true;
+        window.requestAnimFrame(this._boundTick, XML3D.webgl.MAXFPS);
+        // FIXME Do this only when currentTime is changed (what about webcam ?)
+        if (this.textureEntry) {
+            this.textureEntry.setImage(this.video);
+        }
     };
 
     /**
@@ -14885,7 +16204,62 @@ Renderer.prototype.notifyDataChanged = function() {
     // Export to XML3D.webgl namespace
     XML3D.webgl.TransformRenderAdapter = TransformRenderAdapter;
 
-}());// Adapter for <view>
+
+    var DataRenderAdapter = function(factory, node) {
+        XML3D.webgl.RenderAdapter.call(this, factory, node);
+    };
+    XML3D.createClass(DataRenderAdapter, XML3D.webgl.RenderAdapter);
+    var p = DataRenderAdapter.prototype;
+
+    p.init = function() {
+        // Create all matrices, no valid values yet
+        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
+        this.needMatrixUpdate = true;
+    };
+
+    p.updateMatrix = function() {
+
+        if(!this.transformRequest){
+            var that = this;
+            this.transformRequest = this.dataAdapter.getComputeRequest(["transform"],
+                function(request, changeType) {
+                    that.dataChanged(request, changeType);
+                }
+            );
+        }
+
+        this.matrix = mat4.create();
+
+        var dataResult =  this.transformRequest.getResult();
+        var transformData = (dataResult.getOutputData("transform") && dataResult.getOutputData("transform").getValue());
+        if(!transformData){
+            this.matrix = mat4.create();
+            return;
+        }
+        for(var i = 0; i < 16; ++i){
+            this.matrix[i] = transformData[i];
+        }
+        this.needMatrixUpdate = false;
+    };
+
+    p.getMatrix = function() {
+        this.needMatrixUpdate && this.updateMatrix();
+        return this.matrix;
+    };
+
+    p.dataChanged = function(request, changeType){
+        this.factory.renderer.requestRedraw("Transformation changed.", true);
+        this.needMatrixUpdate = true;
+        this.notifyOppositeAdapters();
+    }
+
+    // Export to XML3D.webgl namespace
+    XML3D.webgl.DataRenderAdapter = DataRenderAdapter;
+
+}());
+
+
+// Adapter for <view>
 (function() {
     var ViewRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
@@ -15982,6 +17356,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             view:           ns.ViewRenderAdapter,
             defs:           ns.DefsRenderAdapter,
             mesh:           ns.MeshRenderAdapter,
+            data:           ns.DataRenderAdapter,
             transform:      ns.TransformRenderAdapter,
             shader:         ns.ShaderRenderAdapter,
             texture:        ns.TextureRenderAdapter,

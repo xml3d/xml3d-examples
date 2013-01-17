@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d xmlns="http://www.w3.org/1999/xhtml">
+  <!-- 
+
+ Shaders 
+
+ -->
+    <shader script="urn:xml3d:shader:phong" id="shader_sniper_head">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="sniper_head.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.5 0.5 0.5</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.5 0.5 0.5</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_sniper_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.078125</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="sniper_red.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_sniper_lens">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0.25</float>
+    <texture name="diffuseTexture">
+      <img src="sniper_lens.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_c_arrow">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="c_arrow.jpg" />
+    </texture>
+  </shader>
+    <!--
+
+   Mesh Base
+
+   -->
+    <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="sniper.json" />
+    <!--
+
+   Meshes
+
+   -->
+  <data id="index_sniper_head" src="sniper.json" filter="keep( {index: index_sniper_head} )" />
+  <data id="index_eyeball_l" src="sniper.json" filter="keep( {index: index_eyeball_l} )" />
+  <data id="index_eyeball_r" src="sniper.json" filter="keep( {index: index_eyeball_r} )" />
+  <data id="index_sniper_red" src="sniper.json" filter="keep( {index: index_sniper_red} )" />
+  <data id="index_sniper_lens" src="sniper.json" filter="keep( {index: index_sniper_lens} )" />
+  <data id="index_c_arrow" src="sniper.json" filter="keep( {index: index_c_arrow} )" />
+    <!--
+
+   Animations
+
+   -->
+  <data id="anim_taunt02_heelClick">
+    <data src="sniper.json" filter="keep( {translation: taunt02_heelClick_translation, rotation: taunt02_heelClick_rotation } )" />
+    <float name="maxKey">3.375</float>
+  </data>
+</xml3d>

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Fun Mirror</title>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  </head>
+  <body>
+    <script>
+      window.URL = window.URL || window.webkitURL;
+      navigator.getUserMedia  =
+      navigator.getUserMedia || navigator.webkitGetUserMedia ||
+      navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+      function activateWebCam() {
+      var video = document.getElementById('webcam');
+
+      if (!video) {
+      XML3D.debug.logError("No webcam element");
+      return;
+      }
+      if (navigator.getUserMedia) {
+      navigator.getUserMedia({video: true, audio: true},
+      function(stream) {
+      XML3D.debug.logInfo("Accessing WebCam");
+      video.src = window.URL.createObjectURL(stream);
+      },
+      function (e) {
+      var code = e.code || -1;
+      if (code == 1) {
+      console.log("You declined the access to your webcam. Reload the page if you changed your opinion.");
+      } else {
+      console.log("Could not access the video of your webcam.");
+      }
+      XML3D.debug.logError("Cannot access WebCam");
+      });
+      } else {
+      console.log("Your browser does not support the WebRTC API required to access your webcam.");
+      XML3D.debug.logError("No getUserMedia");
+      }
+      }
+      
+      window.onload = activateWebCam;
+    </script>
+    
+    <h1>Fun Mirror</h1>
+    <div style="color: white;">
+      <xml3d id="MyXml3d" xmlns="http://www.xml3d.org/2009/xml3d"
+             style="width: 1024px; height: 768px;">
+        <view position="0 0 10"/>
+        <defs>
+
+          <data id="kernels" compute="outlineImage = xflow.clampImage(convImage, min, max)" >
+            <float name="min">0</float>
+            <float name="max">255</float>
+            <data compute="convImage = xflow.convoluteImageToFloat(gsImage, kernel)">
+              <float name="kernel">
+                1 1   1  1 1
+                1 2   2  2 1
+                1 2 -32  2 1
+                1 2   2  2 1
+                1 1   1  1 1
+              </float>
+              <data compute="gsImage = xflow.grayscaleImage(funMirrorImage)">
+                <data compute="popartImage = xflow.popartImage(origImage, time)">
+                  <data compute="funMirrorImage = xflow.funMirrorImage(origImage, time)">
+                    <float name="time">0.8</float>
+                    <texture name="origImage">
+                      <video src="../video/Firefox.ogv" id='webcam' autoplay="true"/>
+                    </texture>
+                  </data>
+                </data>
+              </data>
+            </data>
+          </data>
+
+          <shader id="texture1" script="urn:xml3d:shader:phong">
+            <float3 name="diffuseColor">1.5 1.5 1.5</float3>
+            <float name="ambientIntensity">1.0</float>
+            <data src="#kernels" filter="rename({diffuseTexture:outlineImage})" />
+          </shader>
+
+          <shader id="texture2" script="urn:xml3d:shader:phong">
+            <float3 name="diffuseColor">1.5 1.5 1.5</float3>
+            <float name="ambientIntensity">1.0</float>
+            <data src="#kernels" filter="rename({diffuseTexture:funMirrorImage})" />
+          </shader>
+
+          <shader id="texture3" script="urn:xml3d:shader:phong">
+            <float3 name="diffuseColor">1.5 1.5 1.5</float3>
+            <float name="ambientIntensity">1.0</float>
+            <data src="#kernels" filter="rename({diffuseTexture:popartImage})" />
+          </shader>
+
+
+          <data id="mySimpleMesh" type="triangles">
+            <int name="index">0 1 2 1 2 3</int>
+            <float3 name="position">-1.0 -1.0 0.0 1.0 -1.0 0.0 -1.0  1.0 0.0 1.0  1.0 0.0</float3>
+            <float3 name="normal">0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0</float3>
+            <float2 name="texcoord">0.0 0.0 1.0 0.0 0.0 1.0 1.0 1.0</float2>
+          </data>
+
+          <transform id="T1" translation="-4.1 0 -4" scale="4 3 1"/>
+          <transform id="T2" translation="4.1 0 -4" scale="4 3 1" />
+          <transform id="T3" translation="0 -6.1 -4" scale="4 3 1" />
+        </defs>
+
+        <group shader="#texture1" transform="#T1">
+          <mesh src="#mySimpleMesh" />
+        </group>
+        <group shader="#texture2" transform="#T2">
+          <mesh src="#mySimpleMesh" />
+        </group>
+        <group shader="#texture3" transform="#T3">
+          <mesh src="#mySimpleMesh" />
+        </group>
+
+      </xml3d>
+    </div>
+  </body>
+</html>
