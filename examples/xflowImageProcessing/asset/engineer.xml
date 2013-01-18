@@ -5,6 +5,7 @@
  Shaders 
 
  -->
+
   <shader script="urn:xml3d:shader:phongvs" id="shader_engineer_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>

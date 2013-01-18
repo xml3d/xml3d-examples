@@ -59,6 +59,8 @@ function updateAnim() {
         var maxValue = docAnims[id];
         var value = mytime % maxValue;
         var el = document.getElementById(id);
+        if (!el)
+            continue;
         el.removeChild(el.firstChild);
         el.appendChild(document.createTextNode(value));
         //$("#" + id).text(value);
@@ -170,10 +172,13 @@ function setupApp() {
     var objects = {}; // one object per marker
     var models = [];
     for (var i in modelNames) {
+        var element = document.getElementById(name);
+        if (!element)
+            continue;
         models[i] = (function () {
             var name = modelNames[i];
-            var element = document.getElementById(name);
-            element.setAttribute("visible", false);
+
+            element.setAttribute("visible", true);
             //var transform = getTransform(element);
             var transform = null;
             return {

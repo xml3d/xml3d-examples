@@ -53,7 +53,7 @@
         </data>
 
         <data id="TV1" compute="transform = xflow.selectTransform(index, transforms)">
-            <data compute="visibilityX = xflow.selectBool(index, visibilities)">
+            <data compute="visibility = xflow.selectBool(index, visibilities)">
                 <int name="index">0</int>
                 <data src="#ardata"/>
             </data>
@@ -116,6 +116,20 @@
     <group id="Engineer" transform="#TV1">
         <defs>
             <transform id="Engineer_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
+            <!--<shader id="shader_engineer_red">-->
+                <!--<data src="asset/engineer.xml#shader_engineer_red"/>-->
+                <!--&lt;!&ndash;<data src="#TV1"/>&ndash;&gt;-->
+            <!--</shader>-->
+            <shader script="urn:xml3d:shader:phongvs" id="shader_engineer_head">
+                <data src="asset/engineer.xml#shader_engineer_head"/>
+                <!--<data src="#TV1"/>-->
+            </shader>
+
+            <shader script="urn:xml3d:shader:phongvs" id="shader_engineer_red">
+                <data src="asset/engineer.xml#shader_engineer_red"/>
+                <data src="#TV1"/>
+            </shader>
+
         </defs>
         <group transform="#Engineer_PosXfm">
             <!-- Engineer -->
@@ -126,13 +140,13 @@
                     <float id="keyEngineer" name="key">0.0</float>
                 </data>
             </defs>
-            <group shader="asset/engineer.xml#shader_engineer_red">
+            <group shader="#shader_engineer_red">
                 <mesh type="triangle">
                     <data src="#engineerSkinned" />
                     <data src="asset/engineer.xml#index_engineer_red" />
                 </mesh>
             </group>
-            <group shader="asset/engineer.xml#shader_engineer_head">
+            <group shader="#shader_engineer_head">
                 <mesh type="triangle">
                     <data src="#engineerSkinned" />
                     <data src="asset/engineer.xml#index_engineer_head" />
@@ -321,7 +335,13 @@
     <label for="debug">Debug mode</label>
     <input type="checkbox" id ="Debug" value="debug" name="debug" />
 </div>
-
+<script type="text/javascript">
+    var l = ["Sniper", "Medic", "Scout"];
+    for (var i in l) {
+        var el = document.getElementById(l[i]);
+        el.parentNode.removeChild(el);
+    }
+</script>
 </body>
 
 </html>
