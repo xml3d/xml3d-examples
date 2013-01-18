@@ -34,10 +34,13 @@ function initARToolkit(imageData) {
 
     // view.position
     var viewMat = mat4.create();
-    ar.param.copyCameraMatrix(viewMat, 100, 10000);
-    var projMat = ar.param.getProjectionMatrix(100, 10000);
-    var fovyAndAspect = ar.param.getFovyAndAspect();
-    //document.viewMat = viewMat; //???DEBUG
+    var zNear = 0.1;
+    var zFar = 100000.0;
+    ar.param.copyCameraMatrix(viewMat, zNear, zFar);
+    var projMat = ar.param.getProjectionMatrix(zNear, zFar);
+    //var fovyAndAspect = ar.param.getFovyAndAspect();
+
+    ar.perspective = projMat;
 
     ar.resultMat = new NyARTransMatResult(); // store matrices we get in this temp matrix
 
@@ -47,15 +50,19 @@ function initARToolkit(imageData) {
 
 Xflow.registerOperator("ARMarkerDetector", {
     outputs: [ {type: 'float4x4', name : 'transform', customAlloc: true},
-               {type: 'bool', name: 'visibility', customAlloc: true} ],
+               {type: 'bool', name: 'visibility', customAlloc: true},
+               {type: 'float4x4', name : 'perspective', customAlloc: true}
+             ],
     params:  [ {type: 'texture', source : 'image'},
-               {type: 'int', source: 'markers'} ],
+               {type: 'int', source: 'markers'}
+             ],
     alloc: function(sizes, image, markers) {
         var len = markers.length;
         sizes['transform'] = len;
         sizes['visibility'] = len;
+        sizes['perspective'] = 1;
     },
-    evaluate: function(transform, visibility, image, markers) {
+    evaluate: function(transform, visibility, perspective, image, markers) {
 
         if (!ar) {
             initARToolkit(image);
@@ -64,6 +71,10 @@ Xflow.registerOperator("ARMarkerDetector", {
         }
 
         var raster = ar.raster;
+
+        for (var i = 0; i < 16; ++i) {
+            perspective[i]  = ar.perspective[i];
+        }
 
         // detect markers from the canvas (using the raster reader we created for it)
         // use 170 as threshold value (0-255)

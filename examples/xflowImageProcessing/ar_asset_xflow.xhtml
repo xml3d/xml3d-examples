@@ -27,32 +27,22 @@
            xsi:schemaLocation="http://www.w3.org/2009/xml3d ../../org.xml3d.spec/generated/xsd/xml3d.xsd"
            style="background: rgba(0,0,0,0); position: absolute; top: 10px; width: 640px; height: 480px;">
 
-    <view id="View" position="0 0 10" />
-
-    <!--<view id="View"-->
-          <!--position="-366.72576904296875 132.81649780273438 435.1510314941406"-->
-          <!--orientation="-0.32341447472572327 -0.9451191425323486 -0.04640014469623566 0.7316024011799332"/>-->
+    <view id="View" position="0 0 10" perspective="#ardata" />
 
     <defs>
-        <!-- <transform id="ObjectXfm" translation="0.0 0.0 0.0"/> -->
-        <!--<transform id="PosXfm" scale="0.04 0.04 0.04" translation="0.0 -1.0 0.0"/>-->
-
-        <!--<transform id="PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="37.5 37.5 37.5"/>-->
 
         <data id="ardata">
-            <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
-                <data compute="transforms, visibilities = xflow.ARMarkerDetector(arvideo, markers)">
-                    <int name="markers">
-                        <!--0 2-->
-                        <!--11 10 9 7 6 5-->
-                        <!--0 2 5 6 7 9 10 11 22 64-->
-                        <!--22 64-->
-                        22 64
-                    </int>
-                    <texture name="arvideo">
-                        <video src="tests/output_4.ogg"></video>
-                    </texture>
-                </data>
+            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers)">
+                <int name="markers">
+                    <!--0 2-->
+                    <!--11 10 9 7 6 5-->
+                    <!--0 2 5 6 7 9 10 11 22 64-->
+                    22 64
+                    <!--0 1 2 3 4 5-->
+                </int>
+                <texture name="arvideo">
+                    <video src="tests/output_4.ogg"></video>
+                </texture>
             </data>
         </data>
 
