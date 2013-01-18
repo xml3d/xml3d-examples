@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (17.01.2013 16:55:30 MEZ)
+@version: DEVELOPMENT SNAPSHOT (18.01.2013 17:26:41 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (17.01.2013 16:55:30 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (18.01.2013 17:26:41 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -7627,6 +7627,7 @@ XML3D.classInfo['view'] = {
     position : {a: XML3D.XML3DVec3AttributeHandler, params: [0, 0, 0]},
     orientation : {a: XML3D.XML3DRotationAttributeHandler, params: [0, 0, 1, 0]},
     fieldOfView : {a: XML3D.FloatAttributeHandler, params: 0.785398},
+    perspective : {a: XML3D.ReferenceHandler},
     getWorldMatrix : {m: XML3D.methods.XML3DGraphTypeGetWorldMatrix},
     setDirection : {m: XML3D.methods.viewSetDirection},
     setUpVector : {m: XML3D.methods.viewSetUpVector},
@@ -16221,6 +16222,12 @@ Renderer.prototype.notifyDataChanged = function() {
     XML3D.webgl.TransformRenderAdapter = TransformRenderAdapter;
 
 
+
+
+
+
+
+
     var DataRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
     };
@@ -16230,43 +16237,52 @@ Renderer.prototype.notifyDataChanged = function() {
     p.init = function() {
         // Create all matrices, no valid values yet
         this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
-        this.needMatrixUpdate = true;
+        this.matrixReady = {};
+        this.matrices = {};
+        this.requests = {};
     };
 
-    p.updateMatrix = function() {
+    p.updateMatrix = function(type) {
 
-        if(!this.transformRequest){
-            var that = this;
-            this.transformRequest = this.dataAdapter.getComputeRequest(["transform"],
+        createRequest(this, type);
+
+        this.matrices[type] = mat4.create();
+
+        var dataResult =  this.requests[type].getResult();
+        var transformData = (dataResult.getOutputData(type) && dataResult.getOutputData(type).getValue());
+        if(!transformData){
+            mat4.identity(this.matrices[type]);
+            return;
+        }
+        for(var i = 0; i < 16; ++i){
+            this.matrices[type][i] = transformData[i];
+        }
+        this.matrixReady[type] = true;
+    };
+
+    p.getMatrix = function(type) {
+        !this.matrixReady[type] && this.updateMatrix(type);
+        return this.matrices[type];
+    };
+
+    p.dataChanged = function(request, changeType){
+        this.factory.renderer.requestRedraw("Transformation changed.", true);
+        for(var type in this.requests){
+            if(this.requests[type] == request)
+                delete this.matrixReady[type];
+        }
+        this.notifyOppositeAdapters();
+    }
+
+    function createRequest(adapter, key){
+        if(!adapter.requests[key]){
+            var that = adapter;
+            adapter.requests[key] = adapter.dataAdapter.getComputeRequest([key],
                 function(request, changeType) {
                     that.dataChanged(request, changeType);
                 }
             );
         }
-
-        this.matrix = mat4.create();
-
-        var dataResult =  this.transformRequest.getResult();
-        var transformData = (dataResult.getOutputData("transform") && dataResult.getOutputData("transform").getValue());
-        if(!transformData){
-            this.matrix = mat4.create();
-            return;
-        }
-        for(var i = 0; i < 16; ++i){
-            this.matrix[i] = transformData[i];
-        }
-        this.needMatrixUpdate = false;
-    };
-
-    p.getMatrix = function() {
-        this.needMatrixUpdate && this.updateMatrix();
-        return this.matrix;
-    };
-
-    p.dataChanged = function(request, changeType){
-        this.factory.renderer.requestRedraw("Transformation changed.", true);
-        this.needMatrixUpdate = true;
-        this.notifyOppositeAdapters();
     }
 
     // Export to XML3D.webgl namespace
@@ -16315,17 +16331,24 @@ Renderer.prototype.notifyDataChanged = function() {
         }
         this.worldPosition = [tmp[12], tmp[13], tmp[14]];
         mat4.set(mat4.inverse(tmp), this.viewMatrix);
+
+        connectProjectionAdapater(this);
     };
 
     p.getProjectionMatrix = function(aspect) {
         if (this.projMatrix == null) {
-            var fovy = this.node.fieldOfView;
-            var zfar = this.zFar;
-            var znear = this.zNear;
-            var f = 1 / Math.tan(fovy / 2);
-            this.projMatrix = mat4.create([ f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (znear + zfar) / (znear - zfar), -1, 0, 0,
-                   2 * znear * zfar / (znear - zfar), 0 ]);
-
+            var adapter = this.getConnectedAdapter("perspective");
+            if(adapter){
+                this.projMatrix = adapter.getMatrix("perspective");
+            }
+            else{
+                var fovy = this.node.fieldOfView;
+                var zfar = this.zFar;
+                var znear = this.zNear;
+                var f = 1 / Math.tan(fovy / 2);
+                this.projMatrix = mat4.create([ f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (znear + zfar) / (znear - zfar), -1, 0, 0,
+                    2 * znear * zfar / (znear - zfar), 0 ]);
+            }
         }
         return this.projMatrix;
     };
@@ -16363,30 +16386,50 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     p.notifyChanged = function(evt) {
-        var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
 
-        switch (target) {
-        case "parenttransform":
-            this.parentTransform = evt.newValue;
-            this.updateViewMatrix();
-        break;
-        
-        case "orientation":
-        case "position":
-             this.updateViewMatrix();
-        break;
-        
-        case "fieldOfView":
-             this.projMatrix = null;
-        break;
-        
-        default:
-            XML3D.debug.logWarning("Unhandled event in view adapter for parameter " + target);
-        break;
+        if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED) && !evt.internalType){
+            // The connected transform node changed;
+            this.projMatrix = null;
         }
- 
+        else{
+            var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
+
+            switch (target) {
+                case "parenttransform":
+                    this.parentTransform = evt.newValue;
+                    this.updateViewMatrix();
+                    break;
+
+                case "orientation":
+                case "position":
+                    this.updateViewMatrix();
+                    break;
+                case "perspective":
+                case "fieldOfView":
+                    connectProjectionAdapater(this);
+                    this.projMatrix = null;
+                    break;
+
+                default:
+                    XML3D.debug.logWarning("Unhandled event in view adapter for parameter " + target);
+                    break;
+            }
+        }
+
         this.factory.handler.redraw("View changed");
     };
+
+    function connectProjectionAdapater(adapter){
+        var href = adapter.node.getAttribute("perspective");
+        if(href){
+            adapter.connectAdapterHandle("perspective", adapter.getAdapterHandle(href));
+        }
+        else{
+            adapter.disconnectAdapterHandle("perspective");
+        }
+
+    }
+
 
     // Export to XML3D.webgl namespace
     XML3D.webgl.ViewRenderAdapter = ViewRenderAdapter;
@@ -16936,7 +16979,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
         var handle = this.getConnectedAdapter("transform");
         if (handle)
-            return handle.getMatrix();
+            return handle.getMatrix("transform");
 
         return null;
     }
