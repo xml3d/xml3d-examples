@@ -33,7 +33,7 @@
 var math = {};
 
 (function (root, factory) {
-    if (typeof exports === 'object') {
+    if (typeof module !== 'undefined' && typeof exports === 'object') {
         // Node. Does not work with strict CommonJS, but
         // only CommonJS-like enviroments that support module.exports,
         // like Node.

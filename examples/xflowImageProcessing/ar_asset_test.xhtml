@@ -6,8 +6,8 @@
 <head>
     <title>AR Assets</title>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+    <script type="text/javascript" src="xml3d-motion.js"></script>
     <script type="text/javascript" src="JSARToolKit.js"></script>
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="ar_asset_app.js"></script>
@@ -33,7 +33,7 @@
 
             <!--<transform id="PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="37.5 37.5 37.5"/>-->
 
-            <shader id="Phong" script="urn:xml3d:shader:phongvs">
+            <shader id="Phong" script="urn:xml3d:shader:phong">
               <float3 name="diffuseColor">0.5 0.0 0.0</float3>
               <float name="ambientIntensity">0.6</float>
             </shader>

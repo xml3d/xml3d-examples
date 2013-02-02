@@ -33,7 +33,7 @@ function initARToolkit(imageData) {
     ar.param = new FLARParam(ar.canvas.width,ar.canvas.height); // create new Param for the canvas [~camera params]
 
     // view.position
-    var viewMat = mat4.create();
+    var viewMat = math.mat4.create();
     var zNear = 0.1;
     var zFar = 100000.0;
     ar.param.copyCameraMatrix(viewMat, zNear, zFar);

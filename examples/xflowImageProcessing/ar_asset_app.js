@@ -162,7 +162,7 @@ function setupAR() {
     //    var objectXfm = document.getElementById("ObjectXfm");
 
     // view.position
-    var viewMat = mat4.create();
+    var viewMat = math.mat4.create();
     param.copyCameraMatrix(viewMat, 100, 10000);
     var projMat = param.getProjectionMatrix(100, 10000);
     var fovyAndAspect = param.getFovyAndAspect();
