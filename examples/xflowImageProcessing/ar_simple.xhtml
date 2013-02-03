@@ -44,20 +44,37 @@
                     });
         }
 
-        ardata.addOutputFieldListener(['flipvideo'], function(values) {
-            if (values.flipvideo) {
-                var data = values.flipvideo;
-                // Paint camera picture on background
-                var width = data.width;
-                var height = data.height;
-                if (width != background.width || height != background.height || !bgCtx) {
-                    background.width = width;
-                    background.height = height;
-                    bgCtx = background.getContext('2d');
-                }
-                bgCtx.putImageData(data, 0, 0);
+        var observer = new XML3DDataObserver(function (records, observer) {
+            var entry = records[0].result.get("flipvideo");
+            if (!entry)
+                return;
+            var data = entry.value;
+            // Paint camera picture on background
+            var width = data.width;
+            var height = data.height;
+            if (width != background.width || height != background.height || !bgCtx) {
+                background.width = width;
+                background.height = height;
+                bgCtx = background.getContext('2d');
             }
+            bgCtx.putImageData(data, 0, 0);
         });
+        observer.observe(ardata, {names: "flipvideo" });
+
+//        ardata.addOutputFieldListener(['flipvideo'], function(values) {
+//            if (values.flipvideo) {
+//                var data = values.flipvideo;
+//                // Paint camera picture on background
+//                var width = data.width;
+//                var height = data.height;
+//                if (width != background.width || height != background.height || !bgCtx) {
+//                    background.width = width;
+//                    background.height = height;
+//                    bgCtx = background.getContext('2d');
+//                }
+//                bgCtx.putImageData(data, 0, 0);
+//            }
+//        });
     }
 </script>
 <div style="width: 640px; height: 480px" id="Display">

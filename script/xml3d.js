@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (02.02.2013 19:27:33 MEZ)
+@version: DEVELOPMENT SNAPSHOT (03.02.2013 13:57:30 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (02.02.2013 19:27:33 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (03.02.2013 13:57:30 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -6359,7 +6359,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
      * representation. The result is returned as new vector instance.
      * Neither this nor the inputVector are changed.
      * 4x4 matrix representation.
-     * @param {XML3DVec3} inputVector 
+     * @param {XML3DVec3} inputVector
      * @return {XML3DVec3} The rotated vector
      */
     p.rotateVec3 = function(inputVector) {
@@ -7046,8 +7046,8 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
             var name = result.outputNames[i];
             var entry = result.getOutputData(name);
             var value = entry && entry.getValue();
-            var type = getXML3DDataType(entry.type);
-            if(value !== null){
+            if (value !== null) {
+                var type = getXML3DDataType(entry.type);
                 dataResult._entries[name] = new XML3DDataEntry(type, value);
             }
         }
@@ -7064,7 +7064,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
             case Xflow.DATA_TYPE.INT4 : return XML3DDataEntry.INT4;
             case Xflow.DATA_TYPE.BOOL : return XML3DDataEntry.BOOL;
             case Xflow.DATA_TYPE.TEXTURE : return XML3DDataEntry.TEXTURE;
-            default: throw "WHAT IS THIS I DON'T EVEN...";
+            default: throw new Error("WHAT IS THIS I DON'T EVEN...");
         }
     }
 
@@ -15365,14 +15365,14 @@ XML3D.webgl.MAXFPS = 30;
         /** Temporary workaround: this function is called when drawable objects are not yet
          *  updated. Thus, the renderer.render() updates the objects after the picking buffer
          *  has been updated. In that case, the picking buffer needs to be updated again.
-         *  Thus, we only set needPickingDraw to false when we are sure that objects don't 
+         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
          *  need any updates, i.e. when needDraw is false.
-         *  A better solution would be to separate drawable objects updating from rendering 
+         *  A better solution would be to separate drawable objects updating from rendering
          *  and to update the objects either during render() or renderSceneToPickingBuffer().
          */
         if(!this.needDraw)
             this.needPickingDraw = false;
-        
+
         var glY = this.canvasToGlY(canvasY);
 
         this.currentPickObj = this.renderer.getRenderObjectFromPickingBuffer(canvasX, glY);
@@ -16144,7 +16144,7 @@ XML3D.webgl.stopEvent = function(ev) {
         vec[1] = f(v1[1], v2[1]);
         vec[2] = f(v1[2], v2[2]);
 
-        return vec; 
+        return vec;
     };
 
     /**
@@ -16162,10 +16162,10 @@ XML3D.webgl.stopEvent = function(ev) {
         /* bounding box is axis-aligned, but through transformation
          * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57),
          * here min's and max' x and z values are swapped). So we
-         * order them now. 
+         * order them now.
          */
-        var bbmin = mapVec(xfmmin, xfmmax, Math.min); 
-        var bbmax = mapVec(xfmmin, xfmmax, Math.max); 
+        var bbmin = mapVec(xfmmin, xfmmax, Math.min);
+        var bbmax = mapVec(xfmmin, xfmmax, Math.max);
 
         if (bbmin[0] < min[0])
             min[0] = bbmin[0];
