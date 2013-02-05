@@ -5,26 +5,25 @@
 <head>
     <title>Sepia Filter</title>
 
-    <script type="text/javascript" src="jslib/ParallelArray.js"></script>
-
-    <script type="application/javascript" src="rivertrail/jit/narcissus/jsdefs.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/narcissus/jslex.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/narcissus/jsparse.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/narcissus/jsdecomp.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/definitions.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/helper.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/driver.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/dotviz.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/typeinference.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/rangeanalysis.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/inferblockflow.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/infermem.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/genOCL.js"></script>
-    <script type="application/javascript" src="rivertrail/jit/compiler/runOCL.js"></script>
-
+  <script type="text/javascript" src="rivertrail/ParallelArray.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jsdefs.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jslex.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jsparse.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jsdecomp.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/definitions.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/helper.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/driver.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/dotviz.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/typeinference.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/rangeanalysis.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/inferblockflow.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/infermem.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/genOCL.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/runOCL.js"></script>
 
 
-    <script type="text/javascript" src="../../../xml3d.js/build/output/xml3d.js"></script>
+
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
     <!--<script type="text/javascript" src="../../script/xml3d.js"></script>-->
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 </head>
@@ -43,21 +42,21 @@
           </texture>
       </data>
 
-        <shader id="texture1" script="urn:xml3d:shader:phong">
-            <float3 name="diffuseColor">1.5 1.5 1.5</float3>
-            <float name="ambientIntensity">1.0</float>
-            <data src="#images" filter="rename({diffuseTexture:origImage})">
-            </data>
-        </shader>
-
-        <shader id="texture2" script="urn:xml3d:shader:phong">
+      <shader id="texture1" script="urn:xml3d:shader:phong">
           <float3 name="diffuseColor">1.5 1.5 1.5</float3>
           <float name="ambientIntensity">1.0</float>
-          <data src="#images" filter="rename({diffuseTexture:sepiaImage})">
+          <data src="#images" filter="rename({diffuseTexture:origImage})">
           </data>
-        </shader>
+      </shader>
 
-        <!--<shader id="texture3" script="urn:xml3d:shader:phongvs">-->
+      <shader id="texture2" script="urn:xml3d:shader:phong">
+        <float3 name="diffuseColor">1.5 1.5 1.5</float3>
+        <float name="ambientIntensity">1.0</float>
+        <data src="#images" filter="rename({diffuseTexture:sepiaImage})">
+        </data>
+      </shader>
+
+    <!--<shader id="texture3" script="urn:xml3d:shader:phongvs">-->
                 <!--<float3 name="diffuseColor">1.5 1.5 1.5</float3>-->
                 <!--<float name="ambientIntensity">1.0</float>-->
                 <!--<texture name="diffuseTexture">-->

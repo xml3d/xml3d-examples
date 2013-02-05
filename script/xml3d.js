@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (03.02.2013 13:57:30 MEZ)
+@version: DEVELOPMENT SNAPSHOT (05.02.2013 15:39:07 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (03.02.2013 13:57:30 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (05.02.2013 15:39:07 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -1613,7 +1613,7 @@ XML3D.css.convertCssToMat4 = function(cssMatrix, m){
 XML3D.math = {};
 var exports = XML3D.math;
 
-// fix for define variable non-existence
+// fix for define variable non-existence 
 var define = {};
 /*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
 
@@ -1826,12 +1826,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1854,7 +1854,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
     } else {
       // gl-matrix lives in a browser, define its namespaces in global
       shim.exports = window;
-    }
+    }    
   }
   else {
     // gl-matrix lives in commonjs, define its namespaces in exports
@@ -1870,12 +1870,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1920,12 +1920,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2314,7 +2314,7 @@ vec2.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -2326,7 +2326,7 @@ vec2.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1];
         }
-
+        
         return a;
     };
 })();
@@ -2353,12 +2353,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2798,7 +2798,7 @@ vec3.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -2810,7 +2810,7 @@ vec3.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2];
         }
-
+        
         return a;
     };
 })();
@@ -2837,12 +2837,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3286,7 +3286,7 @@ vec4.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -3298,7 +3298,7 @@ vec4.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2]; a[i+3] = vec[3];
         }
-
+        
         return a;
     };
 })();
@@ -3325,12 +3325,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3428,7 +3428,7 @@ mat2.transpose = function(out, a) {
         out[2] = a[1];
         out[3] = a[3];
     }
-
+    
     return out;
 };
 
@@ -3449,7 +3449,7 @@ mat2.invert = function(out, a) {
         return null;
     }
     det = 1.0 / det;
-
+    
     out[0] =  a3 * det;
     out[1] = -a1 * det;
     out[2] = -a2 * det;
@@ -3569,12 +3569,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3702,7 +3702,7 @@ mat3.transpose = function(out, a) {
         out[7] = a[5];
         out[8] = a[8];
     }
-
+    
     return out;
 };
 
@@ -3725,8 +3725,8 @@ mat3.invert = function(out, a) {
         // Calculate the determinant
         det = a00 * b01 + a01 * b11 + a02 * b21;
 
-    if (!det) {
-        return null;
+    if (!det) { 
+        return null; 
     }
     det = 1.0 / det;
 
@@ -3824,8 +3824,8 @@ mat3.mul = mat3.multiply;
  * @returns {String} string representation of the matrix
  */
 mat3.str = function (a) {
-    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' +
-                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' +
+    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + 
+                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' + 
                     a[6] + ', ' + a[7] + ', ' + a[8] + ')';
 };
 
@@ -3841,12 +3841,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -4019,7 +4019,7 @@ mat4.transpose = function(out, a) {
         out[14] = a[11];
         out[15] = a[15];
     }
-
+    
     return out;
 };
 
@@ -4052,8 +4052,8 @@ mat4.invert = function(out, a) {
         // Calculate the determinant
         det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
-    if (!det) {
-        return null;
+    if (!det) { 
+        return null; 
     }
     det = 1.0 / det;
 
@@ -4153,7 +4153,7 @@ mat4.multiply = function (out, a, b) {
         a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
 
     // Cache only the current line of the second matrix
-    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];  
     out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
     out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
     out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
@@ -4273,7 +4273,7 @@ mat4.rotate = function (out, a, rad, axis) {
         b20, b21, b22;
 
     if (Math.abs(len) < GLMAT_EPSILON) { return null; }
-
+    
     len = 1 / len;
     x *= len;
     y *= len;
@@ -4492,7 +4492,7 @@ mat4.fromRotationTranslation = function (out, q, v) {
     out[13] = v[1];
     out[14] = v[2];
     out[15] = 1;
-
+    
     return out;
 };
 
@@ -4694,7 +4694,7 @@ mat4.lookAt = function (out, eye, center, up) {
 mat4.str = function (a) {
     return 'mat4(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
                     a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
-                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' +
+                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
                     a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + ')';
 };
 
@@ -4710,12 +4710,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -4880,7 +4880,7 @@ quat.scale = vec4.scale;
  * @returns {quat} out
  */
 quat.rotateX = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bx = Math.sin(rad), bw = Math.cos(rad);
@@ -4901,7 +4901,7 @@ quat.rotateX = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateY = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         by = Math.sin(rad), bw = Math.cos(rad);
@@ -4922,7 +4922,7 @@ quat.rotateY = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateZ = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bz = Math.sin(rad), bw = Math.cos(rad);
@@ -5037,7 +5037,7 @@ quat.invert = function(out, a) {
     var a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3],
         dot = a0*a0 + a1*a1 + a2*a2 + a3*a3,
         invDot = dot ? 1.0/dot : 0;
-
+    
     // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
 
     out[0] = -a0*invDot;
@@ -6353,13 +6353,13 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         XML3D.math.mat4.fromRotationTranslation(m._data, q, [0, 0, 0]);
         return m;
     };
-
+    
     /**
-     * Rotates the vector passed as parameter with this rotation
+     * Rotates the vector passed as parameter with this rotation 
      * representation. The result is returned as new vector instance.
      * Neither this nor the inputVector are changed.
      * 4x4 matrix representation.
-     * @param {XML3DVec3} inputVector
+     * @param {XML3DVec3} inputVector 
      * @return {XML3DVec3} The rotated vector
      */
     p.rotateVec3 = function(inputVector) {
@@ -6367,7 +6367,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         XML3D.math.vec3.transformQuat(result._data, inputVector._data, this._data)
         return result;
     };
-
+    
     /**
      * Replaces the existing rotation with the quaternion representation passed
      * as argument
@@ -6422,7 +6422,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
      * @return {Float32Array} 
      */
     p.getQuaternion = function() {
-        return XML3D.math.quat.copy(XML3D.math.quat.create(), this._data);
+        return XML3D.math.quat.copy(XML3D.math.quat.create(), this._data); 
     };
 
     XML3D.XML3DRotation = XML3DRotation;
@@ -7924,7 +7924,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
             loadComplete(0, uri);
         }
 
-        video.addEventListener("canplaythrough", loadCompleteCallback, true);
+        video.addEventListener("canplay", loadCompleteCallback, true);
         video.addEventListener("error", loadCompleteCallback, true);
         video.crossorigin = "anonymous";
         video.autoplay = autoplay;
@@ -9165,8 +9165,8 @@ XML3D.classInfo['data'] = {
     getProtoInfo : {m: XML3D.methods.dataGetProtoInfo},
     isOutputConnected : {m: XML3D.methods.dataIsOutputConnected},
     getResult : {m: XML3D.methods.dataGetResult},
-    getOutputNames : {m: XML3D.methods.dataGetOutputNames},
     addOutputFieldListener : {m: XML3D.methods.dataAddOutputFieldListener},
+    getOutputNames : {m: XML3D.methods.dataGetOutputNames},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
     _term: undefined
@@ -12511,12 +12511,12 @@ function applyParallelOperator(operator, inputData, outputData, operatorData){
         if(entry){
             if(operator.mapping[i].internalType == Xflow.DATA_TYPE.TEXTURE){
                 if(size.length == 0){
-                    size[0] = inputData[i].getWidth();
-                    size[1] = inputData[i].getHeight();
+                    size[0] = inputData[i].getHeight();
+                    size[1] = inputData[i].getWidth();
                 }
                 else{
-                    size[0] = Math.min(size[0], inputData[i].getWidth());
-                    size[1] = Math.min(size[1], inputData[i].getHeight());
+                    size[0] = Math.min(size[0], inputData[i].getHeight());
+                    size[1] = Math.min(size[1], inputData[i].getWidth());
                 }
                 value = new ParallelArray(inputData[i].getFilledCanvas());
             }
@@ -14310,22 +14310,6 @@ Xflow.registerOperator("selectTransform", {
         }
     }
 });
-Xflow.registerOperator("selectBool", {
-    outputs: [ {type: 'bool', name : 'result', customAlloc: true} ],
-    params:  [ {type: 'int', source : 'index'},
-               {type: 'bool', source: 'value'} ],
-    alloc: function(sizes, index, value) {
-        sizes['result'] = 1;
-    },
-    evaluate: function(result, index, value) {
-        var i = index[0];
-        if (i < value.length) {
-            result[0] = value[i];
-        } else {
-            result[0] = false;
-        }
-    }
-});
 XML3D.data = {
     toString : function() {
         return "data";
@@ -14792,14 +14776,10 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     VideoDataAdapter.prototype.createVideoFromURL = function(url) {
         var that = this;
         var uri = new XML3D.URI(url).getAbsoluteURI(this.node.ownerDocument.documentURI);
-        this.video = XML3D.base.resourceManager.getVideo(uri, false,
+        this.video = XML3D.base.resourceManager.getVideo(uri, this.node.autoplay,
             {
-                canplaythrough : function(event, video) {
-                    XML3D.util.dispatchCustomEvent(that.node, 'canplaythrough', true, true, null);
-                    if (that.node.autoplay)
-                        video.play();
-                    else
-                        video.pause();
+                canplay : function(event, video) {
+                    XML3D.util.dispatchCustomEvent(that.node, 'canplay', true, true, null);
                     that._startVideoRefresh();
                 },
                 ended : function(event, video) {
@@ -15359,25 +15339,25 @@ XML3D.webgl.MAXFPS = 30;
             return null;
         if(this.needPickingDraw) {
             this.renderer.prepareRendering();
-            this.renderer.renderSceneToPickingBuffer();
+            this.renderer.renderSceneToPickingBuffer();   
         }
-
-        /** Temporary workaround: this function is called when drawable objects are not yet
+        
+        /** Temporary workaround: this function is called when drawable objects are not yet 
          *  updated. Thus, the renderer.render() updates the objects after the picking buffer
-         *  has been updated. In that case, the picking buffer needs to be updated again.
-         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
+         *  has been updated. In that case, the picking buffer needs to be updated again. 
+         *  Thus, we only set needPickingDraw to false when we are sure that objects don't 
          *  need any updates, i.e. when needDraw is false.
-         *  A better solution would be to separate drawable objects updating from rendering
+         *  A better solution would be to separate drawable objects updating from rendering 
          *  and to update the objects either during render() or renderSceneToPickingBuffer().
          */
         if(!this.needDraw)
             this.needPickingDraw = false;
-
+        
         var glY = this.canvasToGlY(canvasY);
-
+        
         this.currentPickObj = this.renderer.getRenderObjectFromPickingBuffer(canvasX, glY);
-
-
+        
+        
         return this.currentPickObj;
     };
 
@@ -15902,19 +15882,19 @@ XML3D.webgl.stopEvent = function(ev) {
 
         var min = bbox.min._data;
         var max = bbox.max._data;
-
+    
         var center = XML3D.math.vec3.scale(XML3D.math.vec3.create(), XML3D.math.vec3.add(XML3D.math.vec3.create(), min, max), 0.5);
         var extend = XML3D.math.vec3.scale(XML3D.math.vec3.create(), XML3D.math.vec3.subtract(XML3D.math.vec3.create(), max, min), 0.5);
-
+    
         XML3D.math.mat4.copy(absMat, gmatrix);
         absMat.set([0, 0, 0, 1], 12)
         for ( var i = 0; i < 16; i++) {
             absMat[i] = Math.abs(absMat[i]);
         }
-
+    
         XML3D.math.vec3.transformMat4(extend, extend, absMat);
         XML3D.math.vec3.transformMat4(center, center, gmatrix);
-
+    
         XML3D.math.vec3.add(bbox.max._data, center, extend);
         XML3D.math.vec3.subtract(bbox.min._data, center, extend);
     };
@@ -16139,12 +16119,12 @@ XML3D.webgl.stopEvent = function(ev) {
      */    
     function mapVec(v1, v2, f)
     {
-        var vec = XML3D.math.vec3.create();
-        vec[0] = f(v1[0], v2[0]);
+        var vec = XML3D.math.vec3.create(); 
+        vec[0] = f(v1[0], v2[0]); 
         vec[1] = f(v1[1], v2[1]);
-        vec[2] = f(v1[2], v2[2]);
-
-        return vec;
+        vec[2] = f(v1[2], v2[2]); 
+        
+        return vec; 
     };
 
     /**
@@ -16158,14 +16138,14 @@ XML3D.webgl.stopEvent = function(ev) {
         var xfmmax = XML3D.math.vec3.create();
         XML3D.math.vec3.transformMat4(xfmmin, bbox.min._data, trafo);
         XML3D.math.vec3.transformMat4(xfmmax, bbox.max._data, trafo);
-
+        
         /* bounding box is axis-aligned, but through transformation
-         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57),
-         * here min's and max' x and z values are swapped). So we
-         * order them now.
+         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57), 
+         * here min's and max' x and z values are swapped). So we 
+         * order them now. 
          */
-        var bbmin = mapVec(xfmmin, xfmmax, Math.min);
-        var bbmax = mapVec(xfmmin, xfmmax, Math.max);
+        var bbmin = mapVec(xfmmin, xfmmax, Math.min); 
+        var bbmax = mapVec(xfmmin, xfmmax, Math.max); 
 
         if (bbmin[0] < min[0])
             min[0] = bbmin[0];
@@ -16348,6 +16328,7 @@ XML3D.webgl.stopEvent = function(ev) {
         program = material.getProgram(lights, dataTable);
 
         if (!program) {
+             XML3D.debug.logError("Unknown shader URI: " + scriptURI + ". Using default shader instead.");
             return "defaultShader";
         }
 
@@ -17802,7 +17783,7 @@ Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, 
           [normalMatrix[0], normalMatrix[1], normalMatrix[2],
           normalMatrix[4], normalMatrix[5], normalMatrix[6],
           normalMatrix[8], normalMatrix[9], normalMatrix[10]]);
-
+    
         this.shaderManager.setUniformVariables(shader, parameters);
         triCount += this.drawObject(shader, mesh);
         objCount++;
@@ -18466,7 +18447,7 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     XML3DRenderAdapter.prototype.generateRay = function(x, y) {
-
+        
         return this.factory.handler.generateRay(x, y);
     };
     XML3D.webgl.XML3DRenderAdapter = XML3DRenderAdapter;
@@ -18695,13 +18676,13 @@ Renderer.prototype.notifyDataChanged = function() {
      * @return {XML3DMatrix} returns the inverse of the view matrix, since now we 
      * want to go world2view and not view2world
      */
-    p.getWorldMatrix = function() {
-        var m = new window.XML3DMatrix();
-        var tmp = XML3D.math.mat4.create();
+    p.getWorldMatrix = function() {        
+        var m = new window.XML3DMatrix();  
+        var tmp = XML3D.math.mat4.create(); 
         XML3D.math.mat4.invert(tmp, this.viewMatrix);
         m._data.set(tmp);
-        return m;
-    };
+        return m; 
+    }; 
 
 
     p.getModelViewMatrix = function(model) {
@@ -18711,7 +18692,7 @@ Renderer.prototype.notifyDataChanged = function() {
     p.getModelViewProjectionMatrix = function(modelViewMatrix) {
         return XML3D.math.mat4.multiply(XML3D.math.mat4.create(), this.projMatrix, modelViewMatrix);
     };
-
+    
     p.getWorldSpacePosition = function() {
     	return this.worldPosition;
     };
@@ -19297,7 +19278,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         var matrix = this.getLocalMatrixInternal();
         if (matrix)
             XML3D.math.mat4.multiply(m, m, matrix);
-
+    
         return m;
     };
 

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>Image Proc Tests</title>
+
+  <script type="text/javascript" src="rivertrail/ParallelArray.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jsdefs.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jslex.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jsparse.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/narcissus/jsdecomp.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/definitions.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/helper.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/driver.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/dotviz.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/typeinference.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/rangeanalysis.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/inferblockflow.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/infermem.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/genOCL.js"></script>
+  <script type="application/javascript" src="rivertrail/jit/compiler/runOCL.js"></script>
+
+
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+	<script type="text/javascript" src="xml3d-xflow-ip-module.js"></script>
+	<style>font {width:25px; display:inline-block; text-align:center}</style>
+</head>
+<body>
+	<h1 style="text-align: center;">Demo implementation of some basic image processing filters and transformations in XFlow (XML3D)</h1>
+
+	<h2>Gaussian Smoothing</h2>
+	<div>
+		<xml3d id="original" xmlns="http://www.xml3d.org/2009/xml3d" style="width: 1000px; height: 500px;">
+			<view position="0 0 10"/>
+
+			<data id="simpleMesh5">
+				<int name="index">0 1 2 1 2 3</int>
+				<float3 name="position">-1.0 -1.0 0.0 1.0 -1.0 0.0 -1.0  1.0 0.0 1.0  1.0 0.0</float3>
+				<float3 name="normal">0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0</float3>
+				<float2 name="texcoord">0.0 0.0 1.0 0.0 0.0 1.0 1.0 1.0</float2>
+			</data>
+
+
+
+      <!--<data id="textureData5" compute="texOutput = xflow.gaussian(texInput, size, sigma)" >-->
+        <!--<texture name="texInput">-->
+          <!--<video src="../video/Big_Buck_Bunny_medium.ogv" autoplay="true" />-->
+        <!--</texture>-->
+
+        <!--<int id="size5" name="size">3</int>-->
+        <!--<float id="sigma5" name="sigma">3</float>-->
+      <!--</data>-->
+
+      <data id="textureData5" compute="texOutput = xflow.convolve(texInput, filter)" >
+        <texture name="texInput">
+          <video src="video/Big_Buck_Bunny_medium.ogv" autoplay="true" />
+        </texture>
+        <data compute="filter = xflow.gaussianKernel(size, sigma)" >
+          <int id="size5" name="size">3</int>
+          <float id="sigma5" name="sigma">3</float>
+        </data>
+      </data>
+
+
+      <shader id="textureInput5" script="urn:xml3d:shader:phong">
+				<float3 name="diffuseColor">1 1 1</float3>
+				<float name="ambientIntensity">1.0</float>
+        <data src="#textureData5" filter="keep({diffuseTexture: texInput})" />
+			</shader>
+
+     <shader id="textureOutput5" script="urn:xml3d:shader:phong" >
+				<float3 name="diffuseColor">1 1 1</float3>
+				<float name="ambientIntensity">1.0</float>
+        <data src="#textureData5" filter="keep({diffuseTexture: texOutput})" />
+			</shader>
+
+			<transform id="moveForward15" translation="-2.1 0 4" scale="2 1.5 1" />
+			<transform id="moveForward25" translation="2.1 0 4" scale="2 1.5 1" />
+
+
+			<group shader="#textureInput5" transform="#moveForward15">
+				<mesh type="triangles" src="#simpleMesh5" />
+			</group>
+
+
+			<group shader="#textureOutput5" transform="#moveForward25">
+				<mesh type="triangles" src="#simpleMesh5" />
+			</group>
+
+		</xml3d>
+	</div>
+
+	Filter size (<font id="div51">3</font>): <input id="range51" type="range"  min="3" max="21" step="2" value="3" onchange="updateSize()" />
+	Sigma (<font id="div52">3</font>): <input id="range52" type="range"  min="1" max="15" step="1" value="3" onchange="updateSigma()" />
+
+	<script>
+	function updateSize() {
+		var range = document.getElementById("range51").value;
+		document.getElementById("size5").firstChild.textContent = range;
+		document.getElementById("div51").innerHTML = range;
+	}
+
+	function updateSigma() {
+		var range = document.getElementById("range52").value;
+		document.getElementById("sigma5").firstChild.textContent = range;
+		document.getElementById("div52").innerHTML = range;
+	}
+	</script>
+
+</body>
+</html>
