@@ -51,6 +51,9 @@ function setupApp() {
     var bgCtx = null;
 
     var ballXfm = getTransform(document.getElementById('Teapot'));
+    //var ballXfm1 = getTransform(document.getElementById('Teapot1'));
+
+    var ballLocalXfm = getTransform(document.getElementById('TeapotLocal'));
 
     var tmpCanvas = null
     var tmpCtx = null;
@@ -63,6 +66,8 @@ function setupApp() {
     }
 
     var video = document.getElementsByTagName("video")[0];
+    if (!video)
+        video = document.getElementsByTagName("img")[0]; //???DEBUG
     video.width = 640;
     video.height = 480;
     video.loop = true;
@@ -100,29 +105,43 @@ function setupApp() {
     }
 
     // Initialize webcam
-    if (WEBCAM && navigator.getUserMedia) {
-        navigator.getUserMedia(
-            {video: true, audio: true}, function(stream) {
-                XML3D.debug.logInfo("Accessing WebCam");
-                video.autoplay = true;
-                video.src = window.URL.createObjectURL(stream);
-            }, function (e) {
-                XML3D.debug.logError("Cannot access WebCam");
-                video.src = "tests/output_4.ogg";
-            });
-    } else {
-        video.src = "tests/output_4.ogg";
+    if (video.nodeName == 'video') {
+        if (WEBCAM && navigator.getUserMedia) {
+            navigator.getUserMedia(
+                {video: true, audio: true}, function(stream) {
+                    XML3D.debug.logInfo("Accessing WebCam");
+                    video.autoplay = true;
+                    video.src = window.URL.createObjectURL(stream);
+                }, function (e) {
+                    XML3D.debug.logError("Cannot access WebCam");
+                    video.src = "tests/output_4.ogg";
+                });
+        } else {
+            video.src = "tests/output_4.ogg";
+        }
     }
 
     var lastTime = Date.now();
     var dir = 1;
     var matrices = [];
 
-    ardata.addOutputFieldListener(['arvideo', 'transforms', 'visibilities'], function(values) {
-        if (values.transforms) {
-            var visibilities = values.visibilities;
+    var m3x3 = math.mat3.create();
+    var dir = math.vec3.create();
+    var p1 = math.vec3.create();
+    var p2 = math.vec3.create();
+    var tv = math.vec3.create();
+    var upVector = math.vec3.create();
+    var quat1 = math.quat4.create();
+    var quat2 = math.quat4.create();
+    var aa = math.quat4.create();
+    var axis = new XML3DVec3();
 
-            while (matrices.length < values.visibilities.length) {
+    var observer = new XML3DDataObserver(function (records, observer) {
+        var transforms = records[0].result.getValue("transforms");
+        var flipvideo = records[0].result.getValue("flipvideo");
+        var visibilities = records[0].result.getValue("visibilities");
+        if (transforms) {
+            while (matrices.length < visibilities.length) {
                 matrices.push(math.mat4.create());
             }
 
@@ -130,25 +149,28 @@ function setupApp() {
             var deltaTime = now - lastTime;
             lastTime = now;
 
-            var animCycleTime = 800;
+            var animCycleTime = 1000*2;
             var tmp = lastTime % animCycleTime;
             var f = tmp == 0.0 ? 1.0 : tmp / animCycleTime;
 
-            if (f > 1) {
-                dir = -dir;
-                var last = visibilities.length-1;
-            }
-            var last = Math.min(last, visibilities.legnth-1);
-            var bounce = Math.max(0, f > 0.5 ? f-0.9 : 0.1-f);
-            if (dir < 0)
-                f = 1-f;
+            var f1 = 1-Math.abs((f*2)-1);
 
-            var visibilities = values.visibilities;
-            for (var i = 0; i < values.transforms.length/16; ++i) {
+
+//            if (f > 1) {
+//                dir = -dir;
+//                var last = visibilities.length-1;
+//            }
+//            var last = Math.min(last, visibilities.legnth-1);
+//            var bounce = Math.max(0, f > 0.5 ? f-0.9 : 0.1-f);
+//            if (dir < 0)
+//                f = 1-f;
+
+            var visibilities = visibilities;
+            for (var i = 0; i < transforms.length/16; ++i) {
                 var j = i * 16;
                 if (visibilities[i]) {
                     for (var k = 0; k < 16; ++k) {
-                        matrices[i][k] = values.transforms[j+k];
+                        matrices[i][k] = transforms[j+k];
                     }
                 }
             }
@@ -156,45 +178,54 @@ function setupApp() {
             var m1 = matrices[0];
             var m2 = matrices[1];
 
-            var dist = math.vec3.createFrom(
-                m1[12]-m2[12],
-                m1[13]-m2[13],
-                m1[14]-m2[14]);
-            var distLen = math.vec3.length(dist);
+            math.mat4.toMat3(m1, m3x3);
+            math.quat4.fromRotationMatrix(m3x3, quat1);
 
+            math.mat4.toMat3(m2, m3x3);
+            math.quat4.fromRotationMatrix(m3x3, quat2);
 
-//            var m3x3 = math.mat4.toMat3(m1);
-//            var quat = math.quat4.fromRotationMatrix(m3x3);
-//            var aa = math.quat4.toAngleAxis(quat);
-//            var t1 = math.vec3.createFrom(m1[12], m1[13], m1[14]);
-//
-//            var m3x3 = math.mat4.toMat3(m2);
-//            var quat = math.quat4.fromRotationMatrix(m3x3);
-//            var aa = math.quat4.toAngleAxis(quat);
-//            var t2 = math.vec3.createFrom(m2[12], m2[13], m2[14]);
-//            var dest = math.vec3.create();
-//            math.vec3.lerp(t1, t2, f, dest);
+            var quat = quat1;
+            math.quat4.slerp(quat1, quat2, f1, quat);
 
-            var dest = math.mat4.create();
-            math.mat4.tween(m1, m2, f, dest);
+            dir[0] = m1[12]-m2[12];
+            dir[1] = m1[13]-m2[13];
+            dir[2] = m1[14]-m2[14];
+            var dirLen = math.vec3.length(dir);
+            math.quat4.toAngleAxis(quat, aa);
 
-            var m3x3 = math.mat4.toMat3(dest);
-            var quat = math.quat4.fromRotationMatrix(m3x3);
-            var aa = math.quat4.toAngleAxis(quat);
-            var tt = math.vec3.createFrom(m1[12], m1[13], m1[14]);
+            p1[0] = m1[12];
+            p1[1] = m1[13];
+            p1[2] = m1[14];
 
+            p2[0] = m2[12];
+            p2[1] = m2[13];
+            p2[2] = m2[14];
 
-            tt[0] = tt[0] + Math.sin(f*Math.pi/distLen);
-            tt[1] = tt[1];
-            tt[2] = tt[2];
+            upVector[0] = 0;
+            upVector[1] = 1;
+            upVector[0] = 0;
+
+            math.mat3.multiplyVec3(m1, upVector);
+
+            tv[0] = p2[0] + dir[0]*f1;
+            tv[1] = p2[1] + dir[1]*f1;
+            tv[2] = p2[2] + dir[2]*f1;
+
+            var height = Math.sin(f1*Math.PI)*dirLen;
+
+            ballLocalXfm.translation.set(0, 0, height);
 
             if (!(isNaN(aa[0]) || isNaN(aa[1]) || isNaN(aa[2]) || isNaN(aa[3]))) {
-                ballXfm.rotation.setAxisAngle(new XML3DVec3(aa[0], aa[1], aa[2]), -aa[3]);
-                ballXfm.translation.set(new XML3DVec3(tt[0], tt[1], tt[2]));
+                axis.x = aa[0];
+                axis.y = aa[1];
+                axis.z = aa[2];
+
+                ballXfm.rotation.setAxisAngle(axis, -aa[3]);
+                ballXfm.translation.set(tv[0], tv[1], tv[2]);
             }
         }
-        if (values.arvideo) {
-            var data = Xflow.toImageData(values.arvideo);
+        if (flipvideo) {
+            var data = Xflow.toImageData(flipvideo);
             var width = data.width;
             var height = data.height;
 
@@ -203,31 +234,11 @@ function setupApp() {
                 background.width = width;
                 background.height = height;
                 bgCtx = background.getContext('2d');
-                if (WEBCAM) {
-                    // flip image so we see it as a mirror
-                    bgCtx.translate(width, 0);
-                    bgCtx.scale(-1, 1);
-                    // painting will be done via temporary canvas
-                } else {
-                    // Paint camera picture on background
-                    bgCtx.putImageData(data, 0, 0);
-                }
             }
-
-            // Mirror picture
-            if (WEBCAM) {
-                if (width != tmpCanvas.width || height != tmpCanvas.height || !tmpCtx) {
-                    tmpCanvas.width = width;
-                    tmpCanvas.height = height;
-                    tmpCtx = tmpCanvas.getContext('2d');
-                }
-                tmpCtx.putImageData(data, 0, 0);
-                // Paint camera picture on background
-                bgCtx.drawImage(tmpCanvas, 0, 0);
-            }
+            bgCtx.putImageData(data, 0, 0);
         }
     });
-
+    observer.observe(ardata, {names: ["flipvideo",  "transforms", "visibilities"]});
 }
 
 window.onload = function() {

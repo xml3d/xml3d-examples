@@ -31,18 +31,22 @@
 
 <defs>
     <data id="ardata">
-        <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers)">
-            <int name="markers">
-                <!--0 2-->
-                <!--11 10 9 7 6 5-->
-                <!--0 2 5 6 7 9 10 11 22 64-->
-                <!--22 64-->
-                <!--0 1 2 3 4 5-->
-                7 5
-            </int>
-            <texture name="arvideo">
-                <video src="tests/output_4.ogg"></video>
-            </texture>
+        <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
+            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers)">
+                <int name="markers">
+                    <!--0 2-->
+                    <!--11 10 9 7 6 5-->
+                    <!--0 2 5 6 7 9 10 11 22 64-->
+                    <!--22 64-->
+                    <!--0 1 2 3 4 5-->
+                    2 3
+                    <!--7 5-->
+                </int>
+                <texture name="arvideo">
+                    <video src="ARTestVideo.ogv"></video>
+                    <!--<video src="tests/output_4.ogg"></video>-->
+                </texture>
+            </data>
         </data>
     </data>
 
@@ -57,11 +61,10 @@
 
 <group id="Teapot">
     <defs>
-        <transform id="ObjectXfm" translation="0.0 0.0 0.0"/>
         <!--<transform id="PosXfm" scale="0.04 0.04 0.04" translation="0.0 -1.0 0.0"/>-->
 
         <!--<transform id="PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="37.5 37.5 37.5"/>-->
-        <transform id="PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="41 41 41"/>
+        <transform id="PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="70 70 70"/>
 
         <transform id="Xfm" scale="0.04 0.04 0.04" translation="0.0 -1.0 0.0"/>
 
@@ -89,7 +92,7 @@
             <bool name="castShadow">true</bool>
         </lightshader>
     </defs>
-    <group transform="#ObjectXfm">
+    <group id="TeapotLocal">
         <group transform="#PosXfm">
 
             <group transform="#light1Xfm">
