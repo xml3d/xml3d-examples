@@ -45,10 +45,9 @@
         }
 
         var observer = new XML3DDataObserver(function (records, observer) {
-            var entry = records[0].result.get("flipvideo");
-            if (!entry)
+            var data = records[0].result.getValue("flipvideo");
+            if (!data)
                 return;
-            var data = entry.value;
             // Paint camera picture on background
             var width = data.width;
             var height = data.height;
