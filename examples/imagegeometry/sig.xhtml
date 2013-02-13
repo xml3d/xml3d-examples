@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <!-- Scripts -->
+    <script type="text/javascript" src="http://localhost:8080/xml3d.js/build/output/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+	<script type="text/javascript" src="./sig-shader.js"></script>
+
+    <title>XML3D Examples</title>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+        <h1>Image Geometry</h1>
+
+        <xml3d id="MyXml3d" activeView="#view" class="xml3d" style="width: 600px; height: 400px;" xmlns="http://www.xml3d.org/2009/xml3d">
+
+  <view id="view" position="0 0 55" />
+
+  <defs>
+
+    <!-- Lights -->
+
+    <transform id="light1Xfm" translation="0 10 0" />
+
+    <transform id="light2Xfm" translation="5 10 0" />
+
+    <transform id="meshXfm" translation="0 0 20" scale="5 5 5"  />
+
+    <lightshader id="light1" script="urn:xml3d:lightshader:point">
+      <float3 name="intensity">100.0 100.0 100.0</float3>
+      <float3 name="attenuation">0.0 0.0 1.0</float3>
+    </lightshader>
+
+    <lightshader id="light2" script="#pointlight">
+      <float3 name="position">0.0 0.0 0.0</float3>
+      <float3 name="intensity">0.0 0.0 0.0</float3>
+      <float3 name="attenuation">0.0 0.0 1.0</float3>
+    </lightshader>
+
+
+    <shader id="Phong" script="urn:xml3d:shader:sig-eyelight">
+      <float3 name="diffuseColor">1.0 1.0 1.0</float3>
+      <float name="ambientIntensity">0.3</float>
+      <texture name="diffuseTexture" wrapS='repeat' wrapT='repeat'>
+        <img src="textures/DiffuseTexture.png"/>
+      </texture>
+    </shader>
+
+    <data id="meshData">
+		<data compute="(index, texcoord) = xflow.createIGIndex(vertexCount, positionTex)">
+		  <int name="vertexCount" >12288</int>
+		  <float3 name="boundingbox">
+			-16.082886  -7.875  -10.0
+			16.082886  7.875  10.0
+		  </float3>
+		  <texture name="normalTex">
+			<img src="textures/NormalTexture.png"/>
+		  </texture>
+		  <texture name="texcoordTex">
+			<img src="textures/TexCoordTexture.png"/>
+		  </texture>
+		  <texture name="positionTex">
+			<img src="textures/CoordinateTexture.png"/>
+		  </texture>
+		</data>
+    </data>
+
+  </defs>
+
+  <group id="root">
+    <group shader="#Phong">
+      <mesh type="triangles" id="Teapot01-FACES" src="#meshData">
+      </mesh>
+    </group>
+  </group>
+
+</xml3d>
+   <div class="description">
+            TODO
+        </div>
+    </div>
+</div>
+</body>
+</html>

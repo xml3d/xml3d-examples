@@ -34,6 +34,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
+    {cat: "shader", name: "Custom Shader: Image Geometry", href: "examples/imagegeometry/sig.xhtml",
+        info: "Demonstrates the usage of xflow and custom shaders to implement sequential image geometry (SIG)."},
 
     {cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
         info: "Demonstrates mesh morphing with Xflow"},
