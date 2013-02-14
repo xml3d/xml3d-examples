@@ -36,12 +36,12 @@
     <transform id="meshXfm" translation="0 0 20" scale="5 5 5"  />
 
 
-    <lightshader id="light1" script="urn:xml3d:lightshader:pointlight">
+    <lightshader id="light1" script="urn:xml3d:lightshader:point">
       <float3 name="intensity">200.0 200.0 200.0</float3>
       <float3 name="attenuation">0.0 0.0 1.0</float3>
     </lightshader>
 
-    <lightshader id="light2" script="urn:xml3d:lightshader:pointlight">
+    <lightshader id="light2" script="urn:xml3d:lightshader:point">
       <float3 name="intensity">0.0 0.0 0.0</float3>
       <float3 name="attenuation">0.0 0.0 1.0</float3>
     </lightshader>
@@ -59,7 +59,7 @@
     </shader>
 
     <data id="meshData">
-                <data compute="(index, igTexCoord) = xflow.createIGIndex(vertexCount, positionTex)">
+                <data compute="texcoord = xflow.createIGIndex(vertexCount, positionTex)">
 
                   <int name="vertexCount" >2610048</int>
 
@@ -80,7 +80,7 @@
                     <img src="./textures/dragon/AOPT160565328_normalImage.png"/>
                   </texture>
 
-                  <texture name="texCoordTex">
+                  <texture name="texcoordTex">
                     <img src="./textures/TexCoordTexture.png"/>
                   </texture>
 

@@ -5,6 +5,7 @@ XML3D.shaders.register("sig-eyelight", {
 
 		"uniform sampler2D normalTex;",
 		"uniform sampler2D positionTex;",
+		"uniform sampler2D positionTex2;",
 		"uniform sampler2D texcoordTex;",
 		"uniform vec3 boundingBox[2];",
 
@@ -22,13 +23,13 @@ XML3D.shaders.register("sig-eyelight", {
 		"	normal = texture2D(normalTex, texcoord).rgb;",
 
 		"	vec3 positionTmp;",
-		"	// SiSGetFloat3FromPixels",
-		"	positionTmp = texture2D(positionTex, texcoord).rgb;",
+		"	// SiSGetFloat3FromPixels2",
+		"	positionTmp = 0.9961089494163424 * texture2D( positionTex, texcoord ).rgb;",
+		"	positionTmp += 0.0038910505836575876 * texture2D( positionTex2, texcoord ).rgb;",
 
 		"	vec2 texCoordComp;",
 		"	// SiSGetFloat2FromPixels ",
 		"	vec4 IG_doubleTexCoords = texture2D( texcoordTex, texcoord );",
-		"	vec2 vertTexCoord;",
 		"	texCoordComp.r = (IG_doubleTexCoords.r * 0.996108948) + (IG_doubleTexCoords.b * 0.003891051);",
 		"	texCoordComp.g = (IG_doubleTexCoords.g * 0.996108948) + (IG_doubleTexCoords.a * 0.003891051);",
 
@@ -42,7 +43,7 @@ XML3D.shaders.register("sig-eyelight", {
 
 		"	// Connector",
 		"    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
-        "    fragNormal = normalize(normalMatrix * normal);",
+        "    fragNormal = normalize(normalMatrix * direction);",
         "    fragVertexPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;",
         "    fragTexCoord = texCoordComp;",
         "}"
@@ -81,14 +82,13 @@ XML3D.shaders.register("sig-eyelight", {
         "  if (alpha < 0.005) discard;",
 
         "  vec3 color = emissiveColor + (ambientIntensity * objDiffuse);\n",
-        
-        "  vec3 eyeVec = normalize(-fragVertexPosition);",     
-        "  vec3 lightVec = eyeVec;",
-        "  float diffuse = max(0.0, dot(fragNormal, lightVec)) ;",
-        "  float specular = pow(max(0.0, dot(fragNormal, eyeVec)), shininess*128.0);",
+        "  vec3 L = normalize(-fragVertexPosition);",     
+        "  vec3 N = normalize(fragNormal);",     
+        "  float diffuse = max(0.0, dot(N, L)) ;",
+        "  float specular = pow(max(0.0, dot(N, L)), shininess*128.0);",
 
         "  color = color + diffuse*objDiffuse + specular*specularColor;",
-        "  gl_FragColor = vec4(color, alpha);",
+        "  gl_FragColor = vec4(color, 1.0);",
         "}"
     ].join("\n"),
 
@@ -99,12 +99,13 @@ XML3D.shaders.register("sig-eyelight", {
     uniforms: {
         diffuseColor    : [1.0, 1.0, 1.0],
         emissiveColor   : [0.0, 0.0, 0.0],
-        specularColor   : [1.0, 1.0, 1.0],
+        specularColor   : [0.5, 0.5, 0.5],
         transparency    : 0.0,
         shininess       : 0.5,
         ambientIntensity: 0.0,
         useVertexColor : false,
-		"boundingBox[0]" : [-16.082886,  -7.875,  -10.0, 16.082886,  7.875,  10.0]
+		"boundingBox[0]" : [ -0.10244499892, -0.0722220018505,   -0.0458104982972,
+							  0.10244499892,   0.0722220018505,   0.0458104982972 ]
     },
 
     samplers: { 
@@ -112,10 +113,12 @@ XML3D.shaders.register("sig-eyelight", {
     },
 
 	meshRequest : {
-		index: { optional: false, size: true },
+		//index: { optional: false, size: true },
 		texcoord : { optional: false },
 		normalTex: null,
 		positionTex: null,
-		texcoordTex: null
+		positionTex2: null,
+		texcoordTex: null,
+		vertexCount: null
 	}
 });

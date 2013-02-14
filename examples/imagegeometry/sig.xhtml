@@ -30,7 +30,6 @@
 
     <transform id="light2Xfm" translation="5 10 0" />
 
-    <transform id="meshXfm" translation="0 0 20" scale="5 5 5"  />
 
     <lightshader id="light1" script="urn:xml3d:lightshader:point">
       <float3 name="intensity">100.0 100.0 100.0</float3>
@@ -53,7 +52,7 @@
     </shader>
 
     <data id="meshData">
-		<data compute="(index, texcoord) = xflow.createIGIndex(vertexCount, positionTex)">
+		<data compute="texcoord = xflow.createIGIndex(vertexCount, positionTex)">
 		  <int name="vertexCount" >12288</int>
 		  <float3 name="boundingbox">
 			-16.082886  -7.875  -10.0

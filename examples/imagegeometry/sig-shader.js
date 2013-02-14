@@ -42,7 +42,7 @@ XML3D.shaders.register("sig-eyelight", {
 
 		"	// Connector",
 		"    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
-        "    fragNormal = normalize(normalMatrix * normal);",
+        "    fragNormal = normalize(normalMatrix * direction);",
         "    fragVertexPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;",
         "    fragTexCoord = texCoordComp;",
         "}"
@@ -82,10 +82,10 @@ XML3D.shaders.register("sig-eyelight", {
 
         "  vec3 color = emissiveColor + (ambientIntensity * objDiffuse);\n",
         
-        "  vec3 eyeVec = normalize(-fragVertexPosition);",     
-        "  vec3 lightVec = eyeVec;",
-        "  float diffuse = max(0.0, dot(fragNormal, lightVec)) ;",
-        "  float specular = pow(max(0.0, dot(fragNormal, eyeVec)), shininess*128.0);",
+        "  vec3 L = normalize(-fragVertexPosition);",     
+        "  vec3 N = normalize(fragNormal);",     
+        "  float diffuse = max(0.0, dot(N, L)) ;",
+        "  float specular = pow(max(0.0, dot(N, L)), shininess*128.0);",
 
         "  color = color + diffuse*objDiffuse + specular*specularColor;",
         "  gl_FragColor = vec4(color, alpha);",
@@ -112,10 +112,10 @@ XML3D.shaders.register("sig-eyelight", {
     },
 
 	meshRequest : {
-		index: { optional: false, size: true },
-		texcoord : { optional: false },
+		texcoord : { required: true },
 		normalTex: null,
 		positionTex: null,
-		texcoordTex: null
+		texcoordTex: null,
+		vertexCount: null
 	}
 });

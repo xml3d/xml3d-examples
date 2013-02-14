@@ -101,8 +101,8 @@ function initPage(){
 
     document.title = "XML3D: " + (CURRENT ? CURRENT.name : "Index");
 
-    buildSocialLinks();
-    addGitHubRibbon();
+    //buildSocialLinks();
+    //addGitHubRibbon();
 }
 
 function buildIndex(){
