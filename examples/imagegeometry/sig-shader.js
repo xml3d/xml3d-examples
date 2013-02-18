@@ -104,7 +104,7 @@ XML3D.shaders.register("sig-eyelight", {
         shininess       : 0.5,
         ambientIntensity: 0.0,
         useVertexColor : false,
-		"boundingBox[0]" : [-16.082886,  -7.875,  -10.0, 16.082886,  7.875,  10.0]
+		boundingBox : [-1, -1, -1, 1 , 1, 1 ]
     },
 
     samplers: { 

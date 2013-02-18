@@ -51,10 +51,13 @@
       </texture>
     </shader>
 
-    <data id="meshData">
-		<data compute="texcoord = xflow.createIGIndex(vertexCount, positionTex)">
+  </defs>
+
+  <group id="root">
+    <group shader="#Phong">
+      <mesh type="triangles" id="Teapot01-FACES" compute="texcoord = xflow.createIGIndex(vertexCount, positionTex)">
 		  <int name="vertexCount" >12288</int>
-		  <float3 name="boundingbox">
+		  <float3 name="boundingBox">
 			-16.082886  -7.875  -10.0
 			16.082886  7.875  10.0
 		  </float3>
@@ -67,14 +70,6 @@
 		  <texture name="positionTex">
 			<img src="textures/CoordinateTexture.png"/>
 		  </texture>
-		</data>
-    </data>
-
-  </defs>
-
-  <group id="root">
-    <group shader="#Phong">
-      <mesh type="triangles" id="Teapot01-FACES" src="#meshData">
       </mesh>
     </group>
   </group>

@@ -103,9 +103,8 @@ XML3D.shaders.register("sig-eyelight", {
         transparency    : 0.0,
         shininess       : 0.5,
         ambientIntensity: 0.0,
-        useVertexColor : false,
-		"boundingBox[0]" : [ -0.10244499892, -0.0722220018505,   -0.0458104982972,
-							  0.10244499892,   0.0722220018505,   0.0458104982972 ]
+        useVertexColor  : false,
+		boundingBox 	: [ 0, 0, 0, 1, 1, 1 ]
     },
 
     samplers: { 
@@ -114,7 +113,7 @@ XML3D.shaders.register("sig-eyelight", {
 
 	meshRequest : {
 		//index: { optional: false, size: true },
-		texcoord : { optional: false },
+		texcoord : { required: true },
 		normalTex: null,
 		positionTex: null,
 		positionTex2: null,
