@@ -54,7 +54,8 @@ Xflow.registerOperator("ARMarkerDetector", {
                {type: 'float4x4', name : 'perspective', customAlloc: true}
              ],
     params:  [ {type: 'texture', source : 'image'},
-               {type: 'int', source: 'markers'}
+               {type: 'int', source: 'markers'},
+               {type: 'bool', source: 'noflip', optional: true}
              ],
     alloc: function(sizes, image, markers) {
         var len = markers.length;
@@ -62,7 +63,7 @@ Xflow.registerOperator("ARMarkerDetector", {
         sizes['visibility'] = len;
         sizes['perspective'] = 1;
     },
-    evaluate: function(transform, visibility, perspective, image, markers) {
+    evaluate: function(transform, visibility, perspective, image, markers, noflip) {
 
         if (!ar) {
             initARToolkit(image);
@@ -136,41 +137,49 @@ Xflow.registerOperator("ARMarkerDetector", {
             var mi = 16*i;
             var xfm = ar.resultMat;
 
-            // webcam
-            transform[mi+0]  = +xfm.m00;
-            transform[mi+1]  = +xfm.m10;
-            transform[mi+2]  = +xfm.m20;
-            transform[mi+3]  = 0;
-            transform[mi+4]  = -xfm.m01;
-            transform[mi+5]  = -xfm.m11;
-            transform[mi+6]  = -xfm.m21;
-            transform[mi+7]  = 0;
-            transform[mi+8]  = -xfm.m02;
-            transform[mi+9]  = -xfm.m12;
-            transform[mi+10] = -xfm.m22;
-            transform[mi+11] = 0;
-            transform[mi+12] = -xfm.m03;
-            transform[mi+13] = -xfm.m13;
-            transform[mi+14] = -xfm.m23;
-            transform[mi+15] = 1;
+            var webcamFlipped = true;
+            if (noflip && noflip[0])
+                webcamFlipped = false;
 
-            // no webcam (video)
-//            transform[mi+0]  = +xfm.m00;
-//            transform[mi+1]  = -xfm.m10;
-//            transform[mi+2]  = -xfm.m20;
-//            transform[mi+3]  = 0;
-//            transform[mi+4]  = +xfm.m01;
-//            transform[mi+5]  = -xfm.m11;
-//            transform[mi+6]  = -xfm.m21;
-//            transform[mi+7]  = 0;
-//            transform[mi+8]  = +xfm.m02;
-//            transform[mi+9]  = -xfm.m12;
-//            transform[mi+10] = -xfm.m22;
-//            transform[mi+11] = 0;
-//            transform[mi+12] = +xfm.m03;
-//            transform[mi+13] = -xfm.m13;
-//            transform[mi+14] = -xfm.m23;
-//            transform[mi+15] = 1;
+
+            if (webcamFlipped) {
+                // webcam (we show mirrored picture on the screen)
+                transform[mi+0]  = +xfm.m00;
+                transform[mi+1]  = +xfm.m10;
+                transform[mi+2]  = +xfm.m20;
+                transform[mi+3]  = 0;
+                transform[mi+4]  = -xfm.m01;
+                transform[mi+5]  = -xfm.m11;
+                transform[mi+6]  = -xfm.m21;
+                transform[mi+7]  = 0;
+                transform[mi+8]  = -xfm.m02;
+                transform[mi+9]  = -xfm.m12;
+                transform[mi+10] = -xfm.m22;
+                transform[mi+11] = 0;
+                transform[mi+12] = -xfm.m03;
+                transform[mi+13] = -xfm.m13;
+                transform[mi+14] = -xfm.m23;
+                transform[mi+15] = 1;
+            } else {
+                // no webcam (we show as is)
+                transform[mi+0]  = +xfm.m00;
+                transform[mi+1]  = -xfm.m10;
+                transform[mi+2]  = -xfm.m20;
+                transform[mi+3]  = 0;
+                transform[mi+4]  = +xfm.m01;
+                transform[mi+5]  = -xfm.m11;
+                transform[mi+6]  = -xfm.m21;
+                transform[mi+7]  = 0;
+                transform[mi+8]  = +xfm.m02;
+                transform[mi+9]  = -xfm.m12;
+                transform[mi+10] = -xfm.m22;
+                transform[mi+11] = 0;
+                transform[mi+12] = +xfm.m03;
+                transform[mi+13] = -xfm.m13;
+                transform[mi+14] = -xfm.m23;
+                transform[mi+15] = 1;
+            }
+
 
             // original
 //            var m4x4 = math.mat4.createFrom(
