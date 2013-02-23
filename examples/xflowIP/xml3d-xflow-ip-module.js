@@ -623,9 +623,13 @@ Xflow.registerOperator("createHistogram", {
         if (channel[0] < 0 || channel[0] > 2)
             throw "Invalid channel: channel must be 0, 1 or 2";
         var s = input.data;
+        // reset histogram to 0
+        for (var i = 0; i < histogram.length; ++i)
+            histogram[i] = 0;
+        // compute histogram
         for (var i = 0; i < s.length; i += 4)
             histogram[s[i + channel[0]]]++;
-
+        // normalize histogram
         for (var i = 0; i < histogram.length; i++)
             histogram[i] /= (input.width * input.height);
     }
