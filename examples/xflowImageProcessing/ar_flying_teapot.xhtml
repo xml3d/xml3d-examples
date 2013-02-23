@@ -4,12 +4,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Ball Demo</title>
+    <title>Teapot Demo</title>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="xml3d-motion.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
     <script type="text/javascript" src="JSARToolKit.js"></script>
     <script type="text/javascript" src="ARMarkerDetector.js"></script>
+    <script type="text/javascript" src="compute_threshold.js"></script>
     <script type="text/javascript" src="phongvs.js"></script>
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="ar_flying_teapot.js"></script>
@@ -32,20 +33,30 @@
 <defs>
     <data id="ardata">
         <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
-            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers)">
+            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers, threshold)">
+                <!--<int name="threshold" id="threshold">-->
+                    <!--170-->
+                <!--</int>-->
                 <int name="markers">
                     <!--0 2-->
                     <!--11 10 9 7 6 5-->
                     <!--0 2 5 6 7 9 10 11 22 64-->
                     <!--22 64-->
                     <!--0 1 2 3 4 5-->
-                    2 3
+                    2 5
                     <!--7 5-->
                 </int>
-                <texture name="arvideo">
-                    <video src="ARTestVideo.ogv"></video>
-                    <!--<video src="tests/output_4.ogg"></video>-->
-                </texture>
+                <data compute="threshold = xflow.getOtsuThreshold(histogram)">
+                    <data compute="histogram = xflow.createNormalizedHistogram(grvideo,channel)">
+                        <int name="channel">0</int>
+                        <data compute="grvideo = xflow.grayscale(arvideo)">
+                            <texture name="arvideo">
+                                <video src="ARTestVideo.ogv"></video>
+                                <!--<video src="tests/output_4.ogg"></video>-->
+                            </texture>
+                        </data>
+                    </data>
+                </data>
             </data>
         </data>
     </data>
@@ -4027,6 +4038,7 @@
     <button id="Stop" type="button">Stop</button>
     <label for="debug">Debug mode</label>
     <input type="checkbox" id="Debug" value="debug" name="debug"/>
+    Detected threshold (<font id="thresholdView">100</font>)
 </div>
 
 </body>

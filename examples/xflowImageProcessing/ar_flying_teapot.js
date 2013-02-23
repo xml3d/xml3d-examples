@@ -135,6 +135,7 @@ function setupApp() {
     var quat2 = math.quat4.create();
     var aa = math.quat4.create();
     var axis = new XML3DVec3();
+    var matrixIndex = [0,0]; // index of two matrices for interpolation
 
     var observer = new XML3DDataObserver(function (records, observer) {
         var transforms = records[0].result.getValue("transforms");
@@ -166,17 +167,20 @@ function setupApp() {
 //                f = 1-f;
 
             var visibilities = visibilities;
+            var mi = 0;
             for (var i = 0; i < transforms.length/16; ++i) {
                 var j = i * 16;
                 if (visibilities[i]) {
+                    if (mi < 2) // we need only two positions for interpolation
+                        matrixIndex[mi++] = i;
                     for (var k = 0; k < 16; ++k) {
                         matrices[i][k] = transforms[j+k];
                     }
                 }
             }
 
-            var m1 = matrices[0];
-            var m2 = matrices[1];
+            var m1 = matrices[matrixIndex[0]];
+            var m2 = matrices[matrixIndex[1]];
 
             math.mat4.toMat3(m1, m3x3);
             math.quat4.fromRotationMatrix(m3x3, quat1);
@@ -211,7 +215,7 @@ function setupApp() {
             tv[1] = p2[1] + dir[1]*f1;
             tv[2] = p2[2] + dir[2]*f1;
 
-            var height = Math.sin(f1*Math.PI)*dirLen;
+            var height = Math.sin(f1*Math.PI)*Math.max(dirLen, 200);
 
             ballLocalXfm.translation.set(0, 0, height);
 
@@ -238,7 +242,13 @@ function setupApp() {
             bgCtx.putImageData(data, 0, 0);
         }
     });
-    observer.observe(ardata, {names: ["flipvideo",  "transforms", "visibilities"]});
+    observer.observe(ardata, {names: ["flipvideo", "transforms", "visibilities"]});
+
+    var observer = new XML3DDataObserver(function (records, observer) {
+        var threshold = records[0].result.getValue("threshold");
+        document.getElementById("thresholdView").innerHTML = threshold[0];
+    });
+    observer.observe(ardata, {names: ["threshold"]});
 }
 
 window.onload = function() {
