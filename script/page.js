@@ -4,7 +4,8 @@ var CATEGORY_LIST = {
     basic: { name: "Basics" },
     external : { name: "External References" },
     shader : { name: "Shaders" },
-    xflow : { name: "Xflow" }
+    xflow : { name: "Xflow" },
+    ar : { name: "Augmented Reality"}
 
 
 }
@@ -49,9 +50,12 @@ var EXAMPLE_LIST = [
     {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
         info: "Demonstrates Xflow Skinning."},
      {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.xhtml",
-    info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
+        info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
      {cat: "xflow", name: "Xflow Keyframe Animation", href: "examples/xflowTransforms/xflow-transforms.xhtml",
-    info: "Demonstrates Xflow to animate transformations."}
+        info: "Demonstrates Xflow to animate transformations."},
+
+    {cat: "ar", name: "Simple AR", href: "examples/xflowAR/ar_simple_no_flip.xhtml",
+        info: "A simple augmented reality application with a teapot. Implemented with Xflow."},
 ]
 
 var CURRENT = null;
