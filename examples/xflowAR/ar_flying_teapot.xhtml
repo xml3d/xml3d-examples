@@ -19,35 +19,39 @@
     <script type="text/javascript" src="ARMarkerDetector.js"></script>
     <script type="text/javascript" src="compute_threshold.js"></script>
     <script type="text/javascript" src="phongvs.js"></script>
+    <script type="text/javascript" src="gl-matrix.js"></script>
+    <script type="text/javascript" src="ar_flying_teapot.js" ></script>
 </head>
 
 <body>
 <div id="overall">
 <div id="content">
     <div style="position: relative; width: 640px; height: 480px; margin: 0 auto" >
-    <video id="background" autoplay="true" width="640" height="480" src="../video/ar_marker.ogg"
-           style="position: absolute; top: 0; width: 640px; height: 480px;"></video>
+    <canvas id="background" width="640" height="480"
+              style="position: absolute; top: 0px; width: 640px; height: 480px;"></canvas>
 
     <xml3d xmlns="http://www.xml3d.org/2009/xml3d"
           style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">
 
         <!-- AR Data -->
-        <data id="arBase"
-              compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers, threshold, noflip)">
-            <bool name="noflip">true</bool>
-            <int name="markers">22 64</int>
-            <data compute="threshold = xflow.getOtsuThreshold(histogram)">
-              <data compute="histogram = xflow.createNormalizedHistogram(grvideo,channel)">
-                <int name="channel">0</int>
-                <data compute="grvideo = xflow.grayscale(arvideo)">
-                  <texture name="arvideo">
-                    <video autoplay="true" src="../video/ar_marker.ogg"></video>
-                  </texture>
+        <data id="arBase" >
+          <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
+            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers, threshold)">
+              <int name="markers">22 64</int>
+              <data compute="threshold = xflow.getOtsuThreshold(histogram)">
+                <data compute="histogram = xflow.createNormalizedHistogram(grvideo,channel)">
+                  <int name="channel">0</int>
+                  <data compute="grvideo = xflow.grayscale(arvideo)">
+                    <texture name="arvideo">
+                      <video autoplay="true" src="../video/ar_marker.ogg"></video>
+                    </texture>
+                  </data>
                 </data>
               </data>
-            </data>
-        </data>
 
+            </data>
+          </data>
+        </data>
 
         <!-- Viewpoint with connection to AR data -->
         <view id="View" perspective="#arBase" />
@@ -67,35 +71,17 @@
           <!-- Take visibility from AR -->
           <data filter="keep(visibility)" src="#obj1AR" />
         </shader>
-        <!-- Group taking transformation from AR data -->
-        <group transform="#obj1AR" shader="#obj1Shader" >
-          <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-            <mesh type="triangles" src="teapot.xml#mesh" />
+        <!-- Transformations modified by XML3DDataObserver -->
+        <transform id="t_teapot_ar" />
+        <transform id="t_teapot_local" />
+        <!-- Hierarchy of the displayed teapot -->
+        <group transform="#t_teapot_ar" shader="#obj1Shader" >
+          <group transform="#t_teapot_local" >
+            <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
+              <mesh type="triangles" src="teapot.xml#mesh" />
+            </group>
           </group>
         </group>
-
-        <!-- Object 2: -->
-        <!-- Extract visibility and transformation -->
-        <data id="obj2AR" compute="transform = xflow.selectTransform(index, transforms)">
-          <data compute="visibility = xflow.selectBool(index, visibilities)">
-            <int name="index">1</int>
-            <data src="#arBase"/>
-          </data>
-        </data>
-        <!-- Shader -->
-        <shader id="obj2Shader" script="urn:xml3d:shader:phongvs">
-          <float3 name="diffuseColor">0.2 0.4 1.0</float3>
-          <float name="ambientIntensity">0.2</float>
-          <!-- Take visibility from AR -->
-          <data filter="keep(visibility)" src="#obj2AR" />
-        </shader>
-        <!-- Group taking transformation from AR data -->
-        <group transform="#obj2AR" shader="#obj2Shader" >
-          <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-            <mesh type="triangles" src="teapot.xml#mesh" />
-          </group>
-        </group>
-
 
         <!-- Lights -->
 
@@ -117,11 +103,9 @@
     </xml3d>
     </div>
     <div class="webcam" >
+      <p>Current Threshold: <span id="thresholdView" ></span></p>
       <p><input type="checkbox" id="check"/><label for="check">Activate Webcam</label></p>
-      <p>Use the following markers: </p>
-      <div class="markerCanvas" >
-        <img src="img/22.png" alt="22" /><img src="img/64.png" alt="64" />
-      </div>
+      <p><a href="markers.xhtml" target="_blank" >Print Markers</a></p>
     </div>
 </div>
 </div>
@@ -164,6 +148,8 @@
   });
   ]]>
 </script>
+
+
 
 </body>
 

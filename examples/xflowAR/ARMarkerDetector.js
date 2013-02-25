@@ -55,6 +55,7 @@ Xflow.registerOperator("ARMarkerDetector", {
              ],
     params:  [ {type: 'texture', source : 'image'},
                {type: 'int', source: 'markers'},
+               {type: 'int', source: 'threshold'},
                {type: 'bool', source: 'noflip', optional: true}
              ],
     alloc: function(sizes, image, markers) {
@@ -63,7 +64,7 @@ Xflow.registerOperator("ARMarkerDetector", {
         sizes['visibility'] = len;
         sizes['perspective'] = 1;
     },
-    evaluate: function(transform, visibility, perspective, image, markers, noflip) {
+    evaluate: function(transform, visibility, perspective, image, markers, threshold, noflip) {
 
         if (!ar) {
             initARToolkit(image);
@@ -79,7 +80,7 @@ Xflow.registerOperator("ARMarkerDetector", {
 
         // detect markers from the canvas (using the raster reader we created for it)
         // use 170 as threshold value (0-255)
-        var detected = ar.detector.detectMarkerLite(raster, 170); // 110
+        var detected = ar.detector.detectMarkerLite(raster, threshold[0]); // 110 / 170
 
         for (var i = 0; i < transform.length; ++i) {
             visibility[i] = false;
