@@ -56,6 +56,8 @@ var EXAMPLE_LIST = [
 
     {cat: "ar", name: "Simple AR", href: "examples/xflowAR/ar_simple_no_flip.xhtml",
         info: "A simple augmented reality application with a teapot. Implemented with Xflow."},
+    {cat: "ar", name: "Flying Teapot", href: "examples/xflowAR/ar_flying_teapot.xhtml",
+        info: "Augmented reality application with a teapot jumping between two markers."},
 ]
 
 var CURRENT = null;
