@@ -5,12 +5,13 @@
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
     <!-- Scripts -->
   <script type="text/javascript" src="../../script/xml3d.js"></script>
-	  <script type="text/javascript" src="./xml3d-motion.js"></script>
+	  <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
     <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function() {
-            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"), {revolveAroundPoint: [-2,-14,-160], dollySpeed: 4000});
+            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"), {revolveAroundPoint:
+                new XML3DVec3(-2,-14,-160), dollySpeed: 4000});
             var xml3d = document.getElementById("MyXml3d");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);

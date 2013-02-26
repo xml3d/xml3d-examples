@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (08.02.2013 16:09:32 MEZ)
+@version: DEVELOPMENT SNAPSHOT (26.02.2013 12:47:06 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (08.02.2013 16:09:32 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (26.02.2013 12:47:06 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -326,45 +326,55 @@ window.requestAnimFrame = (function(){
         return v; 
     }; 
     
-    /** Convert a given mouse page position to be relative to the given target element. 
+    /** Calculate the offset of the given element and return it.
+     *
+     *  @param {Object} element
+     *  @return {{top:number, left:number}} the offset
+     *
+     *  This code is taken from http://javascript.info/tutorial/coordinates .
+     *  We don't want to do it with the offsetParent way, because the xml3d
+     *  element is actually invisible and thus offsetParent will return null
+     *  at least in WebKit. Also it's slow. So we use getBoundingClientRect().
+     *  However it returns the box relative to the window, not the document.
+     *  Thus, we need to incorporate the scroll factor. And because IE is so
+     *  awesome some workarounds have to be done and the code gets complicated.
+     */
+    function calculateOffset(element)
+    {
+        var box = element.getBoundingClientRect();
+        var body = document.body;
+        var docElem = document.documentElement;
+
+        // get scroll factor (every browser except IE supports page offsets)
+        var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop;
+        var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
+
+        // the document (`html` or `body`) can be shifted from left-upper corner in IE. Get the shift.
+        var clientTop = docElem.clientTop || body.clientTop || 0;
+        var clientLeft = docElem.clientLeft || body.clientLeft || 0;
+
+        var top  = box.top +  scrollTop - clientTop;
+        var left = box.left + scrollLeft - clientLeft;
+
+        // for Firefox an additional rounding is sometimes required
+        return {top: Math.round(top), left: Math.round(left)};
+    }
+
+    /** Convert a given mouse page position to be relative to the given target element.
      *  Most probably the page position are the MouseEvent's pageX and pageY attributes.
-     *  The result are the proper coordinates to be given to e.g. 
-     *  the <xml3d>'s getElementByPoint() method.   
-     *  
+     *  The result are the proper coordinates to be given to e.g.
+     *  the <xml3d>'s getElementByPoint() method.
+     *
      *  @param {!Object} xml3dEl the xml3d element to which the coords need to be translated
      *  @param {!number} pageX the x-coordinate relative to the page
      *  @param {!number} pageY the y-coordinate relative to the page
      *  @return {{x: number, y: number}} the converted coordinates
-     */ 
+     */
     u.convertPageCoords = function(xml3dEl, pageX, pageY)
-    {        
-        // get xml3d wrapper node 
-        var wrapper = xml3dEl.parentNode;
-        
-        if(!XML3D._native)
-        {
-            /* in the webgl version we have to take the next parent
-             * because xml3d gets wrapped in an invisible div first
-             * and thus offsetParent below will return null on it at
-             * least in WebKit. 
-             * see https://developer.mozilla.org/en-US/docs/DOM/element.offsetParent 
-             */
-            wrapper = wrapper.parentNode;
-        }
-        
-        // calculate offset to root node 
-        var offX = wrapper.offsetLeft; 
-        var offY = wrapper.offsetTop; 
-        
-        var node = wrapper; 
-        while(node = node.offsetParent)
-        {
-            offX += node.offsetLeft; 
-            offY += node.offsetTop; 
-        }
-        
-        // construct and return result. 
-        return {x: pageX - offX, y: pageY - offY};  
+    {
+        var off = calculateOffset(xml3dEl);
+
+        return {x: pageX - off.left, y: pageY - off.top};
     };
 }());
 // Add convienent array methods if non-existant
@@ -1613,7 +1623,7 @@ XML3D.css.convertCssToMat4 = function(cssMatrix, m){
 XML3D.math = {};
 var exports = XML3D.math;
 
-// fix for define variable non-existence
+// fix for define variable non-existence 
 var define = {};
 /*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
 
@@ -1826,12 +1836,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1854,7 +1864,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
     } else {
       // gl-matrix lives in a browser, define its namespaces in global
       shim.exports = window;
-    }
+    }    
   }
   else {
     // gl-matrix lives in commonjs, define its namespaces in exports
@@ -1870,12 +1880,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1920,12 +1930,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2314,7 +2324,7 @@ vec2.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -2326,7 +2336,7 @@ vec2.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1];
         }
-
+        
         return a;
     };
 })();
@@ -2353,12 +2363,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2798,7 +2808,7 @@ vec3.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -2810,7 +2820,7 @@ vec3.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2];
         }
-
+        
         return a;
     };
 })();
@@ -2837,12 +2847,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3286,7 +3296,7 @@ vec4.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -3298,7 +3308,7 @@ vec4.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2]; a[i+3] = vec[3];
         }
-
+        
         return a;
     };
 })();
@@ -3325,12 +3335,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3428,7 +3438,7 @@ mat2.transpose = function(out, a) {
         out[2] = a[1];
         out[3] = a[3];
     }
-
+    
     return out;
 };
 
@@ -3449,7 +3459,7 @@ mat2.invert = function(out, a) {
         return null;
     }
     det = 1.0 / det;
-
+    
     out[0] =  a3 * det;
     out[1] = -a1 * det;
     out[2] = -a2 * det;
@@ -3569,12 +3579,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3702,7 +3712,7 @@ mat3.transpose = function(out, a) {
         out[7] = a[5];
         out[8] = a[8];
     }
-
+    
     return out;
 };
 
@@ -3725,8 +3735,8 @@ mat3.invert = function(out, a) {
         // Calculate the determinant
         det = a00 * b01 + a01 * b11 + a02 * b21;
 
-    if (!det) {
-        return null;
+    if (!det) { 
+        return null; 
     }
     det = 1.0 / det;
 
@@ -3824,8 +3834,8 @@ mat3.mul = mat3.multiply;
  * @returns {String} string representation of the matrix
  */
 mat3.str = function (a) {
-    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' +
-                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' +
+    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + 
+                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' + 
                     a[6] + ', ' + a[7] + ', ' + a[8] + ')';
 };
 
@@ -3841,12 +3851,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -4019,7 +4029,7 @@ mat4.transpose = function(out, a) {
         out[14] = a[11];
         out[15] = a[15];
     }
-
+    
     return out;
 };
 
@@ -4052,8 +4062,8 @@ mat4.invert = function(out, a) {
         // Calculate the determinant
         det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
-    if (!det) {
-        return null;
+    if (!det) { 
+        return null; 
     }
     det = 1.0 / det;
 
@@ -4153,7 +4163,7 @@ mat4.multiply = function (out, a, b) {
         a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
 
     // Cache only the current line of the second matrix
-    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];  
     out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
     out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
     out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
@@ -4273,7 +4283,7 @@ mat4.rotate = function (out, a, rad, axis) {
         b20, b21, b22;
 
     if (Math.abs(len) < GLMAT_EPSILON) { return null; }
-
+    
     len = 1 / len;
     x *= len;
     y *= len;
@@ -4492,7 +4502,7 @@ mat4.fromRotationTranslation = function (out, q, v) {
     out[13] = v[1];
     out[14] = v[2];
     out[15] = 1;
-
+    
     return out;
 };
 
@@ -4694,7 +4704,7 @@ mat4.lookAt = function (out, eye, center, up) {
 mat4.str = function (a) {
     return 'mat4(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
                     a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
-                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' +
+                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
                     a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + ')';
 };
 
@@ -4710,12 +4720,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -4880,7 +4890,7 @@ quat.scale = vec4.scale;
  * @returns {quat} out
  */
 quat.rotateX = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bx = Math.sin(rad), bw = Math.cos(rad);
@@ -4901,7 +4911,7 @@ quat.rotateX = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateY = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         by = Math.sin(rad), bw = Math.cos(rad);
@@ -4922,7 +4932,7 @@ quat.rotateY = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateZ = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bz = Math.sin(rad), bw = Math.cos(rad);
@@ -5037,7 +5047,7 @@ quat.invert = function(out, a) {
     var a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3],
         dot = a0*a0 + a1*a1 + a2*a2 + a3*a3,
         invDot = dot ? 1.0/dot : 0;
-
+    
     // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
 
     out[0] = -a0*invDot;
@@ -5750,172 +5760,172 @@ if(typeof(exports) !== 'undefined') {
  */
 var SimplexNoise = function(r) {
 	if (r == undefined) r = Math;
-  this.grad3 = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
-                                 [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
-                                 [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
+  this.grad3 = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0], 
+                                 [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1], 
+                                 [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]]; 
   this.p = [];
   for (var i=0; i<256; i++) {
 	  this.p[i] = Math.floor(r.random()*256);
   }
-  // To remove the need for index wrapping, double the permutation table length
-  this.perm = [];
+  // To remove the need for index wrapping, double the permutation table length 
+  this.perm = []; 
   for(var i=0; i<512; i++) {
 		this.perm[i]=this.p[i & 255];
-	}
+	} 
 
-  // A lookup table to traverse the simplex around a given point in 4D.
-  // Details can be found where this table is used, in the 4D noise method.
-  this.simplex = [
-    [0,1,2,3],[0,1,3,2],[0,0,0,0],[0,2,3,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,2,3,0],
-    [0,2,1,3],[0,0,0,0],[0,3,1,2],[0,3,2,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,3,2,0],
-    [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],
-    [1,2,0,3],[0,0,0,0],[1,3,0,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,3,0,1],[2,3,1,0],
-    [1,0,2,3],[1,0,3,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,0,3,1],[0,0,0,0],[2,1,3,0],
-    [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],
-    [2,0,1,3],[0,0,0,0],[0,0,0,0],[0,0,0,0],[3,0,1,2],[3,0,2,1],[0,0,0,0],[3,1,2,0],
-    [2,1,0,3],[0,0,0,0],[0,0,0,0],[0,0,0,0],[3,1,0,2],[0,0,0,0],[3,2,0,1],[3,2,1,0]];
+  // A lookup table to traverse the simplex around a given point in 4D. 
+  // Details can be found where this table is used, in the 4D noise method. 
+  this.simplex = [ 
+    [0,1,2,3],[0,1,3,2],[0,0,0,0],[0,2,3,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,2,3,0], 
+    [0,2,1,3],[0,0,0,0],[0,3,1,2],[0,3,2,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,3,2,0], 
+    [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0], 
+    [1,2,0,3],[0,0,0,0],[1,3,0,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,3,0,1],[2,3,1,0], 
+    [1,0,2,3],[1,0,3,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,0,3,1],[0,0,0,0],[2,1,3,0], 
+    [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0], 
+    [2,0,1,3],[0,0,0,0],[0,0,0,0],[0,0,0,0],[3,0,1,2],[3,0,2,1],[0,0,0,0],[3,1,2,0], 
+    [2,1,0,3],[0,0,0,0],[0,0,0,0],[0,0,0,0],[3,1,0,2],[0,0,0,0],[3,2,0,1],[3,2,1,0]]; 
 };
 
-SimplexNoise.prototype.dot = function(g, x, y) {
+SimplexNoise.prototype.dot = function(g, x, y) { 
 	return g[0]*x + g[1]*y;
 };
 
-SimplexNoise.prototype.noise = function(xin, yin) {
-  var n0, n1, n2; // Noise contributions from the three corners
-  // Skew the input space to determine which simplex cell we're in
-  var F2 = 0.5*(Math.sqrt(3.0)-1.0);
-  var s = (xin+yin)*F2; // Hairy factor for 2D
-  var i = Math.floor(xin+s);
-  var j = Math.floor(yin+s);
-  var G2 = (3.0-Math.sqrt(3.0))/6.0;
-  var t = (i+j)*G2;
-  var X0 = i-t; // Unskew the cell origin back to (x,y) space
-  var Y0 = j-t;
-  var x0 = xin-X0; // The x,y distances from the cell origin
-  var y0 = yin-Y0;
-  // For the 2D case, the simplex shape is an equilateral triangle.
-  // Determine which simplex we are in.
-  var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
-  if(x0>y0) {i1=1; j1=0;} // lower triangle, XY order: (0,0)->(1,0)->(1,1)
-  else {i1=0; j1=1;}      // upper triangle, YX order: (0,0)->(0,1)->(1,1)
-  // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
-  // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
-  // c = (3-sqrt(3))/6
-  var x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
-  var y1 = y0 - j1 + G2;
-  var x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
-  var y2 = y0 - 1.0 + 2.0 * G2;
-  // Work out the hashed gradient indices of the three simplex corners
-  var ii = i & 255;
-  var jj = j & 255;
-  var gi0 = this.perm[ii+this.perm[jj]] % 12;
-  var gi1 = this.perm[ii+i1+this.perm[jj+j1]] % 12;
-  var gi2 = this.perm[ii+1+this.perm[jj+1]] % 12;
-  // Calculate the contribution from the three corners
-  var t0 = 0.5 - x0*x0-y0*y0;
-  if(t0<0) n0 = 0.0;
-  else {
-    t0 *= t0;
-    n0 = t0 * t0 * this.dot(this.grad3[gi0], x0, y0);  // (x,y) of grad3 used for 2D gradient
+SimplexNoise.prototype.noise = function(xin, yin) { 
+  var n0, n1, n2; // Noise contributions from the three corners 
+  // Skew the input space to determine which simplex cell we're in 
+  var F2 = 0.5*(Math.sqrt(3.0)-1.0); 
+  var s = (xin+yin)*F2; // Hairy factor for 2D 
+  var i = Math.floor(xin+s); 
+  var j = Math.floor(yin+s); 
+  var G2 = (3.0-Math.sqrt(3.0))/6.0; 
+  var t = (i+j)*G2; 
+  var X0 = i-t; // Unskew the cell origin back to (x,y) space 
+  var Y0 = j-t; 
+  var x0 = xin-X0; // The x,y distances from the cell origin 
+  var y0 = yin-Y0; 
+  // For the 2D case, the simplex shape is an equilateral triangle. 
+  // Determine which simplex we are in. 
+  var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords 
+  if(x0>y0) {i1=1; j1=0;} // lower triangle, XY order: (0,0)->(1,0)->(1,1) 
+  else {i1=0; j1=1;}      // upper triangle, YX order: (0,0)->(0,1)->(1,1) 
+  // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and 
+  // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where 
+  // c = (3-sqrt(3))/6 
+  var x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords 
+  var y1 = y0 - j1 + G2; 
+  var x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords 
+  var y2 = y0 - 1.0 + 2.0 * G2; 
+  // Work out the hashed gradient indices of the three simplex corners 
+  var ii = i & 255; 
+  var jj = j & 255; 
+  var gi0 = this.perm[ii+this.perm[jj]] % 12; 
+  var gi1 = this.perm[ii+i1+this.perm[jj+j1]] % 12; 
+  var gi2 = this.perm[ii+1+this.perm[jj+1]] % 12; 
+  // Calculate the contribution from the three corners 
+  var t0 = 0.5 - x0*x0-y0*y0; 
+  if(t0<0) n0 = 0.0; 
+  else { 
+    t0 *= t0; 
+    n0 = t0 * t0 * this.dot(this.grad3[gi0], x0, y0);  // (x,y) of grad3 used for 2D gradient 
+  } 
+  var t1 = 0.5 - x1*x1-y1*y1; 
+  if(t1<0) n1 = 0.0; 
+  else { 
+    t1 *= t1; 
+    n1 = t1 * t1 * this.dot(this.grad3[gi1], x1, y1); 
   }
-  var t1 = 0.5 - x1*x1-y1*y1;
-  if(t1<0) n1 = 0.0;
-  else {
-    t1 *= t1;
-    n1 = t1 * t1 * this.dot(this.grad3[gi1], x1, y1);
-  }
-  var t2 = 0.5 - x2*x2-y2*y2;
-  if(t2<0) n2 = 0.0;
-  else {
-    t2 *= t2;
-    n2 = t2 * t2 * this.dot(this.grad3[gi2], x2, y2);
-  }
-  // Add contributions from each corner to get the final noise value.
-  // The result is scaled to return values in the interval [-1,1].
-  return 70.0 * (n0 + n1 + n2);
+  var t2 = 0.5 - x2*x2-y2*y2; 
+  if(t2<0) n2 = 0.0; 
+  else { 
+    t2 *= t2; 
+    n2 = t2 * t2 * this.dot(this.grad3[gi2], x2, y2); 
+  } 
+  // Add contributions from each corner to get the final noise value. 
+  // The result is scaled to return values in the interval [-1,1]. 
+  return 70.0 * (n0 + n1 + n2); 
 };
 
-// 3D simplex noise
-SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
-  var n0, n1, n2, n3; // Noise contributions from the four corners
-  // Skew the input space to determine which simplex cell we're in
-  var F3 = 1.0/3.0;
-  var s = (xin+yin+zin)*F3; // Very nice and simple skew factor for 3D
-  var i = Math.floor(xin+s);
-  var j = Math.floor(yin+s);
-  var k = Math.floor(zin+s);
-  var G3 = 1.0/6.0; // Very nice and simple unskew factor, too
-  var t = (i+j+k)*G3;
-  var X0 = i-t; // Unskew the cell origin back to (x,y,z) space
-  var Y0 = j-t;
-  var Z0 = k-t;
-  var x0 = xin-X0; // The x,y,z distances from the cell origin
-  var y0 = yin-Y0;
-  var z0 = zin-Z0;
-  // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
-  // Determine which simplex we are in.
-  var i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
-  var i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
-  if(x0>=y0) {
-    if(y0>=z0)
-      { i1=1; j1=0; k1=0; i2=1; j2=1; k2=0; } // X Y Z order
-      else if(x0>=z0) { i1=1; j1=0; k1=0; i2=1; j2=0; k2=1; } // X Z Y order
-      else { i1=0; j1=0; k1=1; i2=1; j2=0; k2=1; } // Z X Y order
-    }
-  else { // x0<y0
-    if(y0<z0) { i1=0; j1=0; k1=1; i2=0; j2=1; k2=1; } // Z Y X order
-    else if(x0<z0) { i1=0; j1=1; k1=0; i2=0; j2=1; k2=1; } // Y Z X order
-    else { i1=0; j1=1; k1=0; i2=1; j2=1; k2=0; } // Y X Z order
-  }
-  // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
-  // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
-  // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
+// 3D simplex noise 
+SimplexNoise.prototype.noise3d = function(xin, yin, zin) { 
+  var n0, n1, n2, n3; // Noise contributions from the four corners 
+  // Skew the input space to determine which simplex cell we're in 
+  var F3 = 1.0/3.0; 
+  var s = (xin+yin+zin)*F3; // Very nice and simple skew factor for 3D 
+  var i = Math.floor(xin+s); 
+  var j = Math.floor(yin+s); 
+  var k = Math.floor(zin+s); 
+  var G3 = 1.0/6.0; // Very nice and simple unskew factor, too 
+  var t = (i+j+k)*G3; 
+  var X0 = i-t; // Unskew the cell origin back to (x,y,z) space 
+  var Y0 = j-t; 
+  var Z0 = k-t; 
+  var x0 = xin-X0; // The x,y,z distances from the cell origin 
+  var y0 = yin-Y0; 
+  var z0 = zin-Z0; 
+  // For the 3D case, the simplex shape is a slightly irregular tetrahedron. 
+  // Determine which simplex we are in. 
+  var i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords 
+  var i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords 
+  if(x0>=y0) { 
+    if(y0>=z0) 
+      { i1=1; j1=0; k1=0; i2=1; j2=1; k2=0; } // X Y Z order 
+      else if(x0>=z0) { i1=1; j1=0; k1=0; i2=1; j2=0; k2=1; } // X Z Y order 
+      else { i1=0; j1=0; k1=1; i2=1; j2=0; k2=1; } // Z X Y order 
+    } 
+  else { // x0<y0 
+    if(y0<z0) { i1=0; j1=0; k1=1; i2=0; j2=1; k2=1; } // Z Y X order 
+    else if(x0<z0) { i1=0; j1=1; k1=0; i2=0; j2=1; k2=1; } // Y Z X order 
+    else { i1=0; j1=1; k1=0; i2=1; j2=1; k2=0; } // Y X Z order 
+  } 
+  // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z), 
+  // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and 
+  // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where 
   // c = 1/6.
-  var x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
-  var y1 = y0 - j1 + G3;
-  var z1 = z0 - k1 + G3;
-  var x2 = x0 - i2 + 2.0*G3; // Offsets for third corner in (x,y,z) coords
-  var y2 = y0 - j2 + 2.0*G3;
-  var z2 = z0 - k2 + 2.0*G3;
-  var x3 = x0 - 1.0 + 3.0*G3; // Offsets for last corner in (x,y,z) coords
-  var y3 = y0 - 1.0 + 3.0*G3;
-  var z3 = z0 - 1.0 + 3.0*G3;
-  // Work out the hashed gradient indices of the four simplex corners
-  var ii = i & 255;
-  var jj = j & 255;
-  var kk = k & 255;
-  var gi0 = this.perm[ii+this.perm[jj+this.perm[kk]]] % 12;
-  var gi1 = this.perm[ii+i1+this.perm[jj+j1+this.perm[kk+k1]]] % 12;
-  var gi2 = this.perm[ii+i2+this.perm[jj+j2+this.perm[kk+k2]]] % 12;
-  var gi3 = this.perm[ii+1+this.perm[jj+1+this.perm[kk+1]]] % 12;
-  // Calculate the contribution from the four corners
-  var t0 = 0.6 - x0*x0 - y0*y0 - z0*z0;
-  if(t0<0) n0 = 0.0;
-  else {
-    t0 *= t0;
-    n0 = t0 * t0 * this.dot(this.grad3[gi0], x0, y0, z0);
+  var x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords 
+  var y1 = y0 - j1 + G3; 
+  var z1 = z0 - k1 + G3; 
+  var x2 = x0 - i2 + 2.0*G3; // Offsets for third corner in (x,y,z) coords 
+  var y2 = y0 - j2 + 2.0*G3; 
+  var z2 = z0 - k2 + 2.0*G3; 
+  var x3 = x0 - 1.0 + 3.0*G3; // Offsets for last corner in (x,y,z) coords 
+  var y3 = y0 - 1.0 + 3.0*G3; 
+  var z3 = z0 - 1.0 + 3.0*G3; 
+  // Work out the hashed gradient indices of the four simplex corners 
+  var ii = i & 255; 
+  var jj = j & 255; 
+  var kk = k & 255; 
+  var gi0 = this.perm[ii+this.perm[jj+this.perm[kk]]] % 12; 
+  var gi1 = this.perm[ii+i1+this.perm[jj+j1+this.perm[kk+k1]]] % 12; 
+  var gi2 = this.perm[ii+i2+this.perm[jj+j2+this.perm[kk+k2]]] % 12; 
+  var gi3 = this.perm[ii+1+this.perm[jj+1+this.perm[kk+1]]] % 12; 
+  // Calculate the contribution from the four corners 
+  var t0 = 0.6 - x0*x0 - y0*y0 - z0*z0; 
+  if(t0<0) n0 = 0.0; 
+  else { 
+    t0 *= t0; 
+    n0 = t0 * t0 * this.dot(this.grad3[gi0], x0, y0, z0); 
   }
-  var t1 = 0.6 - x1*x1 - y1*y1 - z1*z1;
-  if(t1<0) n1 = 0.0;
-  else {
-    t1 *= t1;
-    n1 = t1 * t1 * this.dot(this.grad3[gi1], x1, y1, z1);
-  }
-  var t2 = 0.6 - x2*x2 - y2*y2 - z2*z2;
-  if(t2<0) n2 = 0.0;
-  else {
-    t2 *= t2;
-    n2 = t2 * t2 * this.dot(this.grad3[gi2], x2, y2, z2);
-  }
-  var t3 = 0.6 - x3*x3 - y3*y3 - z3*z3;
-  if(t3<0) n3 = 0.0;
-  else {
-    t3 *= t3;
-    n3 = t3 * t3 * this.dot(this.grad3[gi3], x3, y3, z3);
-  }
-  // Add contributions from each corner to get the final noise value.
-  // The result is scaled to stay just inside [-1,1]
-  return 32.0*(n0 + n1 + n2 + n3);
+  var t1 = 0.6 - x1*x1 - y1*y1 - z1*z1; 
+  if(t1<0) n1 = 0.0; 
+  else { 
+    t1 *= t1; 
+    n1 = t1 * t1 * this.dot(this.grad3[gi1], x1, y1, z1); 
+  } 
+  var t2 = 0.6 - x2*x2 - y2*y2 - z2*z2; 
+  if(t2<0) n2 = 0.0; 
+  else { 
+    t2 *= t2; 
+    n2 = t2 * t2 * this.dot(this.grad3[gi2], x2, y2, z2); 
+  } 
+  var t3 = 0.6 - x3*x3 - y3*y3 - z3*z3; 
+  if(t3<0) n3 = 0.0; 
+  else { 
+    t3 *= t3; 
+    n3 = t3 * t3 * this.dot(this.grad3[gi3], x3, y3, z3); 
+  } 
+  // Add contributions from each corner to get the final noise value. 
+  // The result is scaled to stay just inside [-1,1] 
+  return 32.0*(n0 + n1 + n2 + n3); 
 };// XML3DVec3
 
 (function($) {
@@ -6202,8 +6212,8 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
             this._updateQuaternion();
         }
 
-    };
-
+    }; 
+    
     var p = XML3DRotation.prototype;
 
     /** @type {number} */
@@ -6343,7 +6353,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
     };
 
     /**
-     * Returns a XML3DMatrix that describes this 3D rotation in a
+     * Returns a XML3DMatrix that describes this 3D rotation in a 
      * 4x4 matrix representation.
      * @return {XML3DMatrix} Rotation matrix
      */
@@ -6353,13 +6363,13 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         XML3D.math.mat4.fromRotationTranslation(m._data, q, [0, 0, 0]);
         return m;
     };
-
+    
     /**
-     * Rotates the vector passed as parameter with this rotation
+     * Rotates the vector passed as parameter with this rotation 
      * representation. The result is returned as new vector instance.
      * Neither this nor the inputVector are changed.
      * 4x4 matrix representation.
-     * @param {XML3DVec3} inputVector
+     * @param {XML3DVec3} inputVector 
      * @return {XML3DVec3} The rotated vector
      */
     p.rotateVec3 = function(inputVector) {
@@ -6367,7 +6377,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         XML3D.math.vec3.transformQuat(result._data, inputVector._data, this._data)
         return result;
     };
-
+    
     /**
      * Replaces the existing rotation with the quaternion representation passed
      * as argument
@@ -6396,7 +6406,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
     /**
      * Multiplies this rotation with the passed rotation. This rotation is not
      * changed.
-     *
+     * 
      * @param {XML3DRotation} rot1
      * @return {XML3DVec3} The result
      */
@@ -6415,14 +6425,14 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         var na = this._axis.normalize();
         return new XML3DRotation(na, this._angle);
     };
-
-    /**
-     * Returns the quaternion, that underlies this rotation.
-     *
-     * @return {Float32Array}
+    
+    /** 
+     * Returns the quaternion, that underlies this rotation. 
+     * 
+     * @return {Float32Array} 
      */
     p.getQuaternion = function() {
-        return XML3D.math.quat.copy(XML3D.math.quat.create(), this._data);
+        return XML3D.math.quat.copy(XML3D.math.quat.create(), this._data); 
     };
 
     XML3D.XML3DRotation = XML3DRotation;
@@ -6438,7 +6448,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
      * described by two vectors min and max.
      * @constructor
      * @param {XML3DVec3=} min The smaller point of the box. Default: (0,0,0)
-     * @param {XML3DVec3=} max The biggest point of the box. Default: (0,0,0)
+     * @param {XML3DVec3=} max The biggest point of the box. Default: (0,0,0) 
      */
     var XML3DBox = function(min, max, cb) {
         var that = this;
@@ -6538,7 +6548,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
     XML3DBox.prototype.isEmpty = function() {
         return (this._min.x > this._max.x || this._min.y > this._max.y || this._min.z > this._max.z);
     };
-
+    
     /**
      * String representation of the XML3DBox.
      * @override
@@ -6558,9 +6568,9 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         if (this._callback)
             this._callback(this);
     };
-
-    /** updates the min or max accoring to the given point or bounding box.
-    *
+    
+    /** updates the min or max accoring to the given point or bounding box. 
+    * 
     * @param that the object used for extension, which can be a XML3DVec3 or XML3DBox
     */
     XML3DBox.prototype.extend = function(that)
@@ -6604,7 +6614,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
 }(XML3D._native));
 // matrix.js
 (function(isNative) {
-
+    
     if(isNative) return;
 
     /**
@@ -6859,14 +6869,14 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
 
     if(isNative)
         return;
-
+    
     /** returns an XML3DRay that has an origin and a direction.
-    *
-    * If the arguments are not given, the ray's origin is (0,0,0) and
-    * points down the negative z-axis.
-    *
+    * 
+    * If the arguments are not given, the ray's origin is (0,0,0) and 
+    * points down the negative z-axis.  
+    *   
     *  @param {XML3DVec3=} origin (optional) the origin of the ray
-    *  @param {XML3DVec3=} direction (optional) the direction of the ray
+    *  @param {XML3DVec3=} direction (optional) the direction of the ray   
     */
     var XML3DRay = function(origin, direction, cb) {
         var that = this;
@@ -6893,9 +6903,9 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         /** @private * */
         this._callback = typeof cb == 'function' ? cb : 0;
 
-    };
+    }; 
     var p = XML3DRay.prototype;
-
+    
     /** @type {XML3DVec3} */
     Object.defineProperty(p, "origin", {
         /** @this {XML3DRay} * */
@@ -6913,7 +6923,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         configurable : false,
         enumerable : false
     });
-
+    
     /**
      * The set method copies the values from other.
      * @param {XML3DRay} other The other ray
@@ -7359,8 +7369,8 @@ XML3D.base.callAdapterFunc = function(node, funcs) {
     }
     return result;
 };
-
-/**
+  
+/**    
  * This function sends single or multiple adapter events by calling functions
  * specified in events parameter for each adapter associated with the node.
  *
@@ -8021,9 +8031,9 @@ XML3D.config.isXML3DElement = function(e) {
 
 /**
  * @param {Element} element
- * @param {boolean=} selfmonitoring: whether to register listeners on element for node
+ * @param {boolean=} selfmonitoring: whether to register listeners on element for node 
  *                  addition/removal and attribute modification. This property is propagated
- *                  to children.
+ *                  to children. 
  * @return {undefined}
  */
 XML3D.config.element = function(element, selfmonitoring) {
@@ -8053,15 +8063,15 @@ XML3D.config.element = function(element, selfmonitoring) {
 
 /**
  * @param {Element} element
- * @param {boolean=} selfmonitoring: whether to register listeners on element for node
+ * @param {boolean=} selfmonitoring: whether to register listeners on element for node 
  *                  addition/removal and attribute modification. This property is propagated
- *                  to children.
+ *                  to children. 
  * @return {undefined}
  */
 XML3D.config.configure = function(element, selfmonitoring) {
     if (Array.isArray(element)) {
         Array.forEach(element, function(el) {
-            XML3D.config.element(el, selfmonitoring);
+            XML3D.config.element(el, selfmonitoring); 
         });
     } else {
         XML3D.config.element(element, selfmonitoring);
@@ -10260,7 +10270,7 @@ Xflow.DataNode = function(graph, protoNode){
 
     this.loading = false;
 
-
+    
     this._isProtoNode = protoNode;
     this._children = [];
     this._sourceNode = null;
@@ -11504,7 +11514,8 @@ function mappingNotifyOwner(mapping){
     }
 
     function setOperatorProtoNames(channelNode){
-        channelNode.operator = Xflow.getOperator(channelNode.owner._computeOperator);
+        var operatorName = channelNode.owner._computeOperator;
+        channelNode.operator = operatorName && Xflow.getOperator(operatorName);
         if(channelNode.operator){
             var operator = channelNode.operator, inputMapping = channelNode.owner._computeInputMapping;
             for(var i = 0; i < operator.params.length; ++i){
@@ -15340,19 +15351,19 @@ XML3D.webgl.MAXFPS = 30;
         return true;
     };
 
-    /**
-     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in
-     * the GL context. The y-coordinate gets turned upside-down. The lowest possible
-     * canvas coordinate is 0, so we need to subtract 1 from the height, too.
-     *
+    /** 
+     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in 
+     * the GL context. The y-coordinate gets turned upside-down. The lowest possible 
+     * canvas coordinate is 0, so we need to subtract 1 from the height, too. 
+     * 
      * @param {number} canvasY
      * @return {number} the converted y-coordinate
      */
-    CanvasHandler.prototype.canvasToGlY = function(canvasY) {
-
-        return this.canvas.height - canvasY - 1;
-    };
-
+    CanvasHandler.prototype.canvasToGlY = function(canvasY) { 
+        
+        return this.canvas.height - canvasY - 1; 
+    }; 
+    
     /**
      * Binds the picking buffer and passes the request for a picking pass to the
      * renderer
@@ -15366,25 +15377,25 @@ XML3D.webgl.MAXFPS = 30;
             return null;
         if(this.needPickingDraw) {
             this.renderer.prepareRendering();
-            this.renderer.renderSceneToPickingBuffer();
+            this.renderer.renderSceneToPickingBuffer();   
         }
-
-        /** Temporary workaround: this function is called when drawable objects are not yet
+        
+        /** Temporary workaround: this function is called when drawable objects are not yet 
          *  updated. Thus, the renderer.render() updates the objects after the picking buffer
-         *  has been updated. In that case, the picking buffer needs to be updated again.
-         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
+         *  has been updated. In that case, the picking buffer needs to be updated again. 
+         *  Thus, we only set needPickingDraw to false when we are sure that objects don't 
          *  need any updates, i.e. when needDraw is false.
-         *  A better solution would be to separate drawable objects updating from rendering
+         *  A better solution would be to separate drawable objects updating from rendering 
          *  and to update the objects either during render() or renderSceneToPickingBuffer().
          */
         if(!this.needDraw)
             this.needPickingDraw = false;
-
+        
         var glY = this.canvasToGlY(canvasY);
-
+        
         this.currentPickObj = this.renderer.getRenderObjectFromPickingBuffer(canvasX, glY);
-
-
+        
+        
         return this.currentPickObj;
     };
 
@@ -15397,9 +15408,9 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.getWorldSpaceNormalByPoint = function(pickedObj, canvasX, canvasY) {
         if (!pickedObj || this._pickingDisabled)
             return null;
-
+        
         var glY = this.canvasToGlY(canvasY);
-
+        
         this.renderer.renderPickedNormals(pickedObj);
         return this.renderer.readNormalFromPickingBuffer(canvasX, glY);
     };
@@ -15414,21 +15425,21 @@ XML3D.webgl.MAXFPS = 30;
     	if (!pickedObj)
     		return null;
 
-        var glY = this.canvasToGlY(canvasY);
-
+        var glY = this.canvasToGlY(canvasY); 
+        
         this.renderer.renderPickedPosition(pickedObj);
         return this.renderer.readPositionFromPickingBuffer(canvasX, glY);
     };
-
-    CanvasHandler.prototype.getCanvasHeight = function() {
-
-    	return this.canvas.height;
+    
+    CanvasHandler.prototype.getCanvasHeight = function() { 
+    	
+    	return this.canvas.height; 
     };
-
-    CanvasHandler.prototype.getCanvasWidth = function() {
-
-    	return this.canvas.width;
-    };
+    
+    CanvasHandler.prototype.getCanvasWidth = function() { 
+    	
+    	return this.canvas.width; 
+    };  
 
     /**
      * Uses gluUnProject() to transform the 2D screen point to a 3D ray.
@@ -15438,8 +15449,8 @@ XML3D.webgl.MAXFPS = 30;
      * @param {number} canvasY
      */
     CanvasHandler.prototype.generateRay = function(canvasX, canvasY) {
-
-        var glY = this.canvasToGlY(canvasY);
+        
+        var glY = this.canvasToGlY(canvasY); 
 
         // setup input to unproject
         var viewport = new Array();
@@ -15469,7 +15480,7 @@ XML3D.webgl.MAXFPS = 30;
         // calculate ray
         var worldToViewMat = this.renderer.currentView.getViewMatrix().inverse();
         var viewPos = new window.XML3DVec3(worldToViewMat.m41, worldToViewMat.m42, worldToViewMat.m43);
-
+        
         ray.origin.set(viewPos);
         ray.direction.set(farHit[0] - nearHit[0], farHit[1] - nearHit[1], farHit[2] - nearHit[2]);
         ray.direction.set(ray.direction.normalize());
@@ -15909,19 +15920,19 @@ XML3D.webgl.stopEvent = function(ev) {
 
         var min = bbox.min._data;
         var max = bbox.max._data;
-
+    
         var center = XML3D.math.vec3.scale(XML3D.math.vec3.create(), XML3D.math.vec3.add(XML3D.math.vec3.create(), min, max), 0.5);
         var extend = XML3D.math.vec3.scale(XML3D.math.vec3.create(), XML3D.math.vec3.subtract(XML3D.math.vec3.create(), max, min), 0.5);
-
+    
         XML3D.math.mat4.copy(absMat, gmatrix);
         absMat.set([0, 0, 0, 1], 12)
         for ( var i = 0; i < 16; i++) {
             absMat[i] = Math.abs(absMat[i]);
         }
-
+    
         XML3D.math.vec3.transformMat4(extend, extend, absMat);
         XML3D.math.vec3.transformMat4(center, center, gmatrix);
-
+    
         XML3D.math.vec3.add(bbox.max._data, center, extend);
         XML3D.math.vec3.subtract(bbox.min._data, center, extend);
     };
@@ -16135,23 +16146,23 @@ XML3D.webgl.stopEvent = function(ev) {
 
 
     };
-
-    /** for every component of v1 and v2 applies f, i.e. f(v1[.],v2[.]),
+    
+    /** for every component of v1 and v2 applies f, i.e. f(v1[.],v2[.]), 
      *  and returns it.
-     *
-     *  @param {vec3} v1
+     *  
+     *  @param {vec3} v1 
      *  @param {vec3} v2
      *  @param {function(number, number):number} f
-     *  @return {vec3} the mapped vector
-     */
+     *  @return {vec3} the mapped vector 
+     */    
     function mapVec(v1, v2, f)
     {
-        var vec = XML3D.math.vec3.create();
-        vec[0] = f(v1[0], v2[0]);
+        var vec = XML3D.math.vec3.create(); 
+        vec[0] = f(v1[0], v2[0]); 
         vec[1] = f(v1[1], v2[1]);
-        vec[2] = f(v1[2], v2[2]);
-
-        return vec;
+        vec[2] = f(v1[2], v2[2]); 
+        
+        return vec; 
     };
 
     /**
@@ -16165,14 +16176,14 @@ XML3D.webgl.stopEvent = function(ev) {
         var xfmmax = XML3D.math.vec3.create();
         XML3D.math.vec3.transformMat4(xfmmin, bbox.min._data, trafo);
         XML3D.math.vec3.transformMat4(xfmmax, bbox.max._data, trafo);
-
+        
         /* bounding box is axis-aligned, but through transformation
-         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57),
-         * here min's and max' x and z values are swapped). So we
-         * order them now.
+         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57), 
+         * here min's and max' x and z values are swapped). So we 
+         * order them now. 
          */
-        var bbmin = mapVec(xfmmin, xfmmax, Math.min);
-        var bbmax = mapVec(xfmmin, xfmmax, Math.max);
+        var bbmin = mapVec(xfmmin, xfmmax, Math.min); 
+        var bbmax = mapVec(xfmmin, xfmmax, Math.max); 
 
         if (bbmin[0] < min[0])
             min[0] = bbmin[0];
@@ -16362,9 +16373,9 @@ XML3D.webgl.stopEvent = function(ev) {
         this.shaders[shaderId] = program;
         this.gl.useProgram(program.handle);
 
-        this.setUniformsFromComputeResult(program, dataTable);
-        this.createTexturesFromComputeResult(program, dataTable);
-        XML3D.webgl.checkError(this.gl, "setSamplers");
+        this.setUniformsFromComputeResult(program, dataTable, { force: true });
+        this.createTexturesFromComputeResult(program, dataTable, { force: true });
+        //XML3D.webgl.checkError(this.gl, "setSamplers");
         return shaderId;
     };
 
@@ -16546,18 +16557,59 @@ XML3D.webgl.stopEvent = function(ev) {
     };
 
     /**
-     *
+     * @param {ProgramObject} programObject
+     * @param {Xflow.ComputeResult} data
+     * @param {Object?} opt
      */
-    XML3DShaderManager.prototype.setUniformsFromComputeResult = function(programObject, data) {
+    XML3DShaderManager.prototype.setUniformsFromComputeResult = function(programObject, data, opt) {
         var dataMap = data.getOutputMap();
         var uniforms = programObject.uniforms;
+        var opt = opt || {};
+
+        var force = opt.force || false;
+
         for ( var name in uniforms) {
             var entry = dataMap[name];
-            if (entry) {
+
+            if(!entry)
+                continue;
+
+            if(force || entry.userData.webglDataChanged != -1 ) {
                 XML3DShaderManager.setUniform(this.gl, uniforms[name], entry.getValue());
+                entry.userData.webglDataChanged = -1;
             }
         }
     };
+
+    /**
+     * @param {ProgramObject} programObject
+     * @param {Xflow.ComputeResult} result
+     * @param {Object?} opt options
+     */
+    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result, opt) {
+        var texUnit = 0;
+        var samplers = programObject.samplers;
+        var opt = opt || {};
+
+        var force = opt.force || false;
+
+        for ( var name in samplers) {
+            var sampler = samplers[name];
+            var entry = result.getOutputData(name);
+
+            if (!entry) {
+                sampler.info = new InvalidTexture();
+                continue;
+            }
+
+            if(force || entry.userData.webglDataChanged != -1 ) {
+                this.createTextureFromEntry(entry, sampler, texUnit);
+                entry.userData.webglDataChanged = -1;
+            }
+            texUnit++;
+        }
+    };
+
 
     XML3DShaderManager.prototype.setUniformVariables = function(shader, uniforms) {
         for ( var name in uniforms) {
@@ -16690,27 +16742,6 @@ XML3D.webgl.stopEvent = function(ev) {
         this.gl.deleteProgram(shader.handle);
     };
 
-    /**
-     *
-     * @param {ProgramObject} programObject
-     * @param {Xflow.ComputeResult} result
-     */
-    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result) {
-        var texUnit = 0;
-        var samplers = programObject.samplers;
-        for ( var name in samplers) {
-            var sampler = samplers[name];
-            var entry = result.getOutputData(name);
-
-            if (!entry) {
-                sampler.info = new InvalidTexture();
-                continue;
-            }
-
-            this.createTextureFromEntry(entry, sampler, texUnit);
-            texUnit++;
-        }
-    };
 
     /**
      *
@@ -16849,9 +16880,9 @@ XML3D.webgl.stopEvent = function(ev) {
 
             // stretch to fit
             context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            
+
             // centered with transparent padding around edges
-            //ctx.drawImage(image, 0, 0, image.width, image.height); 
+            //ctx.drawImage(image, 0, 0, image.width, image.height);
             image = canvas;
             info.canvas = canvas;
             info.context = context;
@@ -18474,7 +18505,7 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     XML3DRenderAdapter.prototype.generateRay = function(x, y) {
-
+        
         return this.factory.handler.generateRay(x, y);
     };
     XML3D.webgl.XML3DRenderAdapter = XML3DRenderAdapter;
@@ -18698,18 +18729,18 @@ Renderer.prototype.notifyDataChanged = function() {
         m._data.set(this.viewMatrix);
         return m;
     };
-
-    /**
-     * @return {XML3DMatrix} returns the inverse of the view matrix, since now we
+    
+    /** 
+     * @return {XML3DMatrix} returns the inverse of the view matrix, since now we 
      * want to go world2view and not view2world
      */
-    p.getWorldMatrix = function() {
-        var m = new window.XML3DMatrix();
-        var tmp = XML3D.math.mat4.create();
+    p.getWorldMatrix = function() {        
+        var m = new window.XML3DMatrix();  
+        var tmp = XML3D.math.mat4.create(); 
         XML3D.math.mat4.invert(tmp, this.viewMatrix);
         m._data.set(tmp);
-        return m;
-    };
+        return m; 
+    }; 
 
 
     p.getModelViewMatrix = function(model) {
@@ -18719,7 +18750,7 @@ Renderer.prototype.notifyDataChanged = function() {
     p.getModelViewProjectionMatrix = function(modelViewMatrix) {
         return XML3D.math.mat4.multiply(XML3D.math.mat4.create(), this.projMatrix, modelViewMatrix);
     };
-
+    
     p.getWorldSpacePosition = function() {
     	return this.worldPosition;
     };
@@ -18856,32 +18887,32 @@ Renderer.prototype.notifyDataChanged = function() {
         this.node = node;
         this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
     };
-
+    
     XML3D.createClass(TextureRenderAdapter, XML3D.webgl.RenderAdapter);
     TextureRenderAdapter.prototype.notifyChanged = function(evt) {
         var shaderAdapter = this.factory.getAdapter(this.node.parentElement);
         if (shaderAdapter)
             shaderAdapter.notifyChanged(evt);
     };
-
+    
     TextureRenderAdapter.prototype.getDataTable = function() {
         return this.dataAdapter.createDataTable();
     };
-
+    
     TextureRenderAdapter.prototype.destroy = function() {
         if (!this.info || this.info.handle === null)
             return;
-
+        
         this.gl.deleteTexture(this.info.handle);
         this.info = null;
         this.bind = function(texUnit) { return; };
         this.unbind = function(texUnit) { return; };
     };
-
+    
     TextureRenderAdapter.prototype.dispose = function(evt) {
         //TODO: tell renderer to dispose
     };
-
+    
     XML3D.webgl.TextureRenderAdapter = TextureRenderAdapter;
 }());
 XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
@@ -19305,7 +19336,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         var matrix = this.getLocalMatrixInternal();
         if (matrix)
             XML3D.math.mat4.multiply(m, m, matrix);
-
+    
         return m;
     };
 
@@ -19758,7 +19789,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
     LightRenderAdapter.prototype.dispose = function() {
         this.isValid = false;
     };
-
+    
     LightRenderAdapter.prototype.destroy = function() {
     	this.clearAdapterHandles();
     };
