@@ -246,7 +246,8 @@ function setupApp() {
 
     var observer = new XML3DDataObserver(function (records, observer) {
         var threshold = records[0].result.getValue("threshold");
-        document.getElementById("thresholdView").innerHTML = threshold[0];
+        if (threshold && threshold.length >= 1)
+            document.getElementById("thresholdView").innerHTML = threshold[0];
     });
     observer.observe(ardata, {names: ["threshold"]});
 }
