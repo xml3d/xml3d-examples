@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (26.02.2013 12:47:06 MEZ)
+@version: DEVELOPMENT SNAPSHOT (10.04.2013 11:44:42 MESZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (26.02.2013 12:47:06 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (10.04.2013 11:44:42 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -7081,6 +7081,8 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
             case Xflow.DATA_TYPE.INT4 : return XML3DDataEntry.INT4;
             case Xflow.DATA_TYPE.BOOL : return XML3DDataEntry.BOOL;
             case Xflow.DATA_TYPE.TEXTURE : return XML3DDataEntry.TEXTURE;
+            case Xflow.DATA_TYPE.BYTE : return XML3DDataEntry.BYTE;
+            case Xflow.DATA_TYPE.UBYTE : return XML3DDataEntry.UBYTE;
             default: throw new Error("WHAT IS THIS I DON'T EVEN...");
         }
     }
@@ -7100,6 +7102,8 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
     XML3DDataEntry.INT4 = 11;
     XML3DDataEntry.BOOL = 20;
     XML3DDataEntry.TEXTURE = 30;
+    XML3DDataEntry.BYTE = 40;
+    XML3DDataEntry.UBYTE = 50;
 
     var XML3DDataChannelInfo = function(type, origin, originalName, seqLength, seqMinKey, seqMaxKey){
         this.type = getXML3DDataType(type);
@@ -7298,10 +7302,20 @@ XML3D.base.AdapterFactory = function(aspect, mimetypes, canvasId) {
  * Implemented by subclass
  * Create adapter from an object (node in case of an xml, and object in case of json)
  * @param {object} obj
+ * @param {String} mimetype optional mimetype of obj
  * @returns {XML3D.base.Adapter=} created adapter or null if no adapter can be created
  */
-XML3D.base.AdapterFactory.prototype.createAdapter = function(obj) {
+XML3D.base.AdapterFactory.prototype.createAdapter = function(obj, mimetype) {
     return null;
+};
+
+/**
+ * Checks if the adapter factory supports specified mimetype. Can be overridden by subclass.
+ * @param {String} mimetype
+ * @return {Boolean} true if the adapter factory supports specified mimetype
+ */
+XML3D.base.AdapterFactory.prototype.supportsMimetype = function(mimetype) {
+    return this.mimetypes.indexOf(mimetype) != -1;
 };
 
 /**
@@ -7320,9 +7334,10 @@ XML3D.createClass(XML3D.base.NodeAdapterFactory, XML3D.base.AdapterFactory);
  * This function first checks, if an adapter has been already created for the corresponding node
  * If yes, this adapter is returned, otherwise, a new adapter is created and returned.
  * @param {Object} node
+ * @param {String} mimetype optional mimetype of obj
  * @returns {XML3D.base.Adapter} The adapter of the node
  */
-XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
+XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node, mimetype) {
     if (!node || node._configured === undefined)
         return null;
     var elemHandler = node._configured;
@@ -7332,7 +7347,7 @@ XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
         return adapter;
 
     // No adapter found, try to create one
-    adapter = this.createAdapter(node);
+    adapter = this.createAdapter(node, mimetype);
     if (adapter) {
         elemHandler.adapters[key] = adapter;
         adapter.init();
@@ -7575,6 +7590,52 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         }
     };
 
+    var binaryContentTypes = ["application/octet-stream", "text/plain; charset=x-user-defined"];
+    var binaryExtensions = [".bin", ".bson"];
+
+    function endsWith(str, suffix) {
+        return str.indexOf(suffix, str.length - suffix.length) !== -1;
+    }
+
+    ResourceManager.prototype.addBinaryContentType = function (type) {
+        if (binaryContentTypes.indexOf(type) == -1)
+            binaryContentTypes.push(type);
+    };
+
+    ResourceManager.prototype.removeBinaryContentType = function (type) {
+        var idx = binaryContentTypes.indexOf(type);
+        if (idx != -1)
+            binaryContentTypes.splice(idx, 1);
+    };
+
+    function isBinaryContentType(contentType) {
+        for (var i in binaryContentTypes) {
+            if (contentType == binaryContentTypes[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    ResourceManager.prototype.addBinaryExtension = function(extension) {
+        if (binaryExtensions.indexOf(extension) == -1)
+            binaryExtensions.push(extension);
+    };
+
+    ResourceManager.prototype.removeBinaryExtension = function(extension) {
+        var idx = binaryExtensions.indexOf(extension);
+        if (idx != -1)
+            binaryExtensions.splice(idx, 1);
+    };
+
+    function isBinaryExtension(url) {
+        for (var i in binaryExtensions) {
+            if (endsWith(url, binaryExtensions[i]))
+                return true;
+        }
+        return false;
+    }
+
     /**
      * Load a document via XMLHttpRequest
      * @private
@@ -7589,11 +7650,56 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         }
         if (xmlHttp) {
             xmlHttp._url = url;
+            xmlHttp._contentChecked = false;
             xmlHttp.open('GET', url, true);
+            if (isBinaryExtension(url))
+                xmlHttp.responseType = "arraybuffer";
+
             xmlHttp.onreadystatechange = function() {
+                if (xmlHttp._aborted) // This check is possibly not needed
+                    return;
+                // check compatibility between content and request mode
+                if (!xmlHttp._contentChecked &&
+                    // 2 - HEADERS_RECEIVED, 3 - LOADING, 4 - DONE
+                    ((xmlHttp.readyState == 2 || xmlHttp.readyState == 3 ||xmlHttp.readyState == 4) &&
+                        xmlHttp.status == 200)) {
+                    xmlHttp._contentChecked = true; // we check only once
+                    // check if we need to change request mode
+                    var contentType = xmlHttp.getResponseHeader("content-type");
+                    if (contentType) {
+                        var binaryContent = isBinaryContentType(contentType);
+                        var binaryRequest = (xmlHttp.responseType == "arraybuffer");
+                        // When content is not the same as request, we need to repeat request
+                        if (binaryContent != binaryRequest) {
+                            xmlHttp._aborted = true;
+                            var cb = xmlHttp.onreadystatechange;
+                            xmlHttp.onreadystatechange = null;
+                            var url = xmlHttp._url;
+                            xmlHttp.abort();
+
+                            // Note: We do not recycle XMLHttpRequest !
+                            //       This does work only when responseType is changed to "arraybuffer",
+                            //       however the size of the xmlHttp.response buffer is then wrong !
+                            //       It does not work at all (at least in Chrome) when we use overrideMimeType
+                            //       with "text/plain; charset=x-user-defined" argument.
+                            //       The latter mode require creation of the fresh XMLHttpRequest.
+
+                            xmlHttp = new XMLHttpRequest();
+                            xmlHttp._url = url;
+                            xmlHttp._contentChecked = true;
+                            xmlHttp.open('GET', url, true);
+                            if (binaryContent)
+                                xmlHttp.responseType = "arraybuffer";
+                            xmlHttp.onreadystatechange = cb;
+                            xmlHttp.send(null);
+                            return;
+                        }
+                    }
+                }
+                // Request mode and content type are compatible here (both binary or both text)
                 if (xmlHttp.readyState == 4) {
                     if(xmlHttp.status == 200){
-                        XML3D.debug.logDebug("Loaded: " + url);
+                        XML3D.debug.logDebug("Loaded: " + xmlHttp._url);
                         XML3D.xmlHttpCallback && XML3D.xmlHttpCallback(xmlHttp);
                         processResponse(xmlHttp);
                     }
@@ -7637,7 +7743,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         var docCache = c_cachedDocuments[url];
         docCache.mimetype = mimetype;
 
-        if (mimetype == "application/json") {
+        if (req.responseType == "arraybuffer") {
+            docCache.response = req.response;
+        } else if (mimetype == "application/json") {
             docCache.response = JSON.parse(req.responseText);
         } else if (mimetype == "application/xml" || mimetype == "text/xml") {
             docCache.response = req.responseXML;
@@ -7653,6 +7761,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
             for(var i = 0; i < xml3dElements.length; ++i){
                 XML3D.config.element(xml3dElements[i]);
             }
+        } else if (mimetype == "application/octet-stream" || mimetype == "text/plain; charset=x-user-defined") {
+            XML3D.debug.logError("Possibly wrong loading of resource "+url+". Mimetype is "+mimetype+" but response is not an ArrayBuffer");
+            docCache.response = req.response;
         }
     }
 
@@ -7706,6 +7817,8 @@ XML3D.base.sendAdapterEvent = function(node, events) {
             data = response;
         } else if (mimetype == "application/xml" || mimetype == "text/xml") {
             data = response.querySelectorAll("*[id="+fragment+"]")[0];
+        } else {
+            data = response; // for "application/octet-stream" and "text/plain; charset=x-user-defined"
         }
 
         if (data) {
@@ -7764,8 +7877,8 @@ XML3D.base.sendAdapterEvent = function(node, events) {
 
         for ( var i = 0; i < factories.length; ++i) {
             var fac = factories[i];
-            if (fac.aspect == adapterType && fac.mimetypes.indexOf(mimetype) != -1) {
-                var adapter = fac.getAdapter ? fac.getAdapter(data) : fac.createAdapter(data);
+            if (fac.aspect == adapterType && fac.supportsMimetype(mimetype)) {
+                var adapter = fac.getAdapter ? fac.getAdapter(data, mimetype) : fac.createAdapter(data, mimetype);
                 if (adapter) {
                     handle.setAdapter(adapter, XML3D.base.AdapterHandle.STATUS.READY);
                 }
@@ -7891,6 +8004,100 @@ XML3D.base.sendAdapterEvent = function(node, events) {
             c_cachedAdapterHandles[uri][adapterType][canvasId].notifyListeners(type);
         }
     }
+
+
+    /**
+     * Load data via XMLHttpRequest
+     * @private
+     * @param {string} url URL of the document
+     */
+    ResourceManager.prototype.loadData = function(url, loadListener, errorListener) {
+        var xmlHttp = null;
+        try {
+            xmlHttp = new XMLHttpRequest();
+        } catch (e) {
+            xmlHttp = null;
+        }
+        if (xmlHttp) {
+            xmlHttp._url = url;
+            xmlHttp._contentChecked = false;
+            xmlHttp.open('GET', url, true);
+            if (isBinaryExtension(url))
+                xmlHttp.responseType = "arraybuffer";
+
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp._aborted) // This check is possibly not needed
+                    return;
+                // check compatibility between content and request mode
+                if (!xmlHttp._contentChecked &&
+                    // 2 - HEADERS_RECEIVED, 3 - LOADING, 4 - DONE
+                    ((xmlHttp.readyState == 2 || xmlHttp.readyState == 3 ||xmlHttp.readyState == 4) &&
+                        xmlHttp.status == 200)) {
+                    xmlHttp._contentChecked = true; // we check only once
+                    // check if we need to change request mode
+                    var contentType = xmlHttp.getResponseHeader("content-type");
+                    if (contentType) {
+                        var binaryContent = isBinaryContentType(contentType);
+                        var binaryRequest = (xmlHttp.responseType == "arraybuffer");
+                        // When content is not the same as request, we need to repeat request
+                        if (binaryContent != binaryRequest) {
+                            xmlHttp._aborted = true;
+                            var cb = xmlHttp.onreadystatechange;
+                            xmlHttp.onreadystatechange = null;
+                            var url = xmlHttp._url;
+                            xmlHttp.abort();
+
+                            // Note: We do not recycle XMLHttpRequest !
+                            //       This does work only when responseType is changed to "arraybuffer",
+                            //       however the size of the xmlHttp.response buffer is then wrong !
+                            //       It does not work at all (at least in Chrome) when we use overrideMimeType
+                            //       with "text/plain; charset=x-user-defined" argument.
+                            //       The latter mode require creation of the fresh XMLHttpRequest.
+
+                            xmlHttp = new XMLHttpRequest();
+                            xmlHttp._url = url;
+                            xmlHttp._contentChecked = true;
+                            xmlHttp.open('GET', url, true);
+                            if (binaryContent)
+                                xmlHttp.responseType = "arraybuffer";
+                            xmlHttp.onreadystatechange = cb;
+                            xmlHttp.send(null);
+                            return;
+                        }
+                    }
+                }
+                // Request mode and content type are compatible here (both binary or both text)
+                if (xmlHttp.readyState == 4) {
+                    if(xmlHttp.status == 200) {
+                        XML3D.debug.logDebug("Loaded: " + xmlHttp._url);
+
+                        var mimetype = xmlHttp.getResponseHeader("content-type");
+                        var response = null;
+
+                        if (xmlHttp.responseType == "arraybuffer") {
+                            response = xmlHttp.response;
+                        } else if (mimetype == "application/json") {
+                            response = JSON.parse(xmlHttp.responseText);
+                        } else if (mimetype == "application/xml" || mimetype == "text/xml") {
+                            response = xmlHttp.responseXML;
+                        } else if (mimetype == "application/octet-stream" || mimetype == "text/plain; charset=x-user-defined") {
+                            XML3D.debug.logError("Possibly wrong loading of resource "+url+". Mimetype is "+mimetype+" but response is not an ArrayBuffer");
+                            response = xmlHttp.responseText; // FIXME is this correct ?
+                        }
+                        if (loadListener)
+                            loadListener(response);
+                    }
+                    else {
+                        XML3D.debug.logError("Could not load external document '" + xmlHttp._url +
+                            "': " + xmlHttp.status + " - " + xmlHttp.statusText);
+                        if (errorListener)
+                            errorListener(xmlHttp);
+                    }
+                }
+            };
+            xmlHttp.send(null);
+        }
+    };
 
     /**
      * This function is called to load an Image.
@@ -9521,6 +9728,7 @@ XML3D.classInfo['view'] = {
     _term: undefined
 };
 /* END GENERATED */
+window=this;
 var Xflow = {};
 
 Xflow.EPSILON = 0.000001;
@@ -9539,7 +9747,9 @@ Xflow.DATA_TYPE = {
     INT : 20,
     INT4 : 21,
     BOOL: 30,
-    TEXTURE: 40
+    TEXTURE: 40,
+    BYTE : 50,
+    UBYTE : 60
 }
 
 Xflow.DATA_TYPE_TUPLE_SIZE = {};
@@ -9552,6 +9762,8 @@ Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
 Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
 Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BOOL] = 1;
 Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
 
 Xflow.DATA_TYPE_MAP = {
     'float' : Xflow.DATA_TYPE.FLOAT,
@@ -9562,7 +9774,9 @@ Xflow.DATA_TYPE_MAP = {
     'int' : Xflow.DATA_TYPE.INT,
     'int4' : Xflow.DATA_TYPE.INT4,
     'bool' : Xflow.DATA_TYPE.BOOL,
-    'texture' : Xflow.DATA_TYPE.TEXTURE
+    'texture' : Xflow.DATA_TYPE.TEXTURE,
+    'byte' : Xflow.DATA_TYPE.BYTE,
+    'ubyte' : Xflow.DATA_TYPE.UBYTE
 }
 
 Xflow.getTypeName = function(type){
@@ -9577,25 +9791,24 @@ Xflow.getTypeName = function(type){
  * @enum {number}
  */
 Xflow.TEX_FILTER_TYPE = {
-    NONE: 0,
-    REPEAT: 1,
-    LINEAR: 2
+    NEAREST: 0x2600,
+    LINEAR: 0x2601,
+    MIPMAP_NEAREST: 0x2700,
+    MIPMAP_LINEAR: 0x2701
+
 };
 /**
  * @enum {number}
  */
 Xflow.TEX_WRAP_TYPE = {
-    CLAMP: 0,
-    REPEAT: 1,
-    BORDER: 2
+    CLAMP: 0x812F,
+    REPEAT: 0x2901
 };
 /**
  * @enum {number}
  */
 Xflow.TEX_TYPE = {
-    TEXTURE_1D: 0,
-    TEXTURE_2D: 1,
-    TEXTURE_3D: 2
+    TEXTURE_2D: 0x0DE1
 };
 
 
@@ -9669,7 +9882,32 @@ Xflow.ORIGIN = {
     PROTO: 3
 };
 
-(function(){
+
+/* Tools */
+
+/**
+ *
+ * @param {Object} ctor Constructor
+ * @param {Object} parent Parent class
+ * @param {Object=} methods Methods to add to the class
+ * @returns {Object}
+ */
+Xflow.createClass = function(ctor, parent, methods) {
+    methods = methods || {};
+    if (parent) {
+        /** @constructor */
+        var F = function() {
+        };
+        F.prototype = parent.prototype;
+        ctor.prototype = new F();
+        ctor.prototype.constructor = ctor;
+        ctor.superclass = parent.prototype;
+    }
+    for ( var m in methods) {
+        ctor.prototype[m] = methods[m];
+    }
+    return ctor;
+};(function(){
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -9695,13 +9933,13 @@ Xflow.SamplerConfig = function(){
 };
 Xflow.SamplerConfig.prototype.setDefaults = function() {
     // FIXME Generate this from the spec ?
-    this.minFilter = WebGLRenderingContext.LINEAR;
-    this.magFilter = WebGLRenderingContext.LINEAR;
-    this.mipFilter = WebGLRenderingContext.NEAREST;
-    this.wrapS = WebGLRenderingContext.CLAMP_TO_EDGE;
-    this.wrapT = WebGLRenderingContext.CLAMP_TO_EDGE;
-    this.wrapU = WebGLRenderingContext.CLAMP_TO_EDGE;
-    this.textureType = WebGLRenderingContext.TEXTURE_2D;
+    this.minFilter = Xflow.TEX_FILTER_TYPE.LINEAR;
+    this.magFilter = Xflow.TEX_FILTER_TYPE.LINEAR;
+    this.mipFilter = Xflow.TEX_FILTER_TYPE.NEAREST;
+    this.wrapS = Xflow.TEX_WRAP_TYPE.CLAMP;
+    this.wrapT = Xflow.TEX_WRAP_TYPE.CLAMP;
+    this.wrapU = Xflow.TEX_WRAP_TYPE.CLAMP;
+    this.textureType = Xflow.TEX_TYPE.TEXTURE_2D;
     this.colorR = 0;
     this.colorG = 0;
     this.colorB = 0;
@@ -9781,7 +10019,7 @@ Xflow.BufferEntry = function(type, value){
     this._value = value;
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_NEW);
 };
-XML3D.createClass(Xflow.BufferEntry, Xflow.DataEntry);
+Xflow.createClass(Xflow.BufferEntry, Xflow.DataEntry);
 var BufferEntry = Xflow.BufferEntry;
 
 
@@ -9878,7 +10116,7 @@ Xflow.TextureEntry = function(image){
 
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_NEW);
 };
-XML3D.createClass(Xflow.TextureEntry, Xflow.DataEntry);
+Xflow.createClass(Xflow.TextureEntry, Xflow.DataEntry);
 var TextureEntry = Xflow.TextureEntry;
 
 TextureEntry.prototype.isLoading = function() {
@@ -9958,10 +10196,6 @@ TextureEntry.prototype.createImage = function(width, height, formatType, sampler
 TextureEntry.prototype.setImage = function(v) {
     this._updateImage(v);
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
-};
-
-TextureEntry.prototype.setFormatType = function(t) {
-    this._formatType = t;
 };
 
 TextureEntry.prototype.getFormatType = function() {
@@ -10098,6 +10332,119 @@ TextureEntry.prototype.getIterateCount = function() {
 //};
 
 //----------------------------------------------------------------------------------------------------------------------
+// Xflow.ImageDataTextureEntry
+//----------------------------------------------------------------------------------------------------------------------
+
+
+Xflow.ImageDataTextureEntry = function(imageData){
+    Xflow.DataEntry.call(this, Xflow.DATA_TYPE.TEXTURE);
+    this._samplerConfig = new SamplerConfig();
+    this._imageData = null;
+    this._formatType = null;
+    this._updateImageData(imageData);
+
+    notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_NEW);
+};
+Xflow.createClass(Xflow.ImageDataTextureEntry, Xflow.DataEntry);
+var ImageDataTextureEntry = Xflow.ImageDataTextureEntry;
+
+ImageDataTextureEntry.prototype.isLoading = function() {
+    return !this._imageData;
+};
+
+ImageDataTextureEntry.prototype._updateImageData = function(imageData) {
+    this._formatType = null;
+    this._imageData = imageData;
+};
+
+/** Create new image
+ *
+ * @param width
+ * @param height
+ * @param formatType
+ * @param samplerConfig
+ * @return {Image|Canvas}
+ */
+ImageDataTextureEntry.prototype.createImage = function(width, height, formatType, samplerConfig) {
+    if (!this._image || this.getWidth() != width || this.getHeight() != height || this._formatType != formatType) {
+        if (!width || !height)
+            throw new Error("Width or height is not specified");
+        this._formatType = formatType;
+        if (!samplerConfig) {
+            samplerConfig = new Xflow.SamplerConfig();
+            samplerConfig.setDefaults();
+        }
+        this._samplerConfig.set(samplerConfig);
+
+        var imageData = {
+            width: width,
+            height: height,
+            data: null
+        };
+        if(formatType == 'float64'){
+            imageData.data = new Float64Array(width*height*4);
+        }
+        else if(formatType == 'float32'){
+            imageData.data = new Float32Array(width*height*4);
+        }
+        else {
+            // FIXME: We should allocate Uint8ClampedArray here instead
+            // But Uint8ClampedArray can't be allocated in Chrome inside a Web Worker
+            // See bug: http://code.google.com/p/chromium/issues/detail?id=176479
+            // As a work around, we allocate Int16Array which results in correct clamping outside of web worker
+            if(Uint8Array == Uint8ClampedArray)
+                imageData.data = new Int16Array(width*height*4);
+            else
+                imageData.data = new Uint8ClampedArray(width*height*4);
+        }
+        this._imageData = imageData;
+    }
+    this.notifyChanged();
+};
+
+/** @param {Object} v */
+ImageDataTextureEntry.prototype.setImageData = function(v) {
+    this._updateImageData(v);
+    notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
+};
+
+ImageDataTextureEntry.prototype.getWidth = function() {
+    return this._imageData && this._imageData.width || 0;
+};
+
+ImageDataTextureEntry.prototype.getHeight = function() {
+    return this._imageData && this._imageData.height || 0;
+};
+
+/** @return {ImageData} */
+ImageDataTextureEntry.prototype.getValue = function() {
+    return this._imageData;
+};
+
+/** @return {SamplerConfig} */
+ImageDataTextureEntry.prototype.getSamplerConfig = function(){
+    return this._samplerConfig;
+};
+
+/** @return {number} */
+ImageDataTextureEntry.prototype.getLength = function(){
+    return 1;
+};
+ImageDataTextureEntry.prototype.isEmpty = function(){
+    return !this._imageData
+};
+
+ImageDataTextureEntry.prototype.getFormatType = function() {
+    return this._formatType;
+};
+
+
+/** @return {number} */
+ImageDataTextureEntry.prototype.getIterateCount = function() {
+    return 1;
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Xflow.DataChangeNotifier
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -10204,7 +10551,7 @@ Xflow.InputNode = function(graph){
     this._data = null;
     this._param = false;
 };
-XML3D.createClass(Xflow.InputNode, Xflow.GraphNode);
+Xflow.createClass(Xflow.InputNode, Xflow.GraphNode);
 var InputNode = Xflow.InputNode;
 
 InputNode.prototype.notify = function(newValue, notification) {
@@ -10270,7 +10617,7 @@ Xflow.DataNode = function(graph, protoNode){
 
     this.loading = false;
 
-    
+
     this._isProtoNode = protoNode;
     this._children = [];
     this._sourceNode = null;
@@ -10287,7 +10634,7 @@ Xflow.DataNode = function(graph, protoNode){
     this._requests = [];
 
 };
-XML3D.createClass(Xflow.DataNode, Xflow.GraphNode);
+Xflow.createClass(Xflow.DataNode, Xflow.GraphNode);
 var DataNode = Xflow.DataNode;
 
 
@@ -10309,7 +10656,7 @@ Xflow.OrderMapping = function(owner){
     Xflow.Mapping.call(this, owner);
     this._names = [];
 };
-XML3D.createClass(Xflow.OrderMapping, Xflow.Mapping);
+Xflow.createClass(Xflow.OrderMapping, Xflow.Mapping);
 
 /**
  * @constructor
@@ -10322,7 +10669,7 @@ Xflow.NameMapping = function(owner){
     this._srcNames = [];
 
 };
-XML3D.createClass(Xflow.NameMapping, Xflow.Mapping);
+Xflow.createClass(Xflow.NameMapping, Xflow.Mapping);
 
 
 
@@ -11861,7 +12208,7 @@ function synchronizeOutput(operator, outputs){
             entry = new Xflow.BufferEntry(type, null);
         }
         else{
-            entry = new Xflow.TextureEntry(null);
+            entry = window.document ? new Xflow.TextureEntry(null) : new Xflow.ImageDataTextureEntry(null);
         }
         outputs[d.name] = new Xflow.DataSlot(entry, 0);
     }
@@ -12049,7 +12396,7 @@ var ComputeRequest = function(dataNode, filter, callback){
     Xflow.Request.call(this, dataNode, filter, callback);
     this.callback = this.onResultChanged.bind(this);
 };
-XML3D.createClass(ComputeRequest, Xflow.Request);
+Xflow.createClass(ComputeRequest, Xflow.Request);
 Xflow.ComputeRequest = ComputeRequest;
 
 ComputeRequest.prototype.getResult = function(){
@@ -12129,7 +12476,7 @@ Result.prototype.notifyChanged = function(state){
 Xflow.ComputeResult = function(channelNode){
     Xflow.Result.call(this, channelNode);
 };
-XML3D.createClass(Xflow.ComputeResult, Xflow.Result);
+Xflow.createClass(Xflow.ComputeResult, Xflow.Result);
 var ComputeResult = Xflow.ComputeResult;
 
 
@@ -12239,14 +12586,14 @@ Xflow.utils.binarySearch = function(keys, key, maxIndex){
 var operators = {};
 
 Xflow.registerOperator = function(name, data){
-    var actualName = "xflow." + name;
+    var actualName = name;
     initOperator(data);
     operators[actualName] = data;
     data.name = actualName;
 };
 
 Xflow.getOperator = function(name){
-    if (!operators[name])
+    if (name && !operators[name])
     {
         XML3D.debug.logError("Unknown operator: '" + name+"'");
         return null;
@@ -12431,8 +12778,8 @@ function allocateOutput(operator, inputData, output, operatorData){
                     }
                 }
                 if (srcEntry) {
-                    var newWidth = Math.max(srcEntry.width, 1);
-                    var newHeight = Math.max(srcEntry.height, 1);
+                    var newWidth = Math.max(srcEntry.getWidth(), 1);
+                    var newHeight = Math.max(srcEntry.getHeight(), 1);
                     var newFormatType = d.formatType || srcEntry.getFormatType();
                     var newSamplerConfig = d.samplerConfig || srcEntry.getSamplerConfig();
                     entry.createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
@@ -12517,7 +12864,7 @@ if(window.ParallelArray){
 }
 
 function riverTrailAvailable(){
-    return window.ParallelArray && window.RiverTrail && RiverTrail.compiler;
+    return window.ParallelArray && window.RiverTrail && window.RiverTrail.compiler;
 }
 
 
@@ -12533,12 +12880,12 @@ function applyParallelOperator(operator, inputData, outputData, operatorData){
         if(entry){
             if(operator.mapping[i].internalType == Xflow.DATA_TYPE.TEXTURE){
                 if(size.length == 0){
-                    size[0] = inputData[i].getWidth();
-                    size[1] = inputData[i].getHeight();
+                    size[0] = inputData[i].getHeight();
+                    size[1] = inputData[i].getWidth();
                 }
                 else{
-                    size[0] = Math.min(size[0], inputData[i].getWidth());
-                    size[1] = Math.min(size[1], inputData[i].getHeight());
+                    size[0] = Math.min(size[0], inputData[i].getHeight());
+                    size[1] = Math.min(size[1], inputData[i].getWidth());
                 }
                 value = new ParallelArray(inputData[i].getFilledCanvas());
             }
@@ -12553,7 +12900,7 @@ function applyParallelOperator(operator, inputData, outputData, operatorData){
     var outputName = operator.outputs[0].name;
     var outputDataEntry = outputData[outputName].dataEntry;
 
-    RiverTrail.compiler.openCLContext.writeToContext2D(outputDataEntry.getContext2D(),
+    window.RiverTrail.compiler.openCLContext.writeToContext2D(outputDataEntry.getContext2D(),
         result.data, outputDataEntry.getWidth(), outputDataEntry.getHeight());
 
     var value = outputDataEntry.getValue();
@@ -12592,7 +12939,7 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
 }
 
 })();
-Xflow.registerOperator("morph", {
+Xflow.registerOperator("xflow.morph", {
     outputs: [{type: 'float3', name: 'result'}],
     params:  [
         { type: 'float3', source: 'value' },
@@ -12613,7 +12960,7 @@ Xflow.registerOperator("morph", {
         result[1] = value[1] + weight[0] * valueAdd[1];
         result[2] = value[2] + weight[0] * valueAdd[2];
     }
-});Xflow.registerOperator("sub", {
+});Xflow.registerOperator("xflow.sub", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value1'},
                 {type: 'float3', source: 'value2'}],
@@ -12631,7 +12978,7 @@ Xflow.registerOperator("morph", {
         result[1] = value1[1] - value2[1];
         result[2] = value1[2] - value2[2];
     }
-});Xflow.registerOperator("normalize", {
+});Xflow.registerOperator("xflow.normalize", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value'}],
     evaluate: function(result, value, info) {
@@ -12647,7 +12994,7 @@ Xflow.registerOperator("morph", {
         }
     }
 });
-Xflow.registerOperator("lerpSeq", {
+Xflow.registerOperator("xflow.lerpSeq", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'sequence'},
         {type: 'float', source: 'key'}],
@@ -12679,7 +13026,7 @@ Xflow.registerOperator("lerpSeq", {
     }
 });
 
-Xflow.registerOperator("lerpKeys", {
+Xflow.registerOperator("xflow.lerpKeys", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float', source: 'keys', array: true},
         {type: 'float3', source: 'values', array: true},
@@ -12712,7 +13059,7 @@ Xflow.registerOperator("lerpKeys", {
 
 
 
-Xflow.registerOperator("slerpSeq", {
+Xflow.registerOperator("xflow.slerpSeq", {
     outputs: [  {type: 'float4', name: 'result'}],
     params:  [  {type: 'float4', source: 'sequence'},
                 {type: 'float', source: 'key'}],
@@ -12748,7 +13095,7 @@ Xflow.registerOperator("slerpSeq", {
 });
 
 
-Xflow.registerOperator("slerpKeys", {
+Xflow.registerOperator("xflow.slerpKeys", {
     outputs: [  {type: 'float4', name: 'result'}],
     params:  [  {type: 'float', source: 'keys', array: true},
         {type: 'float4', source: 'values', array: true},
@@ -12775,7 +13122,7 @@ Xflow.registerOperator("slerpKeys", {
                 result, 0, true);
         }
     }
-});Xflow.registerOperator("createTransform", {
+});Xflow.registerOperator("xflow.createTransform", {
     outputs: [  {type: 'float4x4', name: 'result'}],
     params:  [  {type: 'float3', source: 'translation', optional: true},
                 {type: 'float4', source: 'rotation', optional: true},
@@ -12894,7 +13241,7 @@ Xflow.registerOperator("slerpKeys", {
         return true;
     }
      */
-});Xflow.registerOperator("createTransformInv", {
+});Xflow.registerOperator("xflow.createTransformInv", {
     outputs: [  {type: 'float4x4', name: 'result'}],
     params:  [  {type: 'float3', source: 'translation', optional: true},
                 {type: 'float4', source: 'rotation', optional: true},
@@ -13013,7 +13360,7 @@ Xflow.registerOperator("slerpKeys", {
 	*/
         return true;
     }
-});Xflow.registerOperator("mul", {
+});Xflow.registerOperator("xflow.mul", {
     outputs: [  {type: 'float4x4', name: 'result'}],
     params:  [  {type: 'float4x4', source: 'value1'},
                 {type: 'float4x4', source: 'value2'}],
@@ -13091,7 +13438,7 @@ Xflow.registerOperator("slerpKeys", {
          */
         return true;
     }
-});Xflow.registerOperator("skinDirection", {
+});Xflow.registerOperator("xflow.skinDirection", {
     outputs: [  {type: 'float3', name: 'result' }],
     params:  [  {type: 'float3', source: 'dir' },
                 {type: 'int4', source: 'boneIdx' },
@@ -13159,7 +13506,7 @@ Xflow.registerOperator("slerpKeys", {
         */
         return true;
     }
-});Xflow.registerOperator("skinPosition", {
+});Xflow.registerOperator("xflow.skinPosition", {
     outputs: [  {type: 'float3', name: 'result' }],
     params:  [  {type: 'float3', source: 'pos' },
                 {type: 'int4', source: 'boneIdx' },
@@ -13226,7 +13573,7 @@ Xflow.registerOperator("slerpKeys", {
         */
         return true;
     }
-});Xflow.registerOperator("forwardKinematics", {
+});Xflow.registerOperator("xflow.forwardKinematics", {
     outputs: [  {type: 'float4x4',  name: 'result', customAlloc: true}],
     params:  [  {type: 'int',       source: 'parent', array: true },
                 {type: 'float4x4',  source: 'xform', array: true }],
@@ -13336,7 +13683,7 @@ Xflow.registerOperator("slerpKeys", {
 
         return true;
     }
-});Xflow.registerOperator("forwardKinematicsInv", {
+});Xflow.registerOperator("xflow.forwardKinematicsInv", {
     outputs: [  {type: 'float4x4',  name: 'result', customAlloc: true}],
     params:  [  {type: 'int',       source: 'parent', array: true },
                 {type: 'float4x4',  source: 'xform', array: true }],
@@ -13384,12 +13731,47 @@ Xflow.registerOperator("slerpKeys", {
             i++;
         }
     }
-});Xflow.registerOperator("flipNormal", {
+});Xflow.registerOperator("xflow.flipNormal", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value'}],
     evaluate: function(result, value, info) {
         for(var i = 0; i<info.iterateCount*3; i++)
             result[i] = -value[i];
+    }
+});Xflow.registerOperator("xflow.createIGIndex", {
+    outputs:[
+        //{type:'int', name:'index', customAlloc:true },
+        {type:'float2', name:'texcoord', customAlloc:true }
+    ],
+    params:[
+        {type:'int', source:'vertexCount', optional:false},
+        {type:'texture', source:'positionTex', optional: false}
+    ],
+    alloc:function (sizes, vertexCount, image) {
+        sizes['texcoord'] = image.width * image.height;
+        //sizes['index'] = vertexCount[0];
+    },
+    evaluate:function (texcoord, vertexCount, image, info) {
+        // tex coords
+        var halfPixel = {
+            x: 0.5 / image.width,
+            y: 0.5 / image.height
+        };
+        var i = 0;
+        for (var y = 0, ylength = image.height; y < ylength; y++)
+        {
+            for (var x = 0, xlength = image.width; x < xlength; x++)
+            {
+                texcoord[i++] = (x / xlength) + halfPixel.x;
+                texcoord[i++] = 1 - ((y / ylength) + halfPixel.y);
+            }
+        }
+
+        // index creation
+        /*for(var i = 0; i < vertexCount[0]; i++) {
+            index[i] = i;
+        }*/
+        return true;
     }
 });// Additional methods in glMatrix style
 
@@ -13599,7 +13981,7 @@ XML3D.math.quat.slerpOffset = function(quat, offset1, quat2, offset2, t, dest, d
     dest[iyd] = c1*quat[iy1] + c2*quat2[iy2];
     dest[izd] = c1*quat[iz1] + c2*quat2[iz2];
     dest[iwd] = c1*quat[iw1] + c2*quat2[iw2];
-};Xflow.registerOperator("noiseImage", {
+};Xflow.registerOperator("xflow.noiseImage", {
     outputs: [ {type: 'texture', name : 'image', customAlloc: true} ],
     params:  [ {type: 'int', source: 'width'},
                {type: 'int', source:'height'},
@@ -13887,7 +14269,7 @@ function setTexel2D(imagedata, x, y, color) {
     data[offset+3] = color[3] * 255.0;
 }
 
-Xflow.registerOperator("sobelImage", {
+Xflow.registerOperator("xflow.sobelImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -13991,7 +14373,7 @@ Xflow.registerOperator("sobelImage", {
         return true;
     }
 });
-Xflow.registerOperator("grayscaleImage", {
+Xflow.registerOperator("xflow.grayscaleImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -14014,7 +14396,7 @@ Xflow.registerOperator("grayscaleImage", {
         return true;
     }
 });
-Xflow.registerOperator("sepiaImage", {
+Xflow.registerOperator("xflow.sepiaImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -14052,7 +14434,7 @@ Xflow.registerOperator("sepiaImage", {
         return [r,g,b,255];
     }
 });
-Xflow.registerOperator("clampImage", {
+Xflow.registerOperator("xflow.clampImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image', formatType: 'ImageData'} ],
     params:  [ {type: 'texture', source : 'image'},
                {type: 'float', source : 'min'},
@@ -14120,7 +14502,7 @@ Xflow.registerOperator("clampImage", {
         return outpixels;
     };
 
-    Xflow.registerOperator("convoluteImage", {
+    Xflow.registerOperator("xflow.convoluteImage", {
         outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
         params:  [
             {type: 'texture', source : 'image'},
@@ -14132,7 +14514,7 @@ Xflow.registerOperator("clampImage", {
         }
     });
 
-    Xflow.registerOperator("convoluteImageToFloat", {
+    Xflow.registerOperator("xflow.convoluteImageToFloat", {
         outputs: [ {type: 'texture', name : 'result', sizeof: 'image', formatType : 'float32'} ],
         params:  [
             {type: 'texture', source : 'image'},
@@ -14147,7 +14529,7 @@ Xflow.registerOperator("clampImage", {
 })();
 // Based on: http://web.archive.org/web/20100310063925/http://dem.ocracy.org/libero/photobooth/
 
-Xflow.registerOperator("funMirrorImage", {
+Xflow.registerOperator("xflow.funMirrorImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'},
                {type: 'float', source : 'time'} ],
@@ -14206,7 +14588,7 @@ Xflow.registerOperator("funMirrorImage", {
     }
 });
 // Based on http://kodemongki.blogspot.de/2011/06/kameraku-custom-shader-effects-example.html
-Xflow.registerOperator("popartImage", {
+Xflow.registerOperator("xflow.popartImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'},
         {type: 'float', source : 'time'} ],
@@ -14242,7 +14624,7 @@ Xflow.registerOperator("popartImage", {
         return true;
     }
 });
-Xflow.registerOperator("magnitudeImage", {
+Xflow.registerOperator("xflow.magnitudeImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image1'} ],
     params:  [
         {type: 'texture', source : 'image1'},
@@ -14262,7 +14644,7 @@ Xflow.registerOperator("magnitudeImage", {
         return true;
     }
 });
-Xflow.registerOperator("flipVerticalImage", {
+Xflow.registerOperator("xflow.flipVerticalImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -14286,7 +14668,7 @@ Xflow.registerOperator("flipVerticalImage", {
         return true;
     }
 });
-Xflow.registerOperator("selectTransform", {
+Xflow.registerOperator("xflow.selectTransform", {
     outputs: [ {type: 'float4x4', name : 'result', customAlloc: true} ],
     params:  [ {type: 'int', source : 'index'},
                {type: 'float4x4', source: 'transform'} ],
@@ -14332,7 +14714,7 @@ Xflow.registerOperator("selectTransform", {
         }
     }
 });
-Xflow.registerOperator("selectBool", {
+Xflow.registerOperator("xflow.selectBool", {
     outputs: [ {type: 'bool', name : 'result', customAlloc: true} ],
     params:  [ {type: 'int', source : 'index'},
                {type: 'bool', source: 'value'} ],
@@ -14541,6 +14923,8 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     var BUFFER_TYPE_TABLE = {};
     BUFFER_TYPE_TABLE['float']    = Xflow.DATA_TYPE.FLOAT;
     BUFFER_TYPE_TABLE['int']      = Xflow.DATA_TYPE.INT;
+    BUFFER_TYPE_TABLE['byte']     = Xflow.DATA_TYPE.BYTE;
+    BUFFER_TYPE_TABLE['ubyte']    = Xflow.DATA_TYPE.UBYTE;
     BUFFER_TYPE_TABLE['bool']     = Xflow.DATA_TYPE.BOOL;
     BUFFER_TYPE_TABLE['float2']   = Xflow.DATA_TYPE.FLOAT2;
     BUFFER_TYPE_TABLE['float3']   = Xflow.DATA_TYPE.FLOAT3;
@@ -15032,6 +15416,8 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     reg['int']         = data.ValueDataAdapter;
     reg['int4']        = data.ValueDataAdapter;
     reg['bool']        = data.ValueDataAdapter;
+    reg['byte']        = data.ValueDataAdapter;
+    reg['ubyte']        = data.ValueDataAdapter;
     reg['img']         = data.ImgDataAdapter;
     reg['texture']     = data.TextureDataAdapter;
     reg['data']        = data.DataAdapter;
@@ -15074,30 +15460,71 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         "float3" : Float32Array,
         "float4" : Float32Array,
         "float4x4" : Float32Array,
-        "bool" : Uint8Array
+        "bool" : Uint8Array,
+        "byte" : Int8Array,
+        "ubyte" : Uint8Array
     };
+
+    var isLittleEndian = (function () {
+        var buf = new ArrayBuffer(4);
+        var dv = new DataView(buf);
+        var view = new Int32Array(buf);
+        view[0] = 0x01020304;
+        var littleEndian = (dv.getInt32(0, true) === 0x01020304);
+        return function () { return littleEndian; }
+    })();
+
+    function realTypeOf(obj) {
+        return Object.prototype.toString.call(obj).slice(8, -1);
+    }
+
+    function createXflowValue(dataNode, dataType, name, key, value) {
+        var v = new (TYPED_ARRAY_MAP[dataType])(value);
+        var type = XML3D.data.BUFFER_TYPE_TABLE[dataType];
+        var buffer = new Xflow.BufferEntry(type, v);
+
+        var inputNode = XML3D.data.xflowGraph.createInputNode();
+        inputNode.data = buffer;
+        inputNode.name = name;
+        inputNode.key = key;
+        dataNode.appendChild(inputNode);
+    }
+
+    function createXflowValueFromBuffer(dataNode, dataType, name, key, arrayBuffer, byteOffset, byteLength) {
+        var ArrayType = TYPED_ARRAY_MAP[dataType];
+        var v = new (ArrayType)(arrayBuffer, byteOffset, byteLength/ArrayType.BYTES_PER_ELEMENT);
+        var type = XML3D.data.BUFFER_TYPE_TABLE[dataType];
+        var buffer = new Xflow.BufferEntry(type, v);
+
+        var inputNode = XML3D.data.xflowGraph.createInputNode();
+        inputNode.data = buffer;
+        inputNode.name = name;
+        inputNode.key = key;
+        dataNode.appendChild(inputNode);
+    }
 
     function createXflowInputs(dataNode, name, jsonData){
         var v = null;
 
-        if(!TYPED_ARRAY_MAP[jsonData.type])
+        if (!TYPED_ARRAY_MAP[jsonData.type])
             return;
 
-        for(var i = 0; i < jsonData.seq.length; ++i){
+        for(var i = 0; i < jsonData.seq.length; ++i) {
             var entry = jsonData.seq[i];
             var value = entry.value;
             var key = entry.key;
 
-            var v = new (TYPED_ARRAY_MAP[jsonData.type])(value);
-            var type = XML3D.data.BUFFER_TYPE_TABLE[jsonData.type];
-            var buffer = new Xflow.BufferEntry(type, v);
-
-            var inputNode = XML3D.data.xflowGraph.createInputNode();
-            inputNode.data = buffer;
-            inputNode.name = name;
-            inputNode.key = key;
-            dataNode.appendChild(inputNode);
-
+            if (realTypeOf(value) === 'Object' && value.url) {
+                if (!isLittleEndian()) {
+                    // FIXME add big-endian -> little-endian conversion
+                    throw new Error("Big-endian binary data are not supported yet");
+                }
+                XML3D.base.resourceManager.loadData(value.url, function (arrayBuffer) {
+                    createXflowValueFromBuffer(dataNode, jsonData.type, name, key, arrayBuffer, value.byteOffset, value.byteLength);
+                }, null);
+            } else {
+                createXflowValue(dataNode, jsonData.type, name, key, value);
+            }
         }
     }
 
@@ -15150,6 +15577,83 @@ XML3D.data.DataAdapter.prototype.toString = function() {
 
     var jsonFactoryInstance = new JSONFactory();
 }());
+// data/adapter/binary/factory.js
+(function() {
+
+    var empty = function() {};
+
+    var TYPED_ARRAY_MAP = {
+        "int" : Int32Array,
+        "int4" : Int32Array,
+        "float" : Float32Array,
+        "float2" : Float32Array,
+        "float3" : Float32Array,
+        "float4" : Float32Array,
+        "float4x4" : Float32Array,
+        "bool" : Uint8Array,
+        "byte" : Int8Array,
+        "ubyte" : Uint8Array
+    };
+
+    function createXflowInput(dataNode, name, type, data) {
+        var v = null;
+
+        if (!TYPED_ARRAY_MAP[type])
+            return;
+
+        var v = new (TYPED_ARRAY_MAP[type])(data);
+        var type = XML3D.data.BUFFER_TYPE_TABLE[type];
+        var buffer = new Xflow.BufferEntry(type, v);
+
+        var inputNode = XML3D.data.xflowGraph.createInputNode();
+        inputNode.data = buffer;
+        inputNode.name = name;
+        dataNode.appendChild(inputNode);
+    }
+
+    function createXflowNode(data) {
+        if (!data instanceof ArrayBuffer && !data instanceof ArrayBufferView)
+            throw new Error("Unknown binary type: " + typeof data);
+
+        var node = XML3D.data.xflowGraph.createDataNode();
+        createXflowInput(node, "data", "ubyte", data);
+        return node;
+    }
+
+    /**
+     * @implements IDataAdapter
+     */
+    var BinaryDataAdapter = function(data) {
+        this.data = data;
+        try {
+            this.xflowDataNode = createXflowNode(data);
+        } catch (e) {
+            XML3D.debug.logException(e, "Failed to process binary file");
+        }
+    };
+
+    BinaryDataAdapter.prototype.getXflowNode = function(){
+        return this.xflowDataNode;
+    }
+
+    /**
+     * @constructor
+     * @implements {XML3D.base.IFactory}
+     */
+    var BinaryFactory = function()
+    {
+        XML3D.base.AdapterFactory.call(this, XML3D.data,
+            ["application/octet-stream", "text/plain; charset=x-user-defined"]);
+    };
+
+    XML3D.createClass(BinaryFactory, XML3D.base.AdapterFactory);
+
+    BinaryFactory.prototype.createAdapter = function(data) {
+        return new BinaryDataAdapter(data);
+    }
+
+    var binaryFactoryInstance = new BinaryFactory();
+}());
 XML3D.webgl = {
     toString : function() {
         return "webgl";
@@ -15172,11 +15676,26 @@ XML3D.webgl.DataChangeListener = function(renderer) {
  * @param {Xflow.DATA_ENTRY_STATE} notification
  */
 XML3D.webgl.DataChangeListener.prototype.dataEntryChanged = function(entry, notification) {
-    entry.userData.webglDataChanged = notification;
+    if(entry.userData.webglData){
+        for(var i in entry.userData.webglData){
+            entry.userData.webglData[i].changed = notification;
+        }
+    }
 
     //TODO: Decide if we need a picking buffer redraw too
     //this.requestRedraw("Data changed", false);
-};// Create global symbol XML3D.webgl
+};
+
+XML3D.webgl.getXflowEntryWebGlData = function(entry, canvasId){
+    if(!entry) return null;
+    if(!entry.userData.webglData)
+        entry.userData.webglData = {};
+    if(!entry.userData.webglData[canvasId])
+        entry.userData.webglData[canvasId] = {
+            changed : Xflow.DATA_ENTRY_STATE.CHANGED_NEW
+        };
+    return entry.userData.webglData[canvasId];
+}// Create global symbol XML3D.webgl
 XML3D.webgl.MAXFPS = 30;
 
 /**
@@ -16263,6 +16782,10 @@ XML3D.webgl.stopEvent = function(ev) {
         this.needsLights = true;
         this.vSource = sources.vertex;
         this.fSource = sources.fragment;
+        var maxTextureUnit = 0;
+        this.nextTextureUnit = function() {
+            return maxTextureUnit++;
+        }
     };
 
     var XML3DShaderManager = function(renderer, factory) {
@@ -16373,8 +16896,10 @@ XML3D.webgl.stopEvent = function(ev) {
         this.shaders[shaderId] = program;
         this.gl.useProgram(program.handle);
 
-        this.setUniformsFromComputeResult(program, dataTable, { force: true });
-        this.createTexturesFromComputeResult(program, dataTable, { force: true });
+        var canvasId = shaderAdapter.factory.canvasId;
+
+        this.setUniformsFromComputeResult(program, dataTable, canvasId, { force: true });
+        this.createTexturesFromComputeResult(program, dataTable, canvasId, { force: true });
         //XML3D.webgl.checkError(this.gl, "setSamplers");
         return shaderId;
     };
@@ -16476,10 +17001,17 @@ XML3D.webgl.stopEvent = function(ev) {
             uniInfo.glType = uni.type;
             uniInfo.location = gl.getUniformLocation(prg, uni.name);
 
+            var name = uniInfo.name;
+            // Need to discuss how to sort out the consequences of doing this in the renderer first --Chris
+            //if(uni.size > 1 && name.substring(name.length-3) == "[0]") {
+            //    name = name.substring(0, name.length -3); // Remove [0]
+            //}
+
             if (uni.type == gl.SAMPLER_2D || uni.type == gl.SAMPLER_CUBE) {
-                programObject.samplers[uni.name] = uniInfo;
+                uniInfo.unit = programObject.nextTextureUnit();
+                programObject.samplers[name] = uniInfo;
             } else
-                programObject.uniforms[uni.name] = uniInfo;
+                programObject.uniforms[name] = uniInfo;
         }
 
         programObject.changes = [];
@@ -16523,12 +17055,13 @@ XML3D.webgl.stopEvent = function(ev) {
     };
 
     XML3DShaderManager.prototype.shaderDataChanged = function(adapter, request, changeType) {
+        var canvasId = adapter.factory.canvasId;
         var shaderId = new XML3D.URI("#" + adapter.node.id).getAbsoluteURI(adapter.node.ownerDocument.documentURI).toString();
         var program = this.shaders[shaderId];
         if(!program) return; // No Program - probably invalid shader
         var result = request.getResult();
         this.bindShader(program);
-        this.setUniformsFromComputeResult(program, result);
+        this.setUniformsFromComputeResult(program, result, canvasId);
         this.createTexturesFromComputeResult(program, result);
         if(program.material) {
             program.material.parametersChanged(result.getOutputMap());
@@ -16561,7 +17094,7 @@ XML3D.webgl.stopEvent = function(ev) {
      * @param {Xflow.ComputeResult} data
      * @param {Object?} opt
      */
-    XML3DShaderManager.prototype.setUniformsFromComputeResult = function(programObject, data, opt) {
+    XML3DShaderManager.prototype.setUniformsFromComputeResult = function(programObject, data, canvasId, opt) {
         var dataMap = data.getOutputMap();
         var uniforms = programObject.uniforms;
         var opt = opt || {};
@@ -16574,9 +17107,11 @@ XML3D.webgl.stopEvent = function(ev) {
             if(!entry)
                 continue;
 
-            if(force || entry.userData.webglDataChanged != -1 ) {
+            var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, canvasId);
+
+            if(force || webglData.changed != -1 ) {
                 XML3DShaderManager.setUniform(this.gl, uniforms[name], entry.getValue());
-                entry.userData.webglDataChanged = -1;
+                webglData.changed = -1;
             }
         }
     };
@@ -16586,7 +17121,7 @@ XML3D.webgl.stopEvent = function(ev) {
      * @param {Xflow.ComputeResult} result
      * @param {Object?} opt options
      */
-    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result, opt) {
+    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result, canvasId, opt) {
         var texUnit = 0;
         var samplers = programObject.samplers;
         var opt = opt || {};
@@ -16602,9 +17137,11 @@ XML3D.webgl.stopEvent = function(ev) {
                 continue;
             }
 
-            if(force || entry.userData.webglDataChanged != -1 ) {
+            var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, canvasId);
+
+            if(force || webglData.changed != -1 ) {
                 this.createTextureFromEntry(entry, sampler, texUnit);
-                entry.userData.webglDataChanged = -1;
+                webglData.changed = -1;
             }
             texUnit++;
         }
@@ -16617,8 +17154,6 @@ XML3D.webgl.stopEvent = function(ev) {
 
             if (u.value)
                 u = u.value;
-            if (u.clean)
-                continue;
 
             if (shader.uniforms[name]) {
                 XML3DShaderManager.setUniform(this.gl, shader.uniforms[name], u);
@@ -16627,8 +17162,12 @@ XML3D.webgl.stopEvent = function(ev) {
 
     };
 
-    XML3DShaderManager.prototype.bindShader = function(shader) {
-        var sp = (typeof shader == typeof "") ? this.getShaderById(shader) : shader;
+    /**
+     *
+     * @param {ProgramObject} programObject
+     */
+    XML3DShaderManager.prototype.bindShader = function(programObject) {
+        var sp = (typeof programObject == typeof "") ? this.getShaderById(programObject) : programObject;
 
         if (this.currentProgram != sp.handle) {
             this.currentProgram = sp.handle;
@@ -16641,8 +17180,8 @@ XML3D.webgl.stopEvent = function(ev) {
         }
     };
 
-    XML3DShaderManager.prototype.updateShader = function(sp) {
-        this.bindShader(sp);
+    /** Assumes, the shader is already bound **/
+    XML3DShaderManager.prototype.updateActiveShader = function(sp) {
         // Apply any changes encountered since the last time this shader was
         // rendered
         for ( var i = 0, l = sp.changes.length; i < l; i++) {
@@ -16742,14 +17281,32 @@ XML3D.webgl.stopEvent = function(ev) {
         this.gl.deleteProgram(shader.handle);
     };
 
+    /**
+     *
+     * @param {ProgramObject} programObject
+     * @param {Xflow.ComputeResult} result
+     */
+    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result) {
+        var samplers = programObject.samplers;
+        for ( var name in samplers) {
+            var sampler = samplers[name];
+            var entry = result.getOutputData(name);
+
+            if (!entry) {
+                sampler.info = sampler.info || new InvalidTexture();
+                continue;
+            }
+
+            this.createTextureFromEntry(entry, sampler);
+        }
+    };
 
     /**
      *
-     * @param {Xflow.TextureEntry} entry
+     * @param {Xflow.TextureEntry} texEntry
      * @param sampler
-     * @param {number} texUnit
      */
-    XML3DShaderManager.prototype.createTextureFromEntry = function(texEntry, sampler, texUnit) {
+    XML3DShaderManager.prototype.createTextureFromEntry = function(texEntry, sampler) {
         var img = texEntry.getImage();
         if (img) {
             var handle = null;
@@ -16769,7 +17326,7 @@ XML3D.webgl.stopEvent = function(ev) {
                 onload : function() {
                     renderer.requestRedraw.call(renderer, "Texture loaded");
                 },
-                unit : texUnit,
+                unit : sampler.unit,
                 image : img,
                 config : texEntry.getSamplerConfig(),
                 canvas : canvas,
@@ -16920,7 +17477,6 @@ XML3D.webgl.stopEvent = function(ev) {
             break;
         case TEXTURE_STATE.LOADED:
             // console.dir("Creating '"+ tex.name + "' from " + info.image.src);
-            // console.dir(info);
             this.createTex2DFromImage(info);
             this.bindTexture(tex);
             break;
@@ -16928,6 +17484,10 @@ XML3D.webgl.stopEvent = function(ev) {
             gl.activeTexture(gl.TEXTURE0 + info.unit + 1);
             gl.bindTexture(gl.TEXTURE_2D, null);
             XML3DShaderManager.setUniform(gl, tex, info.unit + 1);
+            break;
+        default:
+            XML3D.debug.logDebug("Invalid texture: ", tex);
+
         }
         ;
     };
@@ -16972,6 +17532,13 @@ XML3D.webgl.stopEvent = function(ev) {
     Material.prototype.samplers = {};
     Material.prototype.fragment = null;
     Material.prototype.vertex = null;
+    Material.prototype.meshRequest = {
+        index : null,
+        position: { required: true },
+        normal: null,
+        color: null,
+        texcoord: null
+    };
 
     Material.prototype.getRequestFields = function() {
         return Object.keys(this.uniforms).concat(Object.keys(this.samplers));
@@ -17018,7 +17585,7 @@ XML3D.webgl.stopEvent = function(ev) {
 
     /**
      * @param {Xflow.ComputeResult} dataTable
-     * @returns
+     * @returns {ProgramObject}
      */
     Material.prototype.getProgram = function(lights, dataTable) {
         if(!this.program) {
@@ -17342,14 +17909,13 @@ XML3D.webgl.XML3DBufferHandler.prototype.fillOptions = function(options) {
         this.transform = opt.transform || RenderObject.IDENTITY_MATRIX;
         this.visible = opt.visible !== undefined ? opt.visible : true;
         this.meshAdapter.renderObject = this;
+        /** {Object?} **/
+        this.override = null;
         this.create();
     };
 
     RenderObject.IDENTITY_MATRIX = XML3D.math.mat4.identity(XML3D.math.mat4.create());
 
-    RenderObject.prototype.onmaterialChanged = function() {
-        // console.log("Material changed");
-    };
 
     RenderObject.prototype = {
         onenterReady:function () {
@@ -17396,6 +17962,20 @@ XML3D.webgl.XML3DBufferHandler.prototype.fillOptions = function(options) {
         onchangestate:function (name, from, to) {
             XML3D.debug.logInfo("Changed: ", name, from, to);
         }
+    };
+
+    /**
+     * @param {Xflow.Result} result
+     */
+    RenderObject.prototype.setOverride = function(result) {
+        var prog = this.meshAdapter.factory.renderer.shaderManager.getShaderById(this.shader);
+        this.override = Object.create(null);
+        for(var name in prog.uniforms) {
+            var entry = result.getOutputData(name);
+            if (entry && entry.getValue())
+                this.override[name] = entry.getValue();
+        }
+        XML3D.debug.logInfo("Shader attribute override", result, this.override);
     };
 
     StateMachine.create({
@@ -17778,6 +18358,7 @@ var tmpModelViewProjection = XML3D.math.mat4.create();
 var identMat3 = XML3D.math.mat3.identity(XML3D.math.mat3.create());
 var identMat4 = XML3D.math.mat4.identity(XML3D.math.mat4.create());
 
+
 Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, stats) {
     var objCount = 0;
     var triCount = 0;
@@ -17813,7 +18394,7 @@ Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, 
 
 
     this.shaderManager.bindShader(shader);
-    this.shaderManager.updateShader(shader);
+    this.shaderManager.updateActiveShader(shader);
 
     parameters["viewMatrix"] = this.camera.viewMatrix;
     parameters["cameraPosition"] = this.camera.getWorldSpacePosition();
@@ -17843,6 +18424,10 @@ Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, 
           normalMatrix[8], normalMatrix[9], normalMatrix[10]]);
 
         this.shaderManager.setUniformVariables(shader, parameters);
+        if(obj.override !== null) { // TODO: Set back to default after rendering
+            this.shaderManager.setUniformVariables(shader, obj.override);
+        }
+
         triCount += this.drawObject(shader, mesh);
         objCount++;
     }
@@ -17852,66 +18437,76 @@ Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, 
 
 };
 
-
+/**
+ *
+ * @param shader
+ * @param {MeshInfo} meshInfo
+ * @return {*}
+ */
 Renderer.prototype.drawObject = function(shader, meshInfo) {
     var sAttributes = shader.attributes;
     var gl = this.gl;
     var triCount = 0;
     var vbos = meshInfo.vbos;
 
-    var numBins = meshInfo.isIndexed ? vbos.index.length : vbos.position.length;
+    if(!meshInfo.complete)
+        return;
+
+    var numBins = meshInfo.isIndexed ? vbos.index.length : (vbos.position ? vbos.position.length : 1);
 
     for (var i = 0; i < numBins; i++) {
     //Bind vertex buffers
-        for (var name in sAttributes) {
-            var shaderAttribute = sAttributes[name];
-            var vbo;
+    for (var name in sAttributes) {
+        var shaderAttribute = sAttributes[name];
 
-            if (!vbos[name]) {
-                //XML3D.debug.logWarning("Missing required mesh data [ "+name+" ], the object may not render correctly.");
-                continue;
-            }
-
-            if (vbos[name].length > 1)
-                vbo = vbos[name][i];
-            else
-                vbo = vbos[name][0];
-
-            gl.enableVertexAttribArray(shaderAttribute.location);
-            gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-            gl.vertexAttribPointer(shaderAttribute.location, vbo.tupleSize, vbo.glType, false, 0, 0);
+        if (!vbos[name]) {
+            //XML3D.debug.logWarning("Missing required mesh data [ "+name+" ], the object may not render correctly.");
+            continue;
         }
+
+        var vbo;
+        if (vbos[name].length > 1)
+            vbo = vbos[name][i];
+        else
+            vbo = vbos[name][0];
+
+        //console.log("bindBuffer: ", name , vbo);
+        gl.enableVertexAttribArray(shaderAttribute.location);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        gl.vertexAttribPointer(shaderAttribute.location, vbo.tupleSize, vbo.glType, false, 0, 0);
+    }
 
     //Draw the object
-        if (meshInfo.isIndexed) {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vbos.index[i]);
+    if (meshInfo.isIndexed) {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vbos.index[i]);
 
-            if (meshInfo.segments) {
-                //This is a segmented mesh (eg. a collection of disjunct line strips)
-                var offset = 0;
-				var sd = meshInfo.segments.value;
-                for (var j = 0; j < sd.length; j++) {
-                    gl.drawElements(meshInfo.glType, sd[j], gl.UNSIGNED_SHORT, offset);
-                    offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
-                }
-            } else {
-                gl.drawElements(meshInfo.glType, vbos.index[i].length, gl.UNSIGNED_SHORT, 0);
+        if (meshInfo.segments) {
+            //This is a segmented mesh (eg. a collection of disjunct line strips)
+            var offset = 0;
+            var sd = meshInfo.segments.value;
+            for (var j = 0; j < sd.length; j++) {
+                gl.drawElements(meshInfo.glType, sd[j], gl.UNSIGNED_SHORT, offset);
+                offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
             }
-
-            triCount = vbos.index[i].length / 3;
         } else {
-            if (meshInfo.size) {
-                var offset = 0;
-                var sd = meshInfo.size.data;
-                for (var j = 0; j < sd.length; j++) {
-                    gl.drawArrays(meshInfo.glType, offset, sd[j]);
-                    offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
-                }
-            } else {
-                gl.drawArrays(meshInfo.glType, 0, vbos.position[i].length);
-            }
-            triCount = vbos.position[i].length / 3;
+            gl.drawElements(meshInfo.glType, meshInfo.getVertexCount(), gl.UNSIGNED_SHORT, 0);
         }
+
+        triCount = meshInfo.getVertexCount() / 3;
+    } else {
+        if (meshInfo.size) {
+            var offset = 0;
+            var sd = meshInfo.size.data;
+            for (var j = 0; j < sd.length; j++) {
+                gl.drawArrays(meshInfo.glType, offset, sd[j]);
+                offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
+            }
+        } else {
+                //console.log("drawArrays: " + meshInfo.getVertexCount());
+                gl.drawArrays(meshInfo.glType, 0, meshInfo.getVertexCount());
+        }
+        triCount = vbos.position ? vbos.position[i].length / 3 : 0;
+    }
 
     //Unbind vertex buffers
         for (var name in sAttributes) {
@@ -18358,10 +18953,13 @@ Renderer.prototype.notifyDataChanged = function() {
 
         for (var i=0; i<staticAttributes.length; i++) {
             var attr = dataTable.getOutputData(staticAttributes[i]);
-            if (attr && attr.userData.webglDataChanged) {
+            var webglData = XML3D.webgl.getXflowEntryWebGlData(attr, this.factory.canvasId);
+
+            if (attr && webglData && webglData.changed !== undefined) {
                 var value = attr.getValue();
                 for(var j=0; j<this.listeners.length; j++)
                     this.listeners[j].func(staticAttributes[i], value);
+                delete webglData.changed;
             }
         }
     };
@@ -18922,17 +19520,27 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
     var eventTypes = {onclick:1, ondblclick:1,
         ondrop:1, ondragenter:1, ondragleave:1};
 
-    var noDrawableObject = function() {
-        XML3D.debug.logError("Mesh adapter has no callback to its mesh object!");
-    },
-        /**
-         * @type WebGLRenderingContext
-         * @private
-         */
-            rc = window.WebGLRenderingContext;
+    var bboxAttributes = ["boundingBox"];
 
-    var staticAttributes = ["index", "position", "normal", "color", "texcoord", "size", "tangent"];
-    var bboxAttributes = ["boundingbox"];
+    /**
+     * @constructor
+     */
+    var MeshInfo = function(type) {
+        this.vbos = {};
+        this.isIndexed = false;
+        this.complete = false;
+        this.glType = getGLTypeFromString(type);
+        this.bbox = new window.XML3DBox();
+
+        this.getVertexCount = function() {
+            try {
+                return this.isIndexed ? this.vbos.index[0].length : (this.vertexCount !== undefined ? this.vertexCount[0] : this.vbos.position[0].length);
+            } catch(e) {
+                return 0;
+            }
+        }
+        this.update = emptyFunction;
+    }
 
     /**
      * @constructor
@@ -18945,6 +19553,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         this.parentVisible = true;
         this.renderObject = null; // This is set by renderObject itself
 
+        this.requestObject = {};
         this.computeRequest = null;
         this.bboxComputeRequest = null;
     };
@@ -19052,6 +19661,8 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         var shaderName = this.factory.renderer.shaderManager.createShader(adapter,
             this.factory.renderer.lights);
         this.renderObject.shader = shaderName;
+        XML3D.debug.logInfo("New shader, clearing requests: ", shaderName);
+        this.clearRequests(); // New shader, new requests
         this.renderObject.materialChanged();
         this.factory.renderer.requestRedraw("Shader changed.", false);
     }
@@ -19073,38 +19684,42 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     /**
      *
+     * @param {Array<String>} meshRequests
+     * @param {Array<String>} objectRequests
      */
-    p.createRequests = function() {
+    p.createRequests = function(meshRequests, objectRequests) {
         var that = this;
-        this.computeRequest = this.computeRequest || this.dataAdapter.getComputeRequest(staticAttributes,
+        this.computeRequest = this.computeRequest || this.dataAdapter.getComputeRequest(meshRequests,
             function(request, changeType) {
                 that.dataChanged(request, changeType);
         });
+        this.objectRequest = this.objectRequest || this.dataAdapter.getComputeRequest(objectRequests,
+            function(request, changeType) {
+                XML3D.debug.logInfo("Per object shader attributes changes not handled yet", request, changeType);
+            });
         this.bboxComputeRequest = this.bboxComputeRequest || this.dataAdapter.getComputeRequest(bboxAttributes);
     };
 
-    p.finishMesh = function() {
-        this.createRequests();
+    p.clearRequests = function() {
+        this.computeRequest && this.computeRequest.clear();
+        this.objectRequest && this.objectRequest.clear();
+        this.computeRequest = this.objectRequest = null;
+    }
 
-        this.bbox = this.calcBoundingBox();
+    p.finishMesh = function() {
+        var prog = this.factory.renderer.shaderManager.getShaderById(this.renderObject.shader);
+
+        this.requestObject = prog.material.meshRequest;
+
+        this.createRequests(Object.keys(this.requestObject), Object.keys(prog.uniforms));
+
         this.createMeshData();
+        this.createPerObjectData();
         return this.renderObject.mesh.valid;
     }
 
     var emptyFunction = function() {};
 
-    /**
-     * @param {string} type
-     */
-    function createMeshInfo(type) {
-        return {
-            vbos : {},
-            isIndexed: false,
-            glType: getGLTypeFromString(type),
-            bbox : new window.XML3DBox(),
-            update : emptyFunction
-        };
-    }
 
     /**
      * @param {Xflow.data.Request} request
@@ -19130,72 +19745,118 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         }
     };
 
+    p.createPerObjectData = function() {
+        var perObjectData = this.objectRequest.getResult();
+        this.renderObject.setOverride(perObjectData);
+    };
+
     /**
      *
      */
     p.createMeshData = function() {
-        var gl = this.factory.renderer.gl;
         var obj = this.renderObject;
-        obj.mesh = obj.mesh || createMeshInfo(this.node.type);
+        obj.mesh = obj.mesh || new MeshInfo(this.node.type);
 
-        var calculateBBox = false;
         var dataResult =  this.computeRequest.getResult();
 
-        if (!(dataResult.getOutputData("position") && dataResult.getOutputData("position").getValue())) {
-            if(!dataResult.loading)
-                XML3D.debug.logWarning("Mesh " + this.node.id + " has no data for required attribute 'position'.");
-            obj.mesh.valid = false;
-            return;
-        }
-        for ( var i in staticAttributes) {
-            var attr = staticAttributes[i];
-            var entry = dataResult.getOutputData(attr);
-            if (!entry || !entry.getValue())
+        obj.mesh.valid = obj.mesh.complete = true; // Optimistic appraoch
+        for ( var name in this.requestObject) {
+            var attr = this.requestObject[name] || {};
+            var entry = dataResult.getOutputData(name);
+            /*if (entry == undefined) {
+                if(attr.required) {
+                    // This needs a structural change before we get the required signature
+                    console.log("Invalid", name);
+                    obj.mesh.valid = false;
+                    return;
+                }
                 continue;
+            }*/
+            if(!entry || !entry.getValue()) {
+                if(attr.required) {
+                    XML3D.debug.logInfo("Mesh not complete, missing: ", name, entry);
+                    obj.mesh.complete = false;
+                }
+                continue;
+            }
 
-            var buffer = entry.userData.buffer;
+            if (name == "vertexCount") {
+                obj.mesh.vertexCount = entry.getValue();
+                continue;
+            }
 
-            switch(entry.userData.webglDataChanged) {
+            switch(entry.type) {
+                case Xflow.DATA_TYPE.TEXTURE:
+                    this.handleTexture(name, entry, obj.shader, obj.mesh);
+                    break;
+                default:
+                    this.handleBuffer(name, attr, entry, obj.mesh);
+            };
+        }
+        var bbox = this.calcBoundingBox();
+        if(bbox)
+            obj.mesh.bbox.set(bbox);
+
+        obj.mesh.valid = true;
+    };
+
+    /**
+     * @param {string} name
+     * @param {Object} attr
+     * @param {Xflow.BufferEntry} entry
+     * @param {MeshInfo} meshInfo
+     */
+    p.handleBuffer = function(name, attr, entry, meshInfo) {
+        var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, this.factory.canvasId);
+        var buffer = webglData.buffer;
+        var gl = this.factory.renderer.gl;
+
+
+        switch(webglData.changed) {
             case Xflow.DATA_ENTRY_STATE.CHANGED_VALUE:
-                var bufferType = attr == "index" ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
+                var bufferType = name == "index" ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
 
                 gl.bindBuffer(bufferType, buffer);
                 gl.bufferSubData(bufferType, 0, entry.getValue());
                 break;
             case Xflow.DATA_ENTRY_STATE.CHANGED_NEW:
             case Xflow.DATA_ENTRY_STATE.CHANGE_SIZE:
-                if (attr == "index") {
+                if (name == "index") {
                     buffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(entry.getValue()));
                 } else {
                     buffer = createBuffer(gl, gl.ARRAY_BUFFER, entry.getValue());
                 }
                 buffer.tupleSize = entry.getTupleSize();
-                entry.userData.buffer = buffer;
+                webglData.buffer = buffer;
                 break;
-             default:
-                 break;
-            }
-
-            obj.mesh.vbos[attr] = [];
-            obj.mesh.vbos[attr][0] = buffer;
-
-            //TODO: must set isIndexed if indices are removed
-            if (attr == "position")
-                calculateBBox = true;
-            if (attr == "index")
-                obj.mesh.isIndexed = true;
-
-            delete entry.userData.webglDataChanged;
+            default:
+                break;
         }
 
-        //Calculate a bounding box for the mesh
-        if (calculateBBox) {
-            this.bbox = this.calcBoundingBox();
-            obj.mesh.bbox.set(this.bbox);
-        }
+        meshInfo.vbos[name] = [];
+        meshInfo.vbos[name][0] = buffer;
+        meshInfo.isIndexed = meshInfo.isIndexed || name == "index";
+        //if(meshInfo.isIndexed)
+            //console.error("Indexed");
 
-        obj.mesh.valid = true;
-    };
+        delete webglData.changed;
+    }
+    /**
+     * @param {string} name
+     * @param {Xflow.TextureEntry} entry
+     * @param {string} shaderId
+     * @param {MeshInfo} meshInfo
+     */
+    p.handleTexture = function(name, entry, shaderId, meshInfo) {
+        var prog = this.factory.renderer.shaderManager.getShaderById(shaderId);
+        meshInfo.sampler = meshInfo.sampler || {};
+        var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, this.factory.canvasId);
+
+        if(webglData.changed && (name in prog.samplers)) {
+            this.factory.renderer.shaderManager.createTextureFromEntry(entry, prog.samplers[name]);
+        }
+        delete webglData.changed;
+    }
 
     /**
      *
@@ -19210,14 +19871,14 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
     };
 
     /**
-     * @return {XML3DBox}
+     * @return {window.XML3DBox}
      */
     p.getBoundingBox = function() {
-        return new window.XML3DBox(this.bbox);
+        return new window.XML3DBox(this.renderObject.mesh.bbox);
     };
 
     /**
-     * @return {XML3DMatrix}
+     * @return {window.XML3DMatrix}
      */
     p.getWorldMatrix = function() {
 
@@ -19232,7 +19893,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     /**
      * @private
-     * @return {XML3DBox} the calculated bounding box of this mesh.
+     * @return {window.XML3DBox} the calculated bounding box of this mesh.
      */
     p.calcBoundingBox = function() {
 
@@ -19240,7 +19901,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
         // try to compute bbox using the boundingbox property of xflow
         var bboxResult = this.bboxComputeRequest.getResult();
-        var bboxOutData = bboxResult.getOutputData("boundingbox");
+        var bboxOutData = bboxResult.getOutputData("boundingBox");
         if (bboxOutData)
         {
             var bboxVal = bboxOutData.getValue();
@@ -19265,42 +19926,44 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
     };
 
     var getGLTypeFromArray = function(array) {
+        var GL = window.WebGLRenderingContext;
         if (array instanceof Int8Array)
-            return rc.BYTE;
+            return GL.BYTE;
         if (array instanceof Uint8Array)
-            return rc.UNSIGNED_BYTE;
+            return GL.UNSIGNED_BYTE;
         if (array instanceof Int16Array)
-            return rc.SHORT;
+            return GL.SHORT;
         if (array instanceof Uint16Array)
-            return rc.UNSIGNED_SHORT;
+            return GL.UNSIGNED_SHORT;
         if (array instanceof Int32Array)
-            return rc.INT;
+            return GL.INT;
         if (array instanceof Uint32Array)
-            return rc.UNSIGNED_INT;
+            return GL.UNSIGNED_INT;
         if (array instanceof Float32Array)
-            return rc.FLOAT;
-        return rc.FLOAT;
+            return GL.FLOAT;
+        return GL.FLOAT;
     };
 
     /**
      * @param {string} typeName
      */
     function getGLTypeFromString(typeName) {
-        if (typeName && typeName.toLowerCase)
+        var GL = window.WebGLRenderingContext;
+        if (typeName && typeName.toLoweGLase)
             typeName = typeName.toLowerCase();
         switch (typeName) {
             case "triangles":
-                return rc.TRIANGLES;
+                return GL.TRIANGLES;
             case "tristrips":
-                return rc.TRIANGLE_STRIP;
+                return GL.TRIANGLE_STRIP;
             case "points":
-                return rc.POINTS;
+                return GL.POINTS;
             case "lines":
-                return rc.LINES;
+                return GL.LINES;
             case "linestrips":
-                return rc.LINE_STRIP;
+                return GL.LINE_STRIP;
             default:
-                return rc.TRIANGLES;
+                return GL.TRIANGLES;
         }
     };
 

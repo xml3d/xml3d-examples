@@ -11,6 +11,7 @@
     <script type="text/javascript" src="JSARToolKit.js"></script>
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="ARMarkerDetector.js"></script>
+    <script type="text/javascript" src="compute_threshold.js"></script>
     <script type="text/javascript" src="ar_asset_xflow.js"></script>
     <script type="text/javascript" src="phongvs.js"></script>
 </head>
@@ -31,18 +32,20 @@
 
     <defs>
 
-        <data id="ardata">
-            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers)">
-                <int name="markers">
-                    <!--0 2-->
-                    <!--11 10 9 7 6 5-->
-                    <!--0 2 5 6 7 9 10 11 22 64-->
-                    22 64
-                    <!--0 1 2 3 4 5-->
-                </int>
-                <texture name="arvideo">
-                    <video src="tests/output_4.ogg"></video>
-                </texture>
+        <data id="ardata" >
+            <data compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers, threshold)">
+              <int name="markers">22 64</int>
+              <data compute="threshold = xflow.getOtsuThreshold(histogram)">
+                <data compute="histogram = xflow.createNormalizedHistogram(grvideo,channel)">
+                  <int name="channel">0</int>
+                  <data compute="grvideo = xflow.grayscale(arvideo)">
+                    <texture name="arvideo">
+                      <video autoplay="false" src="../video/ar_marker.ogg"></video>
+                    </texture>
+                  </data>
+                </data>
+              </data>
+
             </data>
         </data>
 
@@ -86,25 +89,18 @@
             <float name="ambientIntensity">0.6</float>
         </shader>
 
-        <!-- Lights -->
-
-        <transform id="light1Xfm" translation="0 10 0" />
-
-        <transform id="light2Xfm" translation="5 10 0" />
-
-        <lightshader id="light1" script="urn:xml3d:lightshader:point">
-            <float3 name="intensity">100 0 0</float3>
-            <float3 name="attenuation">0 0 1</float3>
-            <bool   name="castShadow">true</bool>
-        </lightshader>
-
-        <lightshader id="light2" script="urn:xml3d:lightshader:point">
-            <float3 name="intensity">10 10 10</float3>
-            <float3 name="attenuation">0 0 1</float3>
-            <bool   name="castShadow">true</bool>
-        </lightshader>
-
     </defs>
+
+    <!-- Lights -->
+
+    <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
+      <bool name="castShadow">true</bool>
+      <float3 name="intensity">0.5 0.5 0.5</float3>
+
+    </lightshader>
+    <group transform="#t_Lamp">
+      <light shader="#ls_Spot" intensity="1.5"/>
+    </group>
 
     <!-- Engineer -->
     <group id="Engineer" transform="#TV1">

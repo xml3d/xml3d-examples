@@ -1,7 +1,7 @@
 /**
  * Grid Generation
  */
-Xflow.registerOperator("mygrid", {
+Xflow.registerOperator("xflow.mygrid", {
     outputs: [	{type: 'float3', name: 'position', customAlloc: true},
 				{type: 'float3', name: 'normal', customAlloc: true},
 				{type: 'float2', name: 'texcoord', customAlloc: true},
@@ -58,7 +58,7 @@ Xflow.registerOperator("mygrid", {
 /**
  * Wave Transformation
  */
-Xflow.registerOperator("mywave", {
+Xflow.registerOperator("xflow.mywave", {
 	outputs: [	{type: 'float3', name: 'position'},
 				{type: 'float3', name: 'normal'} ],
     params:  [  {type: 'float3', source: 'position' },

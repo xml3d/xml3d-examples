@@ -40,11 +40,7 @@
               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274"
                          scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"/>
 
-              <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
-                <bool name="castShadow">true</bool>
-                <float3 name="intensity">0.5 0.5 0.5</float3>
 
-              </lightshader>
               <shader id="Material" script="urn:xml3d:shader:phong">
                 <float name="ambientIntensity">1</float>
                 <float3 name="diffuseColor">0.400000 0.120000 0.180000</float3>
@@ -55,6 +51,11 @@
             <group id="viewGroup" transform="#t_Camera">
               <view id="defaultView"/>
             </group>
+            <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
+              <bool name="castShadow">true</bool>
+              <float3 name="intensity">0.5 0.5 0.5</float3>
+
+            </lightshader>
             <group transform="#t_Lamp">
               <light shader="#ls_Spot" intensity="1.5"/>
             </group>

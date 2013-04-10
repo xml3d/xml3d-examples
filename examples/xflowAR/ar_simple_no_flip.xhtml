@@ -16,8 +16,7 @@
 
     <!-- Application Scrips -->
     <script type="text/javascript" src="JSARToolKit.js"></script>
-    <script type="text/javascript" src="ARMarkerDetector.js"></script>
-    <script type="text/javascript" src="compute_threshold.js"></script>
+    <script type="text/javascript" src="xflar.js"></script>
     <script type="text/javascript" src="phongvs.js"></script>
 </head>
 
@@ -33,13 +32,13 @@
 
         <!-- AR Data -->
         <data id="arBase"
-              compute="transforms, visibilities, perspective = xflow.ARMarkerDetector(arvideo, markers, threshold, noflip)">
+              compute="transforms, visibilities, perspective = xflar.detect(arvideo, markers, threshold, noflip)">
             <bool name="noflip">true</bool>
             <int name="markers">22 64</int>
-            <data compute="threshold = xflow.getOtsuThreshold(histogram)">
-              <data compute="histogram = xflow.createNormalizedHistogram(grvideo,channel)">
+            <data compute="threshold = xflar.getOtsuThreshold(histogram)">
+              <data compute="histogram = xflip.createNormalizedHistogram(grvideo,channel)">
                 <int name="channel">0</int>
-                <data compute="grvideo = xflow.grayscale(arvideo)">
+                <data compute="grvideo = xflip.grayscale(arvideo)">
                   <texture name="arvideo">
                     <video autoplay="true" src="../video/ar_marker.ogg"></video>
                   </texture>
