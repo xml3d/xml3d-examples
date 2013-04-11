@@ -3,13 +3,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>Image Proc Tests</title>
-    <script type="text/javascript" src="../../../xml3d.js/build/output/xflowip.js"></script>
+    <script type="text/javascript" src="../../script/xflip.js"></script>
     <script type="text/javascript" >
-        XflowIP.init("../../../xml3d.js/build/output/xflowip-worker.js",
-                ["../../../xml3d-examples/examples/xflowIP/xml3d-xflow-ip-module.js"]);
-    </script>
-    <script>
-
+        Xflip.init(["../../script/xflip-operators.js"]);
     </script>
 	<style>
         font {width:25px; display:inline-block; text-align:center}
@@ -26,7 +22,7 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.grayscale(input)">
+            <data compute="output = xflip.grayscale(input)">
                 <texture name="input" >
                     <img src="lena-color.gif" />
                 </texture>
@@ -39,7 +35,7 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.complement(input)">
+            <data compute="output = xflip.complement(input)">
                 <texture name="input" >
                     <img src="lena-color.gif" />
                 </texture>
@@ -52,7 +48,7 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.dim(image, ratio)">
+            <data compute="output = xflip.dim(image, ratio)">
                 <texture name="image" >
                     <img src="lena-color.gif" />
                 </texture>
@@ -76,7 +72,7 @@
         <img src="lena.jpg" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.threshold(image, threshold)">
+            <data compute="output = xflip.threshold(image, threshold)">
                 <texture name="image" >
                     <img src="lena.jpg" />
                 </texture>
@@ -100,7 +96,7 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.sliceColor(image, color, radius)">
+            <data compute="output = xflip.sliceColor(image, color, radius)">
                 <texture name="image">
                     <img src="lena-color.gif" />
                 </texture>
@@ -135,11 +131,11 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.mulColorMatrix(image, weights)">
+            <data compute="output = xflip.mulColorMatrix(image, weights)">
                 <texture name="image" >
                     <img src="lena-color.gif" />
                 </texture>
-                <data compute="weights = xflow.createSaturateMatrix(weight)">
+                <data compute="weights = xflip.createSaturateMatrix(weight)">
                     <float id="weight11" name="weight">1.1</float>
                 </data>
             </data>
@@ -166,7 +162,7 @@
     <h2>Blending operators: Normal, Multiply, Screen, Lighten, and Darken</h2>
 
     <xflowimg srcname="output" class="output" >
-        <data compute="output = xflow.blendNormal(image1, image2)">
+        <data compute="output = xflip.blendNormal(image1, image2)">
             <texture name="image1" >
                 <img src="lena-color.gif" />
             </texture>
@@ -177,7 +173,7 @@
     </xflowimg>
 
     <xflowimg srcname="output" class="output" >
-        <data compute="output = xflow.blendMultiply(image1, image2)">
+        <data compute="output = xflip.blendMultiply(image1, image2)">
             <texture name="image1" >
                 <img src="lena-color.gif" />
             </texture>
@@ -188,7 +184,7 @@
     </xflowimg>
 
     <xflowimg srcname="output" class="output" >
-        <data compute="output = xflow.blendScreen(image1, image2)">
+        <data compute="output = xflip.blendScreen(image1, image2)">
             <texture name="image1" >
                 <img src="lena-color.gif" />
             </texture>
@@ -199,7 +195,7 @@
     </xflowimg>
 
     <xflowimg srcname="output" class="output" >
-        <data compute="output = xflow.blendLighten(image1, image2)">
+        <data compute="output = xflip.blendLighten(image1, image2)">
             <texture name="image1" >
                 <img src="lena-color.gif" />
             </texture>
@@ -210,7 +206,7 @@
     </xflowimg>
 
     <xflowimg srcname="output" class="output" >
-        <data compute="output = xflow.blendDarken(image1, image2)">
+        <data compute="output = xflip.blendDarken(image1, image2)">
             <texture name="image1" >
                 <img src="lena-color.gif" />
             </texture>
@@ -228,7 +224,7 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.convolve(image, filter)">
+            <data compute="output = xflip.convolve(image, filter)">
                 <float name="filter">-1, -1, -1, -1, 8, -1, -1, -1, -1</float>
                 <texture name="image" >
                     <img src="lena-color.gif" />
@@ -237,8 +233,8 @@
         </xflowimg>
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.mask(image, inter, weight)">
-                <data compute="inter = xflow.convolve(image, filter)">
+            <data compute="output = xflip.mask(image, inter, weight)">
+                <data compute="inter = xflip.convolve(image, filter)">
                     <float name="filter">-1, -1, -1, -1, 8, -1, -1, -1, -1</float>
                     <texture name="image" >
                         <img src="lena-color.gif" />
@@ -254,9 +250,9 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.getChannelMagnitude(inter1, inter2)">
-                <data compute="inter2 = xflow.convolve(image, vFilter)">
-                    <data compute="inter1 = xflow.convolve(image, hFilter)">
+            <data compute="output = xflip.getChannelMagnitude(inter1, inter2)">
+                <data compute="inter2 = xflip.convolve(image, vFilter)">
+                    <data compute="inter1 = xflip.convolve(image, hFilter)">
                         <texture name="image" >
                             <img src="lena-color.gif" />
                         </texture>
@@ -273,11 +269,11 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.convolve(image, filter)">
+            <data compute="output = xflip.convolve(image, filter)">
                 <texture name="image">
                     <img src="lena-color.gif" />
                 </texture>
-                <data compute="filter = xflow.createGaussianFilter(size, sigma)">
+                <data compute="filter = xflip.createGaussianFilter(size, sigma)">
                     <int id="size5" name="size">7</int>
                     <float id="sigma5" name="sigma">3</float>
                 </data>
@@ -307,11 +303,11 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.convolve(image, filter)">
+            <data compute="output = xflip.convolve(image, filter)">
                 <texture name="image" >
                     <img src="lena-color.gif" />
                 </texture>
-                <data compute="filter = xflow.createAveragingFilter(size)">
+                <data compute="filter = xflip.createAveragingFilter(size)">
                     <int id="size8" name="size">7</int>
                 </data>
             </data>
@@ -333,7 +329,7 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.median(image, size)">
+            <data compute="output = xflip.median(image, size)">
                 <texture name="image" >
                     <img src="lena-color.gif" />
                 </texture>
@@ -359,11 +355,11 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.erode(image, filter)">
+            <data compute="output = xflip.erode(image, filter)">
                 <texture name="image" >
                     <img src="lena-color.gif" />
                 </texture>
-                <data compute="filter = xflow.createSquareMorphologyFilter(size)">
+                <data compute="filter = xflip.createSquareMorphologyFilter(size)">
                     <int id="size131" name="size">7</int>
                 </data>
             </data>
@@ -385,11 +381,11 @@
         <img src="lena-color.gif" class="input" />
 
         <xflowimg srcname="output" class="output" >
-            <data compute="output = xflow.dilate(image, filter)">
+            <data compute="output = xflip.dilate(image, filter)">
                 <texture name="image" >
                     <img src="lena-color.gif" />
                 </texture>
-                <data compute="filter = xflow.createSquareMorphologyFilter(size)">
+                <data compute="filter = xflip.createSquareMorphologyFilter(size)">
                     <int id="size132" name="size">7</int>
                 </data>
             </data>
@@ -413,10 +409,10 @@
         <img src="micro.jpg" class="input" />
 
         <xflowimg srcname="output" class="output">
-            <data compute="output = xflow.applyGrayscaleHST(image, transform, channel)">
+            <data compute="output = xflip.applyGrayscaleHST(image, transform, channel)">
                 <int name="channel">2</int>
-                <data compute="transform = xflow.createEqualizationHST(histogram)">
-                    <data compute="histogram = xflow.createHistogram(image, channel)">
+                <data compute="transform = xflip.createEqualizationHST(histogram)">
+                    <data compute="histogram = xflip.createHistogram(image, channel)">
                         <int name="channel">1</int>
                         <texture name="image" >
                             <img src="micro.jpg" />
@@ -434,8 +430,8 @@
         <img src="lena.jpg" class="input" />
 
         <xflowimg srcname="output" class="output">
-            <data compute="output = xflow.createSpectrumImage(inter)">
-                <data compute="inter = xflow.applyDFT(image)">
+            <data compute="output = xflip.createSpectrumImage(inter)">
+                <data compute="inter = xflip.applyDFT(image)">
                     <texture name="image" >
                         <img src="lena-small.jpg" />
                     </texture>
@@ -445,9 +441,9 @@
         </xflowimg>
 
         <xflowimg srcname="output" class="output">
-            <data compute="output = xflow.createSpectrumImage(inter)">
-                <data compute="inter = xflow.applyGaussianLPF(inter, sigma)">
-                    <data compute="inter = xflow.applyDFT(image)">
+            <data compute="output = xflip.createSpectrumImage(inter)">
+                <data compute="inter = xflip.applyGaussianLPF(inter, sigma)">
+                    <data compute="inter = xflip.applyDFT(image)">
                         <texture name="image" >
                             <img src="lena-small.jpg" />
                         </texture>
@@ -458,9 +454,9 @@
         </xflowimg>
 
         <xflowimg srcname="output" class="output">
-            <data compute="output = xflow.applyDFTInv(inter)">
-                <data compute="inter = xflow.applyGaussianLPF(inter, sigma)">
-                    <data compute="inter = xflow.applyDFT(image)">
+            <data compute="output = xflip.applyDFTInv(inter)">
+                <data compute="inter = xflip.applyGaussianLPF(inter, sigma)">
+                    <data compute="inter = xflip.applyDFT(image)">
                         <texture name="image" >
                             <img src="lena-small.jpg" />
                         </texture>
@@ -486,25 +482,23 @@
     <div>
         <img src="lena.jpg" class="input" />
 
-<!--
+
         <xflowimg srcname="output" class="output">
-                    <data compute="(output, oSize) = xflow.padToPow2(image)">
-                        <texture name="image" >
-                            <img src="lena.jpg" />
-                        </texture>
-                    </data>
+            <data compute="(output, oSize) = xflip.padToPow2(image)">
+                <texture name="image" >
+                    <img src="lena.jpg" />
+                </texture>
+            </data>
         </xflowimg>
 
-
-
         <xflowimg srcname="output" class="output">
-            <data compute="output = xflow.crop(inter, origin, oSize)">
+            <data compute="output = xflip.crop(inter, origin, oSize)">
                 <int name="origin">0 0</int>
-                <data compute="inter = xflow.applyFFTInv(inter)">
-                    <data compute="inter = xflow.applyGaussianHPF(inter, sigma)">
-                        <float name="sigma">10</float>
-                        <data compute="inter = xflow.applyFFT(inter)">
-                            <data compute="(inter, oSize) = xflow.padToPow2(image)">
+                <data compute="inter = xflip.applyFFTInv(inter)">
+                    <data compute="inter = xflip.applyGaussianHPF(inter, sigma)">
+                        <float id="sigma211" name="sigma">10</float>
+                        <data compute="inter = xflip.applyFFT(inter)">
+                            <data compute="(inter, oSize) = xflip.padToPow2(image)">
                                 <texture name="image" >
                                     <img src="lena.jpg" />
                                 </texture>
@@ -514,7 +508,6 @@
                 </data>
             </data>
         </xflowimg>
--->
 
     </div>
 
@@ -525,7 +518,6 @@
         function updateSigma21() {
             var range = document.getElementById("range21").value;
             document.getElementById("sigma211").firstChild.textContent = range;
-            document.getElementById("sigma212").firstChild.textContent = range;
             document.getElementById("div20").innerHTML = range;
         }
     </script>

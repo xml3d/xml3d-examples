@@ -5,7 +5,8 @@ var CATEGORY_LIST = {
     external : { name: "External References" },
     shader : { name: "Shaders" },
     xflow : { name: "Xflow" },
-    ar : { name: "Augmented Reality"}
+    ar : { name: "Augmented Reality"},
+    ip : {name: "Image Processing"}
 
 
 }
@@ -42,7 +43,7 @@ var EXAMPLE_LIST = [
         info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},
     {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.xhtml",
         info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"},
-    
+
     {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.xhtml",
         info: "Demonstrates Xflow Prototypes."},
     {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
@@ -56,6 +57,19 @@ var EXAMPLE_LIST = [
         info: "A simple augmented reality application with a teapot. Implemented with Xflow."},
     {cat: "ar", name: "Flying Teapot", href: "examples/xflowAR/ar_flying_teapot.xhtml",
         info: "Augmented reality application with a teapot jumping between two markers."},
+
+    {cat: "ip", name: "Pixel-Wise", href: "examples/xflowIP/pixel-wise.html",
+        info: "Basic, pixel-wise image processing operators"},
+    {cat: "ip", name: "Blending", href: "examples/xflowIP/blending.html",
+        info: "Basic blending image processing operators"},
+    {cat: "ip", name: "Spatial Filtering", href: "examples/xflowIP/spatial-filtering.html",
+        info: "Spatial filtering image processing operators"},
+    {cat: "ip", name: "Morphology", href: "examples/xflowIP/morphology.html",
+        info: "Morphology image processing operators"},
+    {cat: "ip", name: "Histogramm", href: "examples/xflowIP/histogramm.html",
+        info: "Histogramm image processing operators"},
+    {cat: "ip", name: "Fourier Transforms", href: "examples/xflowIP/fourier.html",
+        info: "Image processing operators in Fourier space."}
 ]
 
 var CURRENT = null;

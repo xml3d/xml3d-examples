@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (15.02.2013 12:06:42 MEZ)
+@version: DEVELOPMENT SNAPSHOT (10.04.2013 15:58:37 MESZ)
 **/
 XML3D = {};
 XML3D.math = {};
@@ -112,12 +112,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -140,7 +140,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
     } else {
       // gl-matrix lives in a browser, define its namespaces in global
       shim.exports = window;
-    }
+    }    
   }
   else {
     // gl-matrix lives in commonjs, define its namespaces in exports
@@ -156,12 +156,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -206,12 +206,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -600,7 +600,7 @@ vec2.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -612,7 +612,7 @@ vec2.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1];
         }
-
+        
         return a;
     };
 })();
@@ -639,12 +639,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1084,7 +1084,7 @@ vec3.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -1096,7 +1096,7 @@ vec3.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2];
         }
-
+        
         return a;
     };
 })();
@@ -1123,12 +1123,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1572,7 +1572,7 @@ vec4.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-
+        
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -1584,7 +1584,7 @@ vec4.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2]; a[i+3] = vec[3];
         }
-
+        
         return a;
     };
 })();
@@ -1611,12 +1611,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1714,7 +1714,7 @@ mat2.transpose = function(out, a) {
         out[2] = a[1];
         out[3] = a[3];
     }
-
+    
     return out;
 };
 
@@ -1735,7 +1735,7 @@ mat2.invert = function(out, a) {
         return null;
     }
     det = 1.0 / det;
-
+    
     out[0] =  a3 * det;
     out[1] = -a1 * det;
     out[2] = -a2 * det;
@@ -1855,12 +1855,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1988,7 +1988,7 @@ mat3.transpose = function(out, a) {
         out[7] = a[5];
         out[8] = a[8];
     }
-
+    
     return out;
 };
 
@@ -2011,8 +2011,8 @@ mat3.invert = function(out, a) {
         // Calculate the determinant
         det = a00 * b01 + a01 * b11 + a02 * b21;
 
-    if (!det) {
-        return null;
+    if (!det) { 
+        return null; 
     }
     det = 1.0 / det;
 
@@ -2110,8 +2110,8 @@ mat3.mul = mat3.multiply;
  * @returns {String} string representation of the matrix
  */
 mat3.str = function (a) {
-    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' +
-                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' +
+    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + 
+                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' + 
                     a[6] + ', ' + a[7] + ', ' + a[8] + ')';
 };
 
@@ -2127,12 +2127,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2305,7 +2305,7 @@ mat4.transpose = function(out, a) {
         out[14] = a[11];
         out[15] = a[15];
     }
-
+    
     return out;
 };
 
@@ -2338,8 +2338,8 @@ mat4.invert = function(out, a) {
         // Calculate the determinant
         det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
-    if (!det) {
-        return null;
+    if (!det) { 
+        return null; 
     }
     det = 1.0 / det;
 
@@ -2439,7 +2439,7 @@ mat4.multiply = function (out, a, b) {
         a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
 
     // Cache only the current line of the second matrix
-    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];  
     out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
     out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
     out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
@@ -2559,7 +2559,7 @@ mat4.rotate = function (out, a, rad, axis) {
         b20, b21, b22;
 
     if (Math.abs(len) < GLMAT_EPSILON) { return null; }
-
+    
     len = 1 / len;
     x *= len;
     y *= len;
@@ -2778,7 +2778,7 @@ mat4.fromRotationTranslation = function (out, q, v) {
     out[13] = v[1];
     out[14] = v[2];
     out[15] = 1;
-
+    
     return out;
 };
 
@@ -2980,7 +2980,7 @@ mat4.lookAt = function (out, eye, center, up) {
 mat4.str = function (a) {
     return 'mat4(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
                     a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
-                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' +
+                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
                     a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + ')';
 };
 
@@ -2996,12 +2996,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation
+    this list of conditions and the following disclaimer in the documentation 
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3166,7 +3166,7 @@ quat.scale = vec4.scale;
  * @returns {quat} out
  */
 quat.rotateX = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bx = Math.sin(rad), bw = Math.cos(rad);
@@ -3187,7 +3187,7 @@ quat.rotateX = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateY = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         by = Math.sin(rad), bw = Math.cos(rad);
@@ -3208,7 +3208,7 @@ quat.rotateY = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateZ = function (out, a, rad) {
-    rad *= 0.5;
+    rad *= 0.5; 
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bz = Math.sin(rad), bw = Math.cos(rad);
@@ -3323,7 +3323,7 @@ quat.invert = function(out, a) {
     var a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3],
         dot = a0*a0 + a1*a1 + a2*a2 + a3*a3,
         invDot = dot ? 1.0/dot : 0;
-
+    
     // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
 
     out[0] = -a0*invDot;
@@ -3436,7 +3436,9 @@ Xflow.DATA_TYPE = {
     INT : 20,
     INT4 : 21,
     BOOL: 30,
-    TEXTURE: 40
+    TEXTURE: 40,
+    BYTE : 50,
+    UBYTE : 60
 }
 
 Xflow.DATA_TYPE_TUPLE_SIZE = {};
@@ -3449,6 +3451,8 @@ Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
 Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
 Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BOOL] = 1;
 Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
 
 Xflow.DATA_TYPE_MAP = {
     'float' : Xflow.DATA_TYPE.FLOAT,
@@ -3459,7 +3463,9 @@ Xflow.DATA_TYPE_MAP = {
     'int' : Xflow.DATA_TYPE.INT,
     'int4' : Xflow.DATA_TYPE.INT4,
     'bool' : Xflow.DATA_TYPE.BOOL,
-    'texture' : Xflow.DATA_TYPE.TEXTURE
+    'texture' : Xflow.DATA_TYPE.TEXTURE,
+    'byte' : Xflow.DATA_TYPE.BYTE,
+    'ubyte' : Xflow.DATA_TYPE.UBYTE
 }
 
 Xflow.getTypeName = function(type){
@@ -3474,25 +3480,24 @@ Xflow.getTypeName = function(type){
  * @enum {number}
  */
 Xflow.TEX_FILTER_TYPE = {
-    NONE: 0,
-    REPEAT: 1,
-    LINEAR: 2
+    NEAREST: 0x2600,
+    LINEAR: 0x2601,
+    MIPMAP_NEAREST: 0x2700,
+    MIPMAP_LINEAR: 0x2701
+
 };
 /**
  * @enum {number}
  */
 Xflow.TEX_WRAP_TYPE = {
-    CLAMP: 0,
-    REPEAT: 1,
-    BORDER: 2
+    CLAMP: 0x812F,
+    REPEAT: 0x2901
 };
 /**
  * @enum {number}
  */
 Xflow.TEX_TYPE = {
-    TEXTURE_1D: 0,
-    TEXTURE_2D: 1,
-    TEXTURE_3D: 2
+    TEXTURE_2D: 0x0DE1
 };
 
 
@@ -3574,7 +3579,7 @@ Xflow.ORIGIN = {
  * @param {Object} ctor Constructor
  * @param {Object} parent Parent class
  * @param {Object=} methods Methods to add to the class
- * @returns
+ * @returns {Object}
  */
 Xflow.createClass = function(ctor, parent, methods) {
     methods = methods || {};
@@ -3617,13 +3622,13 @@ Xflow.SamplerConfig = function(){
 };
 Xflow.SamplerConfig.prototype.setDefaults = function() {
     // FIXME Generate this from the spec ?
-    this.minFilter = WebGLRenderingContext.LINEAR;
-    this.magFilter = WebGLRenderingContext.LINEAR;
-    this.mipFilter = WebGLRenderingContext.NEAREST;
-    this.wrapS = WebGLRenderingContext.CLAMP_TO_EDGE;
-    this.wrapT = WebGLRenderingContext.CLAMP_TO_EDGE;
-    this.wrapU = WebGLRenderingContext.CLAMP_TO_EDGE;
-    this.textureType = WebGLRenderingContext.TEXTURE_2D;
+    this.minFilter = Xflow.TEX_FILTER_TYPE.LINEAR;
+    this.magFilter = Xflow.TEX_FILTER_TYPE.LINEAR;
+    this.mipFilter = Xflow.TEX_FILTER_TYPE.NEAREST;
+    this.wrapS = Xflow.TEX_WRAP_TYPE.CLAMP;
+    this.wrapT = Xflow.TEX_WRAP_TYPE.CLAMP;
+    this.wrapU = Xflow.TEX_WRAP_TYPE.CLAMP;
+    this.textureType = Xflow.TEX_TYPE.TEXTURE_2D;
     this.colorR = 0;
     this.colorG = 0;
     this.colorB = 0;
@@ -5545,7 +5550,8 @@ function mappingNotifyOwner(mapping){
     }
 
     function setOperatorProtoNames(channelNode){
-        channelNode.operator = Xflow.getOperator(channelNode.owner._computeOperator);
+        var operatorName = channelNode.owner._computeOperator;
+        channelNode.operator = operatorName && Xflow.getOperator(operatorName);
         if(channelNode.operator){
             var operator = channelNode.operator, inputMapping = channelNode.owner._computeInputMapping;
             for(var i = 0; i < operator.params.length; ++i){
@@ -6269,7 +6275,7 @@ Xflow.utils.binarySearch = function(keys, key, maxIndex){
 var operators = {};
 
 Xflow.registerOperator = function(name, data){
-    var actualName = "xflow." + name;
+    var actualName = name;
     initOperator(data);
     operators[actualName] = data;
     data.name = actualName;
@@ -6547,7 +6553,7 @@ if(window.ParallelArray){
 }
 
 function riverTrailAvailable(){
-    return window.ParallelArray && window.RiverTrail && RiverTrail.compiler;
+    return window.ParallelArray && window.RiverTrail && window.RiverTrail.compiler;
 }
 
 
@@ -6583,7 +6589,7 @@ function applyParallelOperator(operator, inputData, outputData, operatorData){
     var outputName = operator.outputs[0].name;
     var outputDataEntry = outputData[outputName].dataEntry;
 
-    RiverTrail.compiler.openCLContext.writeToContext2D(outputDataEntry.getContext2D(),
+    window.RiverTrail.compiler.openCLContext.writeToContext2D(outputDataEntry.getContext2D(),
         result.data, outputDataEntry.getWidth(), outputDataEntry.getHeight());
 
     var value = outputDataEntry.getValue();
@@ -6622,7 +6628,7 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
 }
 
 })();
-Xflow.registerOperator("morph", {
+Xflow.registerOperator("xflow.morph", {
     outputs: [{type: 'float3', name: 'result'}],
     params:  [
         { type: 'float3', source: 'value' },
@@ -6643,7 +6649,7 @@ Xflow.registerOperator("morph", {
         result[1] = value[1] + weight[0] * valueAdd[1];
         result[2] = value[2] + weight[0] * valueAdd[2];
     }
-});Xflow.registerOperator("sub", {
+});Xflow.registerOperator("xflow.sub", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value1'},
                 {type: 'float3', source: 'value2'}],
@@ -6661,7 +6667,7 @@ Xflow.registerOperator("morph", {
         result[1] = value1[1] - value2[1];
         result[2] = value1[2] - value2[2];
     }
-});Xflow.registerOperator("normalize", {
+});Xflow.registerOperator("xflow.normalize", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value'}],
     evaluate: function(result, value, info) {
@@ -6677,7 +6683,7 @@ Xflow.registerOperator("morph", {
         }
     }
 });
-Xflow.registerOperator("lerpSeq", {
+Xflow.registerOperator("xflow.lerpSeq", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'sequence'},
         {type: 'float', source: 'key'}],
@@ -6709,7 +6715,7 @@ Xflow.registerOperator("lerpSeq", {
     }
 });
 
-Xflow.registerOperator("lerpKeys", {
+Xflow.registerOperator("xflow.lerpKeys", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float', source: 'keys', array: true},
         {type: 'float3', source: 'values', array: true},
@@ -6742,7 +6748,7 @@ Xflow.registerOperator("lerpKeys", {
 
 
 
-Xflow.registerOperator("slerpSeq", {
+Xflow.registerOperator("xflow.slerpSeq", {
     outputs: [  {type: 'float4', name: 'result'}],
     params:  [  {type: 'float4', source: 'sequence'},
                 {type: 'float', source: 'key'}],
@@ -6778,7 +6784,7 @@ Xflow.registerOperator("slerpSeq", {
 });
 
 
-Xflow.registerOperator("slerpKeys", {
+Xflow.registerOperator("xflow.slerpKeys", {
     outputs: [  {type: 'float4', name: 'result'}],
     params:  [  {type: 'float', source: 'keys', array: true},
         {type: 'float4', source: 'values', array: true},
@@ -6805,7 +6811,7 @@ Xflow.registerOperator("slerpKeys", {
                 result, 0, true);
         }
     }
-});Xflow.registerOperator("createTransform", {
+});Xflow.registerOperator("xflow.createTransform", {
     outputs: [  {type: 'float4x4', name: 'result'}],
     params:  [  {type: 'float3', source: 'translation', optional: true},
                 {type: 'float4', source: 'rotation', optional: true},
@@ -6924,7 +6930,7 @@ Xflow.registerOperator("slerpKeys", {
         return true;
     }
      */
-});Xflow.registerOperator("createTransformInv", {
+});Xflow.registerOperator("xflow.createTransformInv", {
     outputs: [  {type: 'float4x4', name: 'result'}],
     params:  [  {type: 'float3', source: 'translation', optional: true},
                 {type: 'float4', source: 'rotation', optional: true},
@@ -7043,7 +7049,7 @@ Xflow.registerOperator("slerpKeys", {
 	*/
         return true;
     }
-});Xflow.registerOperator("mul", {
+});Xflow.registerOperator("xflow.mul", {
     outputs: [  {type: 'float4x4', name: 'result'}],
     params:  [  {type: 'float4x4', source: 'value1'},
                 {type: 'float4x4', source: 'value2'}],
@@ -7121,7 +7127,7 @@ Xflow.registerOperator("slerpKeys", {
          */
         return true;
     }
-});Xflow.registerOperator("skinDirection", {
+});Xflow.registerOperator("xflow.skinDirection", {
     outputs: [  {type: 'float3', name: 'result' }],
     params:  [  {type: 'float3', source: 'dir' },
                 {type: 'int4', source: 'boneIdx' },
@@ -7189,7 +7195,7 @@ Xflow.registerOperator("slerpKeys", {
         */
         return true;
     }
-});Xflow.registerOperator("skinPosition", {
+});Xflow.registerOperator("xflow.skinPosition", {
     outputs: [  {type: 'float3', name: 'result' }],
     params:  [  {type: 'float3', source: 'pos' },
                 {type: 'int4', source: 'boneIdx' },
@@ -7256,7 +7262,7 @@ Xflow.registerOperator("slerpKeys", {
         */
         return true;
     }
-});Xflow.registerOperator("forwardKinematics", {
+});Xflow.registerOperator("xflow.forwardKinematics", {
     outputs: [  {type: 'float4x4',  name: 'result', customAlloc: true}],
     params:  [  {type: 'int',       source: 'parent', array: true },
                 {type: 'float4x4',  source: 'xform', array: true }],
@@ -7366,7 +7372,7 @@ Xflow.registerOperator("slerpKeys", {
 
         return true;
     }
-});Xflow.registerOperator("forwardKinematicsInv", {
+});Xflow.registerOperator("xflow.forwardKinematicsInv", {
     outputs: [  {type: 'float4x4',  name: 'result', customAlloc: true}],
     params:  [  {type: 'int',       source: 'parent', array: true },
                 {type: 'float4x4',  source: 'xform', array: true }],
@@ -7414,12 +7420,47 @@ Xflow.registerOperator("slerpKeys", {
             i++;
         }
     }
-});Xflow.registerOperator("flipNormal", {
+});Xflow.registerOperator("xflow.flipNormal", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value'}],
     evaluate: function(result, value, info) {
         for(var i = 0; i<info.iterateCount*3; i++)
             result[i] = -value[i];
+    }
+});Xflow.registerOperator("xflow.createIGIndex", {
+    outputs:[
+        //{type:'int', name:'index', customAlloc:true },
+        {type:'float2', name:'texcoord', customAlloc:true }
+    ],
+    params:[
+        {type:'int', source:'vertexCount', optional:false},
+        {type:'texture', source:'positionTex', optional: false}
+    ],
+    alloc:function (sizes, vertexCount, image) {
+        sizes['texcoord'] = image.width * image.height;
+        //sizes['index'] = vertexCount[0];
+    },
+    evaluate:function (texcoord, vertexCount, image, info) {
+        // tex coords
+        var halfPixel = {
+            x: 0.5 / image.width,
+            y: 0.5 / image.height
+        };
+        var i = 0;
+        for (var y = 0, ylength = image.height; y < ylength; y++)
+        {
+            for (var x = 0, xlength = image.width; x < xlength; x++)
+            {
+                texcoord[i++] = (x / xlength) + halfPixel.x;
+                texcoord[i++] = 1 - ((y / ylength) + halfPixel.y);
+            }
+        }
+
+        // index creation
+        /*for(var i = 0; i < vertexCount[0]; i++) {
+            index[i] = i;
+        }*/
+        return true;
     }
 });// Additional methods in glMatrix style
 
@@ -7629,7 +7670,7 @@ XML3D.math.quat.slerpOffset = function(quat, offset1, quat2, offset2, t, dest, d
     dest[iyd] = c1*quat[iy1] + c2*quat2[iy2];
     dest[izd] = c1*quat[iz1] + c2*quat2[iz2];
     dest[iwd] = c1*quat[iw1] + c2*quat2[iw2];
-};Xflow.registerOperator("noiseImage", {
+};Xflow.registerOperator("xflow.noiseImage", {
     outputs: [ {type: 'texture', name : 'image', customAlloc: true} ],
     params:  [ {type: 'int', source: 'width'},
                {type: 'int', source:'height'},
@@ -7917,7 +7958,7 @@ function setTexel2D(imagedata, x, y, color) {
     data[offset+3] = color[3] * 255.0;
 }
 
-Xflow.registerOperator("sobelImage", {
+Xflow.registerOperator("xflow.sobelImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -8021,7 +8062,7 @@ Xflow.registerOperator("sobelImage", {
         return true;
     }
 });
-Xflow.registerOperator("grayscaleImage", {
+Xflow.registerOperator("xflow.grayscaleImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -8044,7 +8085,7 @@ Xflow.registerOperator("grayscaleImage", {
         return true;
     }
 });
-Xflow.registerOperator("sepiaImage", {
+Xflow.registerOperator("xflow.sepiaImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -8082,7 +8123,7 @@ Xflow.registerOperator("sepiaImage", {
         return [r,g,b,255];
     }
 });
-Xflow.registerOperator("clampImage", {
+Xflow.registerOperator("xflow.clampImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image', formatType: 'ImageData'} ],
     params:  [ {type: 'texture', source : 'image'},
                {type: 'float', source : 'min'},
@@ -8150,7 +8191,7 @@ Xflow.registerOperator("clampImage", {
         return outpixels;
     };
 
-    Xflow.registerOperator("convoluteImage", {
+    Xflow.registerOperator("xflow.convoluteImage", {
         outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
         params:  [
             {type: 'texture', source : 'image'},
@@ -8162,7 +8203,7 @@ Xflow.registerOperator("clampImage", {
         }
     });
 
-    Xflow.registerOperator("convoluteImageToFloat", {
+    Xflow.registerOperator("xflow.convoluteImageToFloat", {
         outputs: [ {type: 'texture', name : 'result', sizeof: 'image', formatType : 'float32'} ],
         params:  [
             {type: 'texture', source : 'image'},
@@ -8177,7 +8218,7 @@ Xflow.registerOperator("clampImage", {
 })();
 // Based on: http://web.archive.org/web/20100310063925/http://dem.ocracy.org/libero/photobooth/
 
-Xflow.registerOperator("funMirrorImage", {
+Xflow.registerOperator("xflow.funMirrorImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'},
                {type: 'float', source : 'time'} ],
@@ -8236,7 +8277,7 @@ Xflow.registerOperator("funMirrorImage", {
     }
 });
 // Based on http://kodemongki.blogspot.de/2011/06/kameraku-custom-shader-effects-example.html
-Xflow.registerOperator("popartImage", {
+Xflow.registerOperator("xflow.popartImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'},
         {type: 'float', source : 'time'} ],
@@ -8272,7 +8313,7 @@ Xflow.registerOperator("popartImage", {
         return true;
     }
 });
-Xflow.registerOperator("magnitudeImage", {
+Xflow.registerOperator("xflow.magnitudeImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image1'} ],
     params:  [
         {type: 'texture', source : 'image1'},
@@ -8292,7 +8333,7 @@ Xflow.registerOperator("magnitudeImage", {
         return true;
     }
 });
-Xflow.registerOperator("flipVerticalImage", {
+Xflow.registerOperator("xflow.flipVerticalImage", {
     outputs: [ {type: 'texture', name : 'result', sizeof : 'image'} ],
     params:  [ {type: 'texture', source : 'image'} ],
     evaluate: function(result, image) {
@@ -8316,7 +8357,7 @@ Xflow.registerOperator("flipVerticalImage", {
         return true;
     }
 });
-Xflow.registerOperator("selectTransform", {
+Xflow.registerOperator("xflow.selectTransform", {
     outputs: [ {type: 'float4x4', name : 'result', customAlloc: true} ],
     params:  [ {type: 'int', source : 'index'},
                {type: 'float4x4', source: 'transform'} ],
@@ -8362,6 +8403,22 @@ Xflow.registerOperator("selectTransform", {
         }
     }
 });
+Xflow.registerOperator("xflow.selectBool", {
+    outputs: [ {type: 'bool', name : 'result', customAlloc: true} ],
+    params:  [ {type: 'int', source : 'index'},
+               {type: 'bool', source: 'value'} ],
+    alloc: function(sizes, index, value) {
+        sizes['result'] = 1;
+    },
+    evaluate: function(result, index, value) {
+        var i = index[0];
+        if (i < value.length) {
+            result[0] = value[i];
+        } else {
+            result[0] = false;
+        }
+    }
+});
 
 var c_nodes = [];
 var c_sinknodes = [];
@@ -8383,9 +8440,7 @@ self.onmessage = function(event) {
     log("MESSAGE RECEIVED: " + type);
     switch(type){
         case "initialize":
-            var addons = data['addons'];
-            importScripts.apply(null, addons);
-            self.postMessage({"type": "initialized"});
+            initialize(data['root'], data['addons'])
             break;
         case "createNode":
             createNode(data.nodeData);
@@ -8446,6 +8501,25 @@ var c_parseConfig = {
     'bool' : { attr: c_input_attr, type: "InputNode", value: 'bool'},
     'texture' : { attr: c_input_attr, type: "InputNode", value: 'texture'},
     'img' : { type: "Image"}
+}
+
+function initialize(root, addons){
+    var relativeAddons = [];
+    root = root.replace(/[^/]*$/,"");
+    for(var i =0; i < addons.length; ++i){
+        var url = addons[i];
+        if(url.indexOf("http://") == -1){
+            if(url.charAt[0] == "/"){
+                url = root.replace(/\/.*$/, "") + url;
+            }
+            else{
+                url = root + url;
+            }
+        }
+        relativeAddons[i] = url;
+    }
+    importScripts.apply(null, relativeAddons);
+    self.postMessage({"type": "initialized"});
 }
 
 function createNode(data){
@@ -8671,6 +8745,7 @@ function SinkNode(id, entry, source, xflowDataNode){
 };
 
 SinkNode.prototype.invalidate = function(){
+    self.postMessage({type: "modified", id: this.id});
     this.invalid = true;
 }
 

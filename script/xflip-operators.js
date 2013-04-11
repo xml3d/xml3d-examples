@@ -1,5 +1,5 @@
 // Basic pixel-wise operations
-Xflow.registerOperator("grayscale", {
+Xflow.registerOperator("xflip.grayscale", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -14,7 +14,7 @@ Xflow.registerOperator("grayscale", {
     }
 });
 
-Xflow.registerOperator("complement", {
+Xflow.registerOperator("xflip.complement", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -32,7 +32,7 @@ Xflow.registerOperator("complement", {
     }
 });
 
-Xflow.registerOperator("dim", {
+Xflow.registerOperator("xflip.dim", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
 			   {type: 'float', source : 'ratio'}],
@@ -42,19 +42,19 @@ Xflow.registerOperator("dim", {
 
         var s = input.data;
         var d = output.data;
-		
+
         for (var i = 0; i < s.length; i += 4) {
             d[i] = ratio[0] * s[i];
             d[i + 1] = ratio[0] * s[i + 1];
             d[i + 2] = ratio[0] * s[i + 2];
             d[i + 3] = s[i + 3];
         }
-		
+
         return true;
     }
 });
 
-Xflow.registerOperator("threshold", {
+Xflow.registerOperator("xflip.threshold", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
 			   {type: 'int', source : 'threshold'}],
@@ -64,12 +64,12 @@ Xflow.registerOperator("threshold", {
 
         var s = input.data;
         var d = output.data;
-		
+
         for (var i = 0; i < s.length; i += 4) {
             d[i] = d[i + 1] = d[i + 2] = ((s[i] >= threshold[0]) ? 255 : 0);
             d[i + 3] = s[i + 3];
         }
-		
+
         return true;
     }
 });
@@ -83,7 +83,7 @@ function euclideanDist(point1, point2) {
     return Math.sqrt(sum);
 }
 
-Xflow.registerOperator("sliceColor", {
+Xflow.registerOperator("xflip.sliceColor", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
                {type: 'int', source : 'color'},
@@ -113,7 +113,7 @@ Xflow.registerOperator("sliceColor", {
     }
 });
 
-Xflow.registerOperator("createSaturateMatrix", {
+Xflow.registerOperator("xflip.createSaturateMatrix", {
     outputs: [ {type: 'float', name : 'output', customAlloc: true} ],
     params:  [ {type: 'float', source : 'weight'} ],
     alloc: function(sizes) {
@@ -134,7 +134,7 @@ Xflow.registerOperator("createSaturateMatrix", {
     }
 });
 
-Xflow.registerOperator("mulColorMatrix", {
+Xflow.registerOperator("xflip.mulColorMatrix", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
                {type: 'float', source : 'weights'} ],
@@ -158,7 +158,7 @@ Xflow.registerOperator("mulColorMatrix", {
     }
 });
 
-Xflow.registerOperator("mask", {
+Xflow.registerOperator("xflip.mask", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
                {type: 'texture', source : 'input2'},
@@ -180,7 +180,7 @@ Xflow.registerOperator("mask", {
     }
 });
 
-Xflow.registerOperator("getChannelMagnitude", {
+Xflow.registerOperator("xflip.getChannelMagnitude", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
                {type: 'texture', source : 'input2'} ],
@@ -200,7 +200,7 @@ Xflow.registerOperator("getChannelMagnitude", {
     }
 });
 
-Xflow.registerOperator("premultiply", {
+Xflow.registerOperator("xflip.premultiply", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -219,7 +219,7 @@ Xflow.registerOperator("premultiply", {
     }
 });
 
-Xflow.registerOperator("unpremultiply", {
+Xflow.registerOperator("xflip.unpremultiply", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -239,7 +239,7 @@ Xflow.registerOperator("unpremultiply", {
 });
 
 // Blending
-Xflow.registerOperator("blendNormal", {
+Xflow.registerOperator("xflip.blendNormal", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
         {type: 'texture', source : 'input2'}],
@@ -266,7 +266,7 @@ Xflow.registerOperator("blendNormal", {
     }
 });
 
-Xflow.registerOperator("blendMultiply", {
+Xflow.registerOperator("xflip.blendMultiply", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
         {type: 'texture', source : 'input2'}],
@@ -296,7 +296,7 @@ Xflow.registerOperator("blendMultiply", {
     }
 });
 
-Xflow.registerOperator("blendScreen", {
+Xflow.registerOperator("xflip.blendScreen", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
                {type: 'texture', source : 'input2'} ],
@@ -323,7 +323,7 @@ Xflow.registerOperator("blendScreen", {
     }
 });
 
-Xflow.registerOperator("blendDarken", {
+Xflow.registerOperator("xflip.blendDarken", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
         {type: 'texture', source : 'input2'}],
@@ -350,7 +350,7 @@ Xflow.registerOperator("blendDarken", {
     }
 });
 
-Xflow.registerOperator("blendLighten", {
+Xflow.registerOperator("xflip.blendLighten", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input1'} ],
     params:  [ {type: 'texture', source : 'input1'},
         {type: 'texture', source : 'input2'}],
@@ -378,7 +378,7 @@ Xflow.registerOperator("blendLighten", {
 });
 
 // Spatial filtering
-Xflow.registerOperator("convolve", {
+Xflow.registerOperator("xflip.convolve", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input', 'formatType' : 'float32'} ],
     params:  [ {type: 'texture', source : 'input'},
 			   {type: 'float', source : 'filter'}],
@@ -421,7 +421,7 @@ function gaussian(x, y, sigma) {
 	return Math.pow(Math.E, -(Math.pow(x, 2) + Math.pow(y, 2)) / (2 * Math.pow(sigma, 2)));
 }
 
-Xflow.registerOperator("createGaussianFilter", {
+Xflow.registerOperator("xflip.createGaussianFilter", {
     outputs: [ {type: 'float', name : 'output', customAlloc: true} ],
     params:  [ {type: 'int', source : 'size'},
 			   {type: 'float', source : 'sigma'} ],
@@ -452,7 +452,7 @@ Xflow.registerOperator("createGaussianFilter", {
     }
 });
 
-Xflow.registerOperator("createAveragingFilter", {
+Xflow.registerOperator("xflip.createAveragingFilter", {
     outputs: [ {type: 'float', name : 'output', customAlloc: true} ],
     params:  [ {type: 'int', source : 'size'} ],
     alloc: function(sizes, size) {
@@ -467,7 +467,7 @@ Xflow.registerOperator("createAveragingFilter", {
     }
 });
 
-Xflow.registerOperator("median", {
+Xflow.registerOperator("xflip.median", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
                 {type: 'int', source : 'size'}],
@@ -510,7 +510,7 @@ Xflow.registerOperator("median", {
 });
 
 // Morphology
-Xflow.registerOperator("erode", {
+Xflow.registerOperator("xflip.erode", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
 			   {type: 'int', source : 'filter'}],
@@ -553,7 +553,7 @@ Xflow.registerOperator("erode", {
 }
 });
 
-Xflow.registerOperator("dilate", {
+Xflow.registerOperator("xflip.dilate", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
 			   {type: 'int', source : 'filter'}],
@@ -596,7 +596,7 @@ Xflow.registerOperator("dilate", {
 }
 });
 
-Xflow.registerOperator("createSquareMorphologyFilter", {
+Xflow.registerOperator("xflip.createSquareMorphologyFilter", {
     outputs: [ {type: 'int', name : 'output', customAlloc: true} ],
     params:  [ {type: 'int', source : 'size'} ],
     alloc: function(sizes, size) {
@@ -612,7 +612,7 @@ Xflow.registerOperator("createSquareMorphologyFilter", {
 });
 
 // Histogram processing
-Xflow.registerOperator("createHistogram", {
+Xflow.registerOperator("xflip.createHistogram", {
     outputs: [ {type: 'float', name : 'histogram', customAlloc: true} ],
     params:  [ {type: 'texture', source : 'input'},
                {type: 'int', source : 'channel'} ],
@@ -635,7 +635,7 @@ Xflow.registerOperator("createHistogram", {
     }
 });
 
-Xflow.registerOperator("createEqualizationHST", {
+Xflow.registerOperator("xflip.createEqualizationHST", {
     outputs: [ {type: 'float', name : 'HST'} ],
     params:  [ {type: 'float', source : 'histogram'} ],
     evaluate: function(HST, histogram) {
@@ -648,7 +648,7 @@ Xflow.registerOperator("createEqualizationHST", {
     }
 });
 
-Xflow.registerOperator("applyHST", {
+Xflow.registerOperator("xflip.applyHST", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
                {type: 'float', source: 'HST'},
@@ -669,7 +669,7 @@ Xflow.registerOperator("applyHST", {
     }
 });
 
-Xflow.registerOperator("applyGrayscaleHST", {
+Xflow.registerOperator("xflip.applyGrayscaleHST", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'},
                {type: 'float', source: 'HST'} ],
@@ -687,7 +687,7 @@ Xflow.registerOperator("applyGrayscaleHST", {
 /*
 * Pads both sides of the input image to the nearest powers of 2
 */
-Xflow.registerOperator("padToPow2", {
+Xflow.registerOperator("xflip.padToPow2", {
     outputs: [ {type: 'texture', name : 'output', customAlloc: true},
                {type: 'int', name: 'originalSize', customAlloc: true} ],
     params:  [ {type: 'texture', source : 'input'} ],
@@ -729,7 +729,7 @@ Xflow.registerOperator("padToPow2", {
 /*
 * Returns the area of interest of an input image
 */
-Xflow.registerOperator("crop", {
+Xflow.registerOperator("xflip.crop", {
     outputs: [ {type: 'texture', name : 'output', customAlloc: true} ],
     params:  [ {type: 'texture', source : 'input'},
                {type: 'int', source : 'origin', array: true},
@@ -769,7 +769,7 @@ Xflow.registerOperator("crop", {
  2D Discrete Fourier Transform (DFT) with REAL input
  Amplitude and Phase are stored in the first and the second component of the output texture, respectively.
  */
-Xflow.registerOperator("applyDFT", {
+Xflow.registerOperator("xflip.applyDFT", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input', 'formatType' : 'float32'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -804,7 +804,7 @@ Xflow.registerOperator("applyDFT", {
  2D Inverse Discrete Fourier Transform (IDFT) with COMPLEX input
  Amplitude and Phase are stored in the first and the second component of the output texture, respectively.
  */
-Xflow.registerOperator("applyDFTInv", {
+Xflow.registerOperator("xflip.applyDFTInv", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input', 'formatType' : 'float32'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -933,7 +933,7 @@ function FFT1D(dir, image, rc, wh) {
  2D Fast Fourier Transform (FFT) with REAL input
  Amplitude and Phase are stored in the first and the second component of the output texture, respectively.
  */
-Xflow.registerOperator("applyFFT", {
+Xflow.registerOperator("xflip.applyFFT", {
     outputs: [ {type: 'texture', name : 'output', 'formatType' : 'float32', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -974,7 +974,7 @@ Xflow.registerOperator("applyFFT", {
  2D Inverse Fast Fourier Transform (IFFT) with COMPLEX input
  Amplitude and Phase are stored in the first and the second component of the output texture, respectively.
  */
-Xflow.registerOperator("applyFFTInv", {
+Xflow.registerOperator("xflip.applyFFTInv", {
     outputs: [ {type: 'texture', name : 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source : 'input'} ],
     evaluate: function(output, input) {
@@ -1016,7 +1016,7 @@ Xflow.registerOperator("applyFFTInv", {
  * First and second channels of input texture are the amplitude and the phase of the transform, respectively.
  * Input of this operator is of Float32 precision
  */
-Xflow.registerOperator("createSpectrumImage", {
+Xflow.registerOperator("xflip.createSpectrumImage", {
     outputs: [ {type: 'texture', name: 'output', sizeof: 'input'} ],
     params:  [ {type: 'texture', source: 'input', 'formatType' : 'float32'} ],
     evaluate: function (output, input) {
@@ -1030,7 +1030,7 @@ Xflow.registerOperator("createSpectrumImage", {
     }
 });
 
-Xflow.registerOperator("applyGaussianLPF", {
+Xflow.registerOperator("xflip.applyGaussianLPF", {
     outputs: [ {type: 'texture', name: 'output', sizeof: 'input', 'formatType' : 'float32'} ],
     params:  [ {type: 'texture', source: 'input'},
                {type: 'float', source: 'sigma'} ],
@@ -1050,7 +1050,7 @@ Xflow.registerOperator("applyGaussianLPF", {
     }
 });
 
-Xflow.registerOperator("applyGaussianHPF", {
+Xflow.registerOperator("xflip.applyGaussianHPF", {
     outputs: [ {type: 'texture', name: 'output', sizeof: 'input', 'formatType' : 'float32'} ],
     params:  [ {type: 'texture', source: 'input'},
         {type: 'float', source: 'sigma'} ],
