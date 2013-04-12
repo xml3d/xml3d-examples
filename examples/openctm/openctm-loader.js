@@ -22,35 +22,10 @@
     var openctmFormatHandler = new OpenCTMFormatHandler();
     XML3D.base.registerFormat(openctmFormatHandler);
 
-    // TODO this should be moved to Xflow.TYPED_ARRAY_MAP
-    var TYPED_ARRAY_MAP = {
-        "int" : Int32Array,
-        "int4" : Int32Array,
-        "float" : Float32Array,
-        "float2" : Float32Array,
-        "float3" : Float32Array,
-        "float4" : Float32Array,
-        "float4x4" : Float32Array,
-        "bool" : Uint8Array,
-        "byte" : Int8Array,
-        "ubyte" : Uint8Array
-    };
-
     function createXflowBuffer(dataNode, name, type, size, key) {
-        if (size == 0)
-            return null;
-        var typeId = Xflow.DATA_TYPE_MAP[type];
-        var tupleSize = Xflow.DATA_TYPE_TUPLE_SIZE[typeId];
-
-        var v = new (TYPED_ARRAY_MAP[type])(size * tupleSize);
-        var buffer = new Xflow.BufferEntry(typeId, v);
-
-        var inputNode = XML3D.data.xflowGraph.createInputNode();
-        inputNode.data = buffer;
-        inputNode.name = name;
-        //inputNode.key = key;
+        var inputNode = Xflow.createBufferInputNode(type, name, size);
         dataNode.appendChild(inputNode);
-        return buffer.getValue();
+        return inputNode.data.getValue();
     }
 
     // OpenCTM

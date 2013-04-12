@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (12.04.2013 14:48:03 MESZ)
+@version: DEVELOPMENT SNAPSHOT (12.04.2013 16:50:13 MESZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (12.04.2013 14:48:03 MESZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (12.04.2013 16:50:13 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -9970,19 +9970,6 @@ Xflow.DATA_TYPE = {
     UBYTE : 60
 }
 
-Xflow.DATA_TYPE_TUPLE_SIZE = {};
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT2] = 2;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT3] = 3;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4] = 4;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4X4] = 16;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BOOL] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
-
 Xflow.DATA_TYPE_MAP = {
     'float' : Xflow.DATA_TYPE.FLOAT,
     'float2' : Xflow.DATA_TYPE.FLOAT2,
@@ -9996,6 +9983,36 @@ Xflow.DATA_TYPE_MAP = {
     'byte' : Xflow.DATA_TYPE.BYTE,
     'ubyte' : Xflow.DATA_TYPE.UBYTE
 }
+
+
+
+Xflow.DATA_TYPE_TUPLE_SIZE = {};
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT2] = 2;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT3] = 3;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4] = 4;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4X4] = 16;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BOOL] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
+Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
+
+
+
+Xflow.TYPED_ARRAY_MAP = {};
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT] = Float32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT2] = Float32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT3] = Float32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT4] = Float32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT4X4] = Float32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.INT] = Int32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.INT4] = Int32Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.BOOL] = Int8Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.BYTE] = Int8Array;
+Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.UBYTE] = Uint8Array;
+
 
 Xflow.getTypeName = function(type){
     for(var i in Xflow.DATA_TYPE_MAP){
@@ -10819,6 +10836,23 @@ Object.defineProperty(InputNode.prototype, "data", {
     /** @return {Object} */
     get: function(){ return this._data; }
 });
+
+
+Xflow.createBufferInputNode = function(type, name, size){
+    if (size == 0)
+        return null;
+    var typeId = Xflow.DATA_TYPE_MAP[type];
+    var tupleSize = Xflow.DATA_TYPE_TUPLE_SIZE[typeId];
+    var arrayType = Xflow.TYPED_ARRAY_MAP[typeId];
+
+    var v = new (arrayType)(size * tupleSize);
+    var buffer = new Xflow.BufferEntry(typeId, v);
+
+    var inputNode = XML3D.data.xflowGraph.createInputNode();
+    inputNode.data = buffer;
+    inputNode.name = name;
+    return inputNode;
+};
 
 
 //----------------------------------------------------------------------------------------------------------------------
