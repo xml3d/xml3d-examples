@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <title>Xflip Example</title>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui-1.8.23.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+
+    <!-- Application Scrips -->
+    <script type="text/javascript" src="../../script/xflip.js"></script>
+    <script type="text/javascript" >
+        Xflip.init(["../../script/xflip-operators.js"]);
+    </script>
+</head>
+<body>
+<div id="overall">
+<div id="content">
+
+    <h1>Basic Pixel-Wise Operations</h1>
+
+    <div class="xflipOverall" >
+
+    <div class="xflipBox">
+        <h2>Original</h2>
+        <img src="img/lena-color.gif" class="input" />
+    </div>
+
+	<div class="xflipBox">
+        <h2>Grayscale</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.grayscale(input)">
+                <texture name="input" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+             </data>
+        </xflowimg>
+	</div>
+
+
+	<div class="xflipBox">
+        <h2>Complement</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.complement(input)">
+                <texture name="input" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+            </data>
+        </xflowimg>
+	</div>
+
+
+    <div class="xflipBox">
+        <h2>Dim</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.dim(image, ratio)">
+                <texture name="image" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <float id="ratio3" name="ratio">0.5</float>
+            </data>
+        </xflowimg>
+        <div class="options">
+            Ratio (<font id="div3" style="">0.5</font>):
+            <input id="range3" type="range"  min="0" max="1" step="0.1" value="0.5" onchange="updateRatio()" />
+        </div>
+	</div>
+
+	<script>
+	function updateRatio() {
+		var range = document.getElementById("range3").value;
+		document.getElementById("ratio3").firstChild.textContent = range;
+		document.getElementById("div3").innerHTML = range;
+	}
+	</script>
+
+
+    <div class="xflipBox">
+        <h2>Threshold</h2>
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.threshold(image, threshold)">
+                <texture name="image" >
+                    <img src="img/lena.jpg" />
+                </texture>
+                <int id="threshold4" name="threshold">100</int>
+            </data>
+        </xflowimg>
+        <div class="options">
+            Threshold (<font id="div4">100</font>):
+            <input id="range4" type="range"  min="0" max="255" step="1" value="100" onchange="updateThreshold()" />
+        </div>
+    </div>
+
+
+	<script>
+	function updateThreshold() {
+		var range = document.getElementById("range4").value;
+		document.getElementById("threshold4").firstChild.textContent = range;
+		document.getElementById("div4").innerHTML = range;
+	}
+	</script>
+
+
+    <div class="xflipBox">
+        <h2>Slice Color</h2>
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.sliceColor(image, color, radius)">
+                <texture name="image">
+                    <img src="img/lena-color.gif" />
+                </texture>
+
+                <int id="color7" name="color">255 0 0</int>
+                <float id="radius7" name="radius">150</float>
+            </data>
+        </xflowimg>
+        <div class="options">
+            Radius (<font id="div71">150</font>): <input id="range71" type="range"  min="0" max="200" step="1" value="150" onchange="updateRadius()" /><br />
+            Color (<font id="div72" style="width:60px;">#ff0000</font>): <input id="color72" type="color"  value="#ff0000" onchange="updateColor()" />
+        </div>
+    </div>
+
+
+
+    <script>
+        function updateRadius() {
+            var range = document.getElementById("range71").value;
+            document.getElementById("radius7").firstChild.textContent = range;
+            document.getElementById("div71").innerHTML = range;
+        }
+
+        function updateColor() {
+            var color = document.getElementById("color72").value;
+            var RGBStr = parseInt(color.charAt(1) + color.charAt(2),16) + ' ' +
+                    parseInt(color.charAt(3) + color.charAt(4),16) + ' ' + parseInt(color.charAt(5) + color.charAt(6),16);
+            document.getElementById("color7").firstChild.textContent = RGBStr;
+            document.getElementById("div72").innerHTML = color;
+        }
+    </script>
+
+
+    <div class="xflipBox">
+        <h2>Multiply Saturate Color Matrix</h2>
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.mulColorMatrix(image, weights)">
+                <texture name="image" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <data compute="weights = xflip.createSaturateMatrix(weight)">
+                    <float id="weight11" name="weight">1.1</float>
+                </data>
+            </data>
+        </xflowimg>
+        <div class="options">
+            Ratio (<font id="div11">1.1</font>):
+            <input id="range11" type="range"  min="0" max="2" step="0.1" value="1.1" onchange="updateweight11()" />
+
+        </div>
+    </div>
+
+
+    <script>
+        function updateweight11() {
+            var range = document.getElementById("range11").value;
+            document.getElementById("weight11").firstChild.textContent = range;
+            document.getElementById("div11").innerHTML = range;
+        }
+    </script>
+
+    </div>
+
+
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <title>Xflip Example</title>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui-1.8.23.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+
+    <!-- Application Scrips -->
+    <script type="text/javascript" src="../../script/xflip.js"></script>
+    <script type="text/javascript" >
+        Xflip.init(["../../script/xflip-operators.js"]);
+    </script>
+</head>
+<body>
+<div id="overall">
+<div id="content">
+
+    <h1>Blending Operations</h1>
+
+    <div class="xflipOverall" >
+
+    <div class="xflipBox">
+        <h2>Input A</h2>
+        <img src="img/lena-color.gif" class="input" />
+    </div>
+
+    <div class="xflipBox">
+        <h2>Input B</h2>
+        <img src="img/color.png" class="input" />
+    </div>
+
+    <div class="xflipBox">
+        <h2>Normal Blending</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.blendNormal(image1, image2)">
+                <texture name="image1" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <texture name="image2" >type
+                    <img src="img/color.png" />
+                </texture>
+            </data>
+        </xflowimg>
+    </div>
+
+    <div class="xflipBox">
+        <h2>Multiply Blending</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.blendMultiply(image1, image2)">
+                <texture name="image1" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <texture name="image2" >type
+                    <img src="img/color.png" />
+                </texture>
+            </data>
+        </xflowimg>
+    </div>
+
+    <div class="xflipBox">
+        <h2>Screen Blending</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.blendScreen(image1, image2)">
+                <texture name="image1" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <texture name="image2" >type
+                    <img src="img/color.png" />
+                </texture>
+            </data>
+        </xflowimg>
+    </div>
+
+    <div class="xflipBox">
+        <h2>Lighten Blending</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.blendLighten(image1, image2)">
+                <texture name="image1" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <texture name="image2" >type
+                    <img src="img/color.png" />
+                </texture>
+            </data>
+        </xflowimg>
+    </div>
+
+    <div class="xflipBox">
+        <h2>Darken Blending</h2>
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.blendDarken(image1, image2)">
+                <texture name="image1" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <texture name="image2" >type
+                    <img src="img/color.png" />
+                </texture>
+            </data>
+        </xflowimg>
+    </div>
+
+    </div>
+
+
+
+</div>
+</div>
+
+</body>
+</html>

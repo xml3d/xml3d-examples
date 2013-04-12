@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Noise</title>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  </head>
+  <body>
+    <h1>Noise</h1>
+    <div style="color: white;">
+        <xml3d id="MyXml3d" xmlns="http://www.xml3d.org/2009/xml3d"
+               style="width: 300px; height: 200px;">
+            <view position="0 0 10"/>
+            <defs>
+
+              <shader id="texture" script="urn:xml3d:shader:phong">
+                <float3 name="diffuseColor">1.5 1.5 1.5</float3>
+                <float name="ambientIntensity">1.0</float>
+
+                <data compute="diffuseTexture = xflow.noiseImage(width, height, scale, minFreq, maxFreq)">
+                  <int name="width">1024</int>
+                  <int name="height">1024</int>
+                  <float2 name="scale">10 10</float2>
+                  <float name="minFreq">0.0</float>
+                  <float name="maxFreq">0.0</float>
+                </data>
+
+              </shader>
+
+                <shader id="texture1" script="urn:xml3d:shader:phong">
+                    <float3 name="diffuseColor">1.5 1.5 1.5</float3>
+                    <float name="ambientIntensity">1.0</float>
+
+                    <texture name="diffuseTexture">
+                        <img src="texture.png" />
+                    </texture>
+                </shader>
+
+
+            <data id="mySimpleMesh" type="triangles">
+                <int name="index">0 1 2 1 2 3</int>
+                <float3 name="position">-1.0 -1.0 0.0 1.0 -1.0 0.0 -1.0  1.0 0.0 1.0  1.0 0.0</float3>
+                <float3 name="normal">0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0</float3>
+                <float2 name="texcoord">0.0 0.0 1.0 0.0 0.0 1.0 1.0 1.0</float2>
+              </data>
+
+              <transform id="moveForward" translation="0 0 5" />
+            </defs>
+            <group shader="#texture" transform="#moveForward">
+                <mesh src="#mySimpleMesh" />
+            </group>
+        </xml3d>
+    </div>
+  </body>
+</html>

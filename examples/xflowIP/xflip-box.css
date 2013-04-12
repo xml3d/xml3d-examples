@@ -1,0 +1,58 @@
+.xflipBox{
+    float:left;
+    border: 1px solid #888;
+    padding: 4px;
+    position: relative;
+    margin: 8px;
+}
+
+.xflipBox h2{
+    position: absolute;
+    bottom: 100%;
+    background: #888;
+    border-radius: 8px 8px 0 0;
+    left: -1px; right: -1px;
+    color: white;
+    font-size: 12pt;
+    padding: 2px 4px;
+    text-align: center;
+    display: none;
+}
+.xflipBox:hover h2{
+    display: block;
+}
+
+
+.xflipBox .options{
+    position: absolute;
+    top: 100%;
+    left: -1px; right: -1px;
+    border: 1px solid #888;
+    background: white;
+    display: none;
+    text-align: center;
+    padding: 4px;
+}
+.xflipBox:hover .options{
+    display: block;
+}
+
+.xflipOverall{
+    padding-top: 16px;
+    padding-bottom: 64px;
+}
+
+.xflipOverall h1{
+     margin-bottom: 16px;
+}
+
+.xflipOverall:after{
+    content: " ";
+    display: block;
+    clear: both;
+}
+
+
+font {width:25px; display:inline-block; text-align:center}
+.input { width: 200px }
+.output { height: 200px }

@@ -1,0 +1,38 @@
+.webcam{
+    text-align: center;
+    padding: 8px;
+}
+
+.markerCanvas {
+    background: white;
+
+}
+
+.markerCanvas p{
+    display: block;
+    padding: 30px 200px;
+    width: 200px;
+    height: 150px;
+    border: 1px solid #aaa;
+    position: relative;
+}
+.markerCanvas img{
+    width: 150px;
+    float: left;
+}
+
+.markerCanvas span{
+    font-family: 'Helevtica Neue',Helvetica,Arial,sans-serif;
+    position: absolute;
+    top: 50%;
+    margin-top: -10px;
+    font-size: 20px;
+    right: 40px;
+}
+
+@media print
+{
+    input{
+        display: none;
+    }
+}

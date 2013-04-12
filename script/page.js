@@ -4,7 +4,9 @@ var CATEGORY_LIST = {
     basic: { name: "Basics" },
     external : { name: "External References" },
     shader : { name: "Shaders" },
-    xflow : { name: "Xflow" }
+    xflow : { name: "Xflow" },
+    ar : { name: "Augmented Reality"},
+    ip : {name: "Image Processing"}
 
 
 }
@@ -43,17 +45,33 @@ var EXAMPLE_LIST = [
         info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},
     {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.xhtml",
         info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"},
-    /*
-    {cat: "xflow", name: "Xflow Skinning", href: "examples/gangnamStyle/gangnam-style.xhtml",
-        info: "Demonstrates Xflow Skinning Gangnam Style!"},*/
+
     {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.xhtml",
         info: "Demonstrates Xflow Prototypes."},
     {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
         info: "Demonstrates Xflow Skinning."},
      {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.xhtml",
-    info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
-     {cat: "xflow", name: "Xflow Keyframe Animation", href: "examples/xflowTransforms/xflow-transforms.xhtml",
-    info: "Demonstrates Xflow to animate transformations."}
+        info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
+     /*{cat: "xflow", name: "Xflow Keyframe Animation", href: "examples/xflowTransforms/xflow-transforms.xhtml",
+        info: "Demonstrates Xflow to animate transformations."},*/
+
+    {cat: "ar", name: "Simple AR", href: "examples/xflowAR/ar_simple_no_flip.xhtml",
+        info: "A simple augmented reality application with a teapot. Implemented with Xflow."},
+    {cat: "ar", name: "Flying Teapot", href: "examples/xflowAR/ar_flying_teapot.xhtml",
+        info: "Augmented reality application with a teapot jumping between two markers."},
+
+    {cat: "ip", name: "Pixel-Wise", href: "examples/xflowIP/pixel-wise.html",
+        info: "Basic, pixel-wise image processing operators"},
+    {cat: "ip", name: "Blending", href: "examples/xflowIP/blending.html",
+        info: "Basic blending image processing operators"},
+    {cat: "ip", name: "Spatial Filtering", href: "examples/xflowIP/spatial-filtering.html",
+        info: "Spatial filtering image processing operators"},
+    {cat: "ip", name: "Morphology", href: "examples/xflowIP/morphology.html",
+        info: "Morphology image processing operators"},
+    {cat: "ip", name: "Histogramm", href: "examples/xflowIP/histogramm.html",
+        info: "Histogramm image processing operators"},
+    {cat: "ip", name: "Fourier Transforms", href: "examples/xflowIP/fourier.html",
+        info: "Image processing operators in Fourier space."}
 ]
 
 var CURRENT = null;
@@ -168,21 +186,25 @@ function buildTestList(){
 }
 
 function buildSocialLinks(){
-    var url = encodeURIComponent(document.URL);
-    var socialButtons = $('<div class="socialButtons" ></div>');
-    $("#content").append(socialButtons);
+    if(navigator.onLine){
+        var url = encodeURIComponent(document.URL);
+        var socialButtons = $('<div class="socialButtons" ></div>');
+        $("#content").append(socialButtons);
 
-    var twitter = '<a href="https://twitter.com/share" class="twitter-share-button" data-hashtags="xml3d">Tweet</a>' +
-        '<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>';
-    socialButtons.append($(twitter));
+        var twitter = '<a href="https://twitter.com/share" class="twitter-share-button" data-hashtags="xml3d">Tweet</a>' +
+            '<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>';
+        socialButtons.append($(twitter));
 
-    var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url + '&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=light&amp;action=like&amp;height=35" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:450px; height:35px;" allowTransparency="true"></iframe>';
-    socialButtons.append($(facebook));
+        var facebook = '<iframe src="//www.facebook.com/plugins/like.php?href=' + url + '&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=light&amp;action=like&amp;height=35" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:450px; height:35px;" allowTransparency="true"></iframe>';
+        socialButtons.append($(facebook));
+    }
 }
 
 function addGitHubRibbon() {
-    var code = '<a href="https://github.com/xml3d/xml3d-examples/"><img class="ribbon" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/></a>'
-    $('body').append(code);
+    if(navigator.onLine){
+        var code = '<a href="https://github.com/xml3d/xml3d-examples/"><img class="ribbon" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/></a>'
+        $('body').append(code);
+    }
 }
 
 

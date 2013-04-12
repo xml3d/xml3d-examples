@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>Image Proc Tests</title>
+    <script type="text/javascript" src="../../script/xflip.js"></script>
+    <script type="text/javascript" >
+        Xflip.init(["../../script/xflip-operators.js"]);
+    </script>
+	<style>
+        font {width:25px; display:inline-block; text-align:center}
+        .input { width: 200px }
+        .output { height: 200px }
+    </style>
+</head>
+<body>
+	<h1 style="text-align: center;">XFlow Image Processing Tools Demo</h1>
+
+    <h1>Basic Pixel-Wise Operations</h1>
+	<h2>Grayscale</h2>
+	<div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.grayscale(input)">
+                <texture name="input" >
+                    <img src="lena-color.gif" />
+                </texture>
+             </data>
+        </xflowimg>
+	</div>
+
+	<h2>Complement</h2>
+	<div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.complement(input)">
+                <texture name="input" >
+                    <img src="lena-color.gif" />
+                </texture>
+            </data>
+        </xflowimg>
+	</div>
+
+	<h2>Dim</h2>
+	<div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.dim(image, ratio)">
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+                <float id="ratio3" name="ratio">0.5</float>
+            </data>
+        </xflowimg>
+	</div>
+
+	Ratio (<font id="div3" style="">0.5</font>): <input id="range3" type="range"  min="0" max="1" step="0.1" value="0.5" onchange="updateRatio()" />
+
+	<script>
+	function updateRatio() {
+		var range = document.getElementById("range3").value;
+		document.getElementById("ratio3").firstChild.textContent = range;
+		document.getElementById("div3").innerHTML = range;
+	}
+	</script>
+
+	<h2>Threshold</h2>
+    <div>
+        <img src="lena.jpg" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.threshold(image, threshold)">
+                <texture name="image" >
+                    <img src="lena.jpg" />
+                </texture>
+                <int id="threshold4" name="threshold">100</int>
+            </data>
+        </xflowimg>
+    </div>
+
+	Threshold (<font id="div4">100</font>): <input id="range4" type="range"  min="0" max="255" step="1" value="100" onchange="updateThreshold()" />
+
+	<script>
+	function updateThreshold() {
+		var range = document.getElementById("range4").value;
+		document.getElementById("threshold4").firstChild.textContent = range;
+		document.getElementById("div4").innerHTML = range;
+	}
+	</script>
+
+    <h2>Slice Color</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.sliceColor(image, color, radius)">
+                <texture name="image">
+                    <img src="lena-color.gif" />
+                </texture>
+
+                <int id="color7" name="color">255 0 0</int>
+                <float id="radius7" name="radius">150</float>
+            </data>
+        </xflowimg>
+    </div>
+
+    Radius (<font id="div71">150</font>): <input id="range71" type="range"  min="0" max="200" step="1" value="150" onchange="updateRadius()" />
+    Color (<font id="div72" style="width:60px;">#ff0000</font>): <input id="color72" type="color"  value="#ff0000" onchange="updateColor()" />
+
+    <script>
+        function updateRadius() {
+            var range = document.getElementById("range71").value;
+            document.getElementById("radius7").firstChild.textContent = range;
+            document.getElementById("div71").innerHTML = range;
+        }
+
+        function updateColor() {
+            var color = document.getElementById("color72").value;
+            var RGBStr = parseInt(color.charAt(1) + color.charAt(2),16) + ' ' +
+                    parseInt(color.charAt(3) + color.charAt(4),16) + ' ' + parseInt(color.charAt(5) + color.charAt(6),16);
+            document.getElementById("color7").firstChild.textContent = RGBStr;
+            document.getElementById("div72").innerHTML = color;
+        }
+    </script>
+
+    <h2>Multiply Saturate Color Matrix</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.mulColorMatrix(image, weights)">
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+                <data compute="weights = xflip.createSaturateMatrix(weight)">
+                    <float id="weight11" name="weight">1.1</float>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+    Ratio (<font id="div11">1.1</font>): <input id="range11" type="range"  min="0" max="2" step="0.1" value="1.1" onchange="updateweight11()" />
+
+    <script>
+        function updateweight11() {
+            var range = document.getElementById("range11").value;
+            document.getElementById("weight11").firstChild.textContent = range;
+            document.getElementById("div11").innerHTML = range;
+        }
+    </script>
+
+    <h1>Blending Operations</h1>
+
+    <h2>Input images</h2>
+
+    <img src="lena-color.gif" class="input" />
+    <img src="color.png" class="input" />
+
+    <h2>Blending operators: Normal, Multiply, Screen, Lighten, and Darken</h2>
+
+    <xflowimg srcname="output" class="output" >
+        <data compute="output = xflip.blendNormal(image1, image2)">
+            <texture name="image1" >
+                <img src="lena-color.gif" />
+            </texture>
+            <texture name="image2" >type
+                <img src="color.png" />
+            </texture>
+        </data>
+    </xflowimg>
+
+    <xflowimg srcname="output" class="output" >
+        <data compute="output = xflip.blendMultiply(image1, image2)">
+            <texture name="image1" >
+                <img src="lena-color.gif" />
+            </texture>
+            <texture name="image2" >type
+                <img src="color.png" />
+            </texture>
+        </data>
+    </xflowimg>
+
+    <xflowimg srcname="output" class="output" >
+        <data compute="output = xflip.blendScreen(image1, image2)">
+            <texture name="image1" >
+                <img src="lena-color.gif" />
+            </texture>
+            <texture name="image2" >type
+                <img src="color.png" />
+            </texture>
+        </data>
+    </xflowimg>
+
+    <xflowimg srcname="output" class="output" >
+        <data compute="output = xflip.blendLighten(image1, image2)">
+            <texture name="image1" >
+                <img src="lena-color.gif" />
+            </texture>
+            <texture name="image2" >type
+                <img src="color.png" />
+            </texture>
+        </data>
+    </xflowimg>
+
+    <xflowimg srcname="output" class="output" >
+        <data compute="output = xflip.blendDarken(image1, image2)">
+            <texture name="image1" >
+                <img src="lena-color.gif" />
+            </texture>
+            <texture name="image2" >type
+                <img src="color.png" />
+            </texture>
+        </data>
+    </xflowimg>
+
+
+    <h1>Spatial Filtering Operations</h1>
+
+    <h2>Laplacian + Masking Original Image</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.convolve(image, filter)">
+                <float name="filter">-1, -1, -1, -1, 8, -1, -1, -1, -1</float>
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+            </data>
+        </xflowimg>
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.mask(image, inter, weight)">
+                <data compute="inter = xflip.convolve(image, filter)">
+                    <float name="filter">-1, -1, -1, -1, 8, -1, -1, -1, -1</float>
+                    <texture name="image" >
+                        <img src="lena-color.gif" />
+                    </texture>
+                </data>
+                <float name="weight">1</float>
+            </data>
+        </xflowimg>
+    </div>
+
+    <h2>Sobel + Magnitude</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.getChannelMagnitude(inter1, inter2)">
+                <data compute="inter2 = xflip.convolve(image, vFilter)">
+                    <data compute="inter1 = xflip.convolve(image, hFilter)">
+                        <texture name="image" >
+                            <img src="lena-color.gif" />
+                        </texture>
+                        <float name="hFilter">-1, 0, 1, -2, 0, 2, -1, 0, 1</float>
+                    </data>
+                    <float name="vFilter">-1, -2, -1, 0, 0, 0, 1, 2, 1</float>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+	<h2>Gaussian</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.convolve(image, filter)">
+                <texture name="image">
+                    <img src="lena-color.gif" />
+                </texture>
+                <data compute="filter = xflip.createGaussianFilter(size, sigma)">
+                    <int id="size5" name="size">7</int>
+                    <float id="sigma5" name="sigma">3</float>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+	Size (<font id="div51">7</font>): <input id="range51" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize5()" />
+	Sigma (<font id="div52">3</font>): <input id="range52" type="range"  min="1" max="15" step="1" value="3" onchange="updateSigma5()" />
+
+	<script>
+	function updateSize5() {
+		var range = document.getElementById("range51").value;
+		document.getElementById("size5").firstChild.textContent = range;
+		document.getElementById("div51").innerHTML = range;
+	}
+
+	function updateSigma5() {
+		var range = document.getElementById("range52").value;
+		document.getElementById("sigma5").firstChild.textContent = range;
+		document.getElementById("div52").innerHTML = range;
+	}
+	</script>
+
+    <h2>Averaging</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.convolve(image, filter)">
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+                <data compute="filter = xflip.createAveragingFilter(size)">
+                    <int id="size8" name="size">7</int>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+    Size (<font id="div8">7</font>): <input id="range8" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize8()" />
+
+    <script>
+        function updateSize8() {
+            var range = document.getElementById("range8").value;
+            document.getElementById("size8").firstChild.textContent = range;
+            document.getElementById("div8").innerHTML = range;
+        }
+    </script>
+
+    <h2>Median</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.median(image, size)">
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+                <int id="size9" name="size">3</int>
+            </data>
+        </xflowimg>
+    </div>
+
+    Size (<font id="div9">3</font>): <input id="range9" type="range"  min="3" max="21" step="2" value="3" onchange="updateSize9()" />
+
+    <script>
+        function updateSize9() {
+            var range = document.getElementById("range9").value;
+            document.getElementById("size9").firstChild.textContent = range;
+            document.getElementById("div9").innerHTML = range;
+        }
+    </script>
+
+    <h1>Morphology Operations</h1>
+
+    <h2>Erode</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.erode(image, filter)">
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+                <data compute="filter = xflip.createSquareMorphologyFilter(size)">
+                    <int id="size131" name="size">7</int>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+    Size (<font id="div131">7</font>): <input id="range131" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize131()" />
+
+    <script>
+        function updateSize131() {
+            var range = document.getElementById("range131").value;
+            document.getElementById("size131").firstChild.textContent = range;
+            document.getElementById("div131").innerHTML = range;
+        }
+    </script>
+
+    <h2>Dilate</h2>
+    <div>
+        <img src="lena-color.gif" class="input" />
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.dilate(image, filter)">
+                <texture name="image" >
+                    <img src="lena-color.gif" />
+                </texture>
+                <data compute="filter = xflip.createSquareMorphologyFilter(size)">
+                    <int id="size132" name="size">7</int>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+    Size (<font id="div132">7</font>): <input id="range132" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize132()" />
+
+    <script>
+        function updateSize132() {
+            var range = document.getElementById("range132").value;
+            document.getElementById("size132").firstChild.textContent = range;
+            document.getElementById("div132").innerHTML = range;
+        }
+    </script>
+
+    <h1>Histogram Processing Operations</h1>
+
+    <h2>Histogram Equalization (Contrast Stretching)</h2>
+    <div>
+        <img src="micro.jpg" class="input" />
+
+        <xflowimg srcname="output" class="output">
+            <data compute="output = xflip.applyGrayscaleHST(image, transform, channel)">
+                <int name="channel">2</int>
+                <data compute="transform = xflip.createEqualizationHST(histogram)">
+                    <data compute="histogram = xflip.createHistogram(image, channel)">
+                        <int name="channel">1</int>
+                        <texture name="image" >
+                            <img src="micro.jpg" />
+                        </texture>
+                    </data>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+    <h1>Frequency Domain Operations</h1>
+
+    <h2>DFT + Spectrum + Gaussian LPF + DFTInv (64*64 input image)</h2>
+    <div>
+        <img src="lena.jpg" class="input" />
+
+        <xflowimg srcname="output" class="output">
+            <data compute="output = xflip.createSpectrumImage(inter)">
+                <data compute="inter = xflip.applyDFT(image)">
+                    <texture name="image" >
+                        <img src="lena-small.jpg" />
+                    </texture>
+                </data>
+                <float id="sigma20" name="sigma">10</float>
+            </data>
+        </xflowimg>
+
+        <xflowimg srcname="output" class="output">
+            <data compute="output = xflip.createSpectrumImage(inter)">
+                <data compute="inter = xflip.applyGaussianLPF(inter, sigma)">
+                    <data compute="inter = xflip.applyDFT(image)">
+                        <texture name="image" >
+                            <img src="lena-small.jpg" />
+                        </texture>
+                    </data>
+                    <float id="sigma201" name="sigma">10</float>
+                </data>
+            </data>
+        </xflowimg>
+
+        <xflowimg srcname="output" class="output">
+            <data compute="output = xflip.applyDFTInv(inter)">
+                <data compute="inter = xflip.applyGaussianLPF(inter, sigma)">
+                    <data compute="inter = xflip.applyDFT(image)">
+                        <texture name="image" >
+                            <img src="lena-small.jpg" />
+                        </texture>
+                    </data>
+                    <float id="sigma202" name="sigma">10</float>
+                </data>
+            </data>
+        </xflowimg>
+    </div>
+
+    Sigma (<font id="div20">10</font>): <input id="range20" type="range"  min="1" max="50" step="1" value="10" onchange="updateSigma20()" />
+
+    <script>
+        function updateSigma20() {
+            var range = document.getElementById("range20").value;
+            document.getElementById("sigma201").firstChild.textContent = range;
+            document.getElementById("sigma202").firstChild.textContent = range;
+            document.getElementById("div20").innerHTML = range;
+        }
+    </script>
+
+    <h2>FFT + Spectrum + Gaussian HPF + FFTInv (512*512 input image)</h2>
+    <div>
+        <img src="lena.jpg" class="input" />
+
+
+        <xflowimg srcname="output" class="output">
+            <data compute="(output, oSize) = xflip.padToPow2(image)">
+                <texture name="image" >
+                    <img src="lena.jpg" />
+                </texture>
+            </data>
+        </xflowimg>
+
+        <xflowimg srcname="output" class="output">
+            <data compute="output = xflip.crop(inter, origin, oSize)">
+                <int name="origin">0 0</int>
+                <data compute="inter = xflip.applyFFTInv(inter)">
+                    <data compute="inter = xflip.applyGaussianHPF(inter, sigma)">
+                        <float id="sigma211" name="sigma">10</float>
+                        <data compute="inter = xflip.applyFFT(inter)">
+                            <data compute="(inter, oSize) = xflip.padToPow2(image)">
+                                <texture name="image" >
+                                    <img src="lena.jpg" />
+                                </texture>
+                            </data>
+                        </data>
+                    </data>
+                </data>
+            </data>
+        </xflowimg>
+
+    </div>
+
+
+    Sigma (<font id="div21">10</font>): <input id="range21" type="range"  min="1" max="50" step="1" value="10" onchange="updateSigma21()" />
+
+    <script>
+        function updateSigma21() {
+            var range = document.getElementById("range21").value;
+            document.getElementById("sigma211").firstChild.textContent = range;
+            document.getElementById("div20").innerHTML = range;
+        }
+    </script>
+
+</body>
+</html>
