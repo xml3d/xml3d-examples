@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (12.04.2013 11:20:20 MESZ)
+@version: DEVELOPMENT SNAPSHOT (12.04.2013 14:48:03 MESZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (12.04.2013 11:20:20 MESZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (12.04.2013 14:48:03 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -6993,7 +6993,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
     XML3DDataObserver.prototype.observe = function(node, options){
         if(this.observed.length == 0)
             c_XflowObserverList.push(this);
-        var dataAdapter = XML3D.data.factory.getAdapter(node);
+        var dataAdapter = XML3D.base.resourceManager.getAdapter(node, XML3D.data);
         if(dataAdapter){
 
             var entry = {
@@ -7332,10 +7332,9 @@ XML3D.base.AdapterFactory = function(aspect, mimetypes, canvasId) {
  * Implemented by subclass
  * Create adapter from an object (node in case of an xml, and object in case of json)
  * @param {object} obj
- * @param {String} mimetype optional mimetype of obj
  * @returns {XML3D.base.Adapter=} created adapter or null if no adapter can be created
  */
-XML3D.base.AdapterFactory.prototype.createAdapter = function(obj, mimetype) {
+XML3D.base.AdapterFactory.prototype.createAdapter = function(obj) {
     return null;
 };
 
@@ -7364,10 +7363,9 @@ XML3D.createClass(XML3D.base.NodeAdapterFactory, XML3D.base.AdapterFactory);
  * This function first checks, if an adapter has been already created for the corresponding node
  * If yes, this adapter is returned, otherwise, a new adapter is created and returned.
  * @param {Object} node
- * @param {String} mimetype optional mimetype of obj
  * @returns {XML3D.base.Adapter} The adapter of the node
  */
-XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node, mimetype) {
+XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
     if (!node || node._configured === undefined)
         return null;
     var elemHandler = node._configured;
@@ -7377,7 +7375,7 @@ XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node, mimetype) {
         return adapter;
 
     // No adapter found, try to create one
-    adapter = this.createAdapter(node, mimetype);
+    adapter = this.createAdapter(node);
     if (adapter) {
         elemHandler.adapters[key] = adapter;
         adapter.init();
@@ -7528,144 +7526,6 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     XML3D.base.AdapterHandle = AdapterHandle;
 
 }());(function() {
-
-    /**
-     * A format handler is provide functionality for detecting format of resources
-     * and providing format-specific services.
-     * FormatHandlers are registered with XML3D.base.resourceManager.registerFormat() function.
-     * @constructor
-     */
-    var FormatHandler = function() {
-        this.factories = {}; // a map from an aspect name to a factory class
-    };
-
-    FormatHandler.prototype.registerFactoryClass = function(factoryClass) {
-        if (!factoryClass.aspect || !XML3D.isSuperclassOf(XML3D.base.AdapterFactory, factoryClass))
-            throw new Error("factoryClass must be a subclass of XML3D.base.AdapterFactory");
-        this.factories[factoryClass.aspect] = factoryClass;
-    }
-
-    /**
-     * Returns true if response data format is supported.
-     * response, responseType, and mimetype values are returned by XMLHttpRequest.
-     * Data type of the response is one of ArrayBuffer, Blob, Document, String, Object.
-     * responseType is one of "", "arraybuffer", "blob", "document", "json", "text"
-     *
-     * @override
-     * @param {Object} response
-     * @param {string} responseType
-     * @param {string} mimetype
-     * @return {Boolean}
-     */
-    FormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
-        return false;
-    }
-
-    /**
-     * Converts response data to format data.
-     * Default implementation returns value of response.
-     *
-     * @override
-     * @param {Object} response
-     * @param {string} responseType
-     * @param {string} mimetype
-     * @return {Object}
-     */
-    FormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
-        return response;
-    }
-
-    /**
-     * Extracts data for a fragment from document data and fragment reference.
-     *
-     * @override
-     * @param {Object} documentData
-     * @param {string} fragment Fragment without pound key which defines the part of the document
-     * @return {*}
-     */
-    FormatHandler.prototype.getFragmentData = function(documentData, fragment) {
-        if (!fragment)
-            return documentData;
-        return null;
-    }
-
-    // Export
-    XML3D.base.FormatHandler = FormatHandler;
-
-    /**
-     * XMLFormatHandler supports all XML and HTML-based documents.
-     * @constructor
-     */
-    var XMLFormatHandler = function() {
-    }
-
-    XMLFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
-        return response && response.nodeType === 9 && (mimetype === "application/xml" || mimetype === "text/xml");
-    }
-
-    XMLFormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
-        return response;
-    }
-
-    XMLFormatHandler.prototype.getFragmentData = function(documentData, fragment) {
-        return documentData.querySelectorAll("*[id="+fragment+"]")[0];
-    }
-
-    XML3D.createClass(XMLFormatHandler, FormatHandler);
-
-    // Export
-    XML3D.base.XMLFormatHandler = XMLFormatHandler;
-
-    var XML3DFormatHandler = function() {
-    }
-
-    XML3DFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
-        var supported = XMLFormatHandler.prototype.isFormatSupported.call(this, response, responseType, mimetype);
-        // FIXME add check by searching for 'xml3d' tags in the document
-        return supported;
-    }
-
-    XML3DFormatHandler.prototype.getFormatData = function(response, responseType) {
-        // Configure all xml3d elements:
-        var xml3dElements = response.querySelectorAll("xml3d");
-        for(var i = 0; i < xml3dElements.length; ++i) {
-            XML3D.config.element(xml3dElements[i]);
-        }
-
-        return response;
-    }
-
-    XML3D.createClass(XML3DFormatHandler, XMLFormatHandler);
-
-    // Export
-    XML3D.base.XML3DFormatHandler = XML3DFormatHandler;
-
-    var JSONFormatHandler = function() {
-    }
-
-    JSONFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
-        return mimetype === "application/json";
-    }
-
-    JSONFormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
-        return response;
-    }
-
-    XML3D.createClass(JSONFormatHandler, FormatHandler);
-
-    // Export
-    XML3D.base.JSONFormatHandler = JSONFormatHandler;
-
-    var BinaryFormatHandler = function() {
-    }
-
-    XML3D.createClass(BinaryFormatHandler, FormatHandler);
-
-    // Export
-    XML3D.base.BinaryFormatHandler = BinaryFormatHandler;
-
-}());
-(function() {
     "use strict";
 
     var c_cachedDocuments = {};
@@ -7927,29 +7787,33 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         var docCache = c_cachedDocuments[url];
         docCache.mimetype = mimetype;
 
+        var response = null;
         if (req.responseType == "arraybuffer") {
-            docCache.response = req.response;
+            response = req.response;
         } else if (mimetype == "application/json") {
-            docCache.response = JSON.parse(req.responseText);
+            response = JSON.parse(req.responseText);
         } else if (mimetype == "application/xml" || mimetype == "text/xml") {
-            docCache.response = req.responseXML;
-
-            if(!docCache.response){
+            response = req.responseXML;
+            if (!response) {
                 XML3D.debug.logError("Invalid external XML document '" + req._url +
-                "': XML Syntax error");
+                    "': XML Syntax error");
                 return;
-            }
-
-            // FIXME moved code to XML3DFormatHandler.prototype.getFormatData, cleanup
-            // Configure all xml3d elements:
-            var xml3dElements = docCache.response.querySelectorAll("xml3d");
-            for(var i = 0; i < xml3dElements.length; ++i){
-                XML3D.config.element(xml3dElements[i]);
             }
         } else if (mimetype == "application/octet-stream" || mimetype == "text/plain; charset=x-user-defined") {
             XML3D.debug.logError("Possibly wrong loading of resource "+url+". Mimetype is "+mimetype+" but response is not an ArrayBuffer");
-            docCache.response = req.response;
+            response = req.response;
+        } else {
+            XML3D.debug.logError("Unidentified response type (response = '"+req.response+"', responseType = '"+req.responseType+"')");
+            response = req.response;
         }
+
+        var formatHandler = XML3D.base.findFormat(response, req.responseType, mimetype);
+        if (!formatHandler) {
+            XML3D.debug.logError("No format handler for resource (response = '"+response+"', responseType = '"+req.responseType+"')");
+            return;
+        }
+        docCache.format = formatHandler;
+        docCache.response = formatHandler.getFormatData(response, req.responseType, mimetype);
     }
 
     /**
@@ -7988,6 +7852,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
 
         var response = c_cachedDocuments[url].response;
         var mimetype = c_cachedDocuments[url].mimetype;
+        var format = c_cachedDocuments[url].format;
 
         var fullUrl = url + (fragment ? "#" + fragment : "");
         if (!response) {
@@ -7996,19 +7861,11 @@ XML3D.base.sendAdapterEvent = function(node, events) {
             return;
         }
 
-        var data = null;
-        if (mimetype == "application/json") {
-            // TODO: Select subset of data according to fragment
-            data = response;
-        } else if (mimetype == "application/xml" || mimetype == "text/xml") {
-            // FIXME: This code moved to XMLFormatHandler.prototype.getFragmentData, cleanup
-            data = response.querySelectorAll("*[id="+fragment+"]")[0];
-        } else {
-            data = response; // for "application/octet-stream" and "text/plain; charset=x-user-defined"
-        }
+        // get part of the resource represented by the fragment
+        var data = format.getFragmentData(response, fragment);
 
         if (data) {
-            updateMissingHandles(fullUrl, mimetype, data);
+            updateMissingHandles(fullUrl, format, data);
         }
         else{
             invalidateHandles(fullUrl);
@@ -8019,15 +7876,15 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     /**
      * Update all AdapterHandles without adapters of a certain url
      * @param {string} url The complete url + fragment
-     * @param {string} mimetype Mimetype of the document
+     * @param {FormatHandler} format Format handler
      * @param {Object} data Data of the document corresponding to the url. Possibily a DOM element
      */
-    function updateMissingHandles(url, mimetype, data){
+    function updateMissingHandles(url, format, data){
         for ( var adapterType in c_cachedAdapterHandles[url]) {
             for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
                 var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
                 if (!handle.hasAdapter()) {
-                    updateHandle(handle, adapterType, canvasId, mimetype, data);
+                    updateHandle(handle, adapterType, canvasId, format, data);
                     loadComplete(canvasId, url);
                 }
             }
@@ -8055,21 +7912,19 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * @param {XML3D.base.AdapterHandle} handle The AdapterHandle to be updated
      * @param {Object} adapterType The type / aspect of the adapter (e.g. XML3D.data or XML3D.webgl)
      * @param {number} canvasId Id of corresponding canvas handler. 0 if not dependent of canvas handler
-     * @param {mimetype} mimetype Mimetype of the corresponding document
+     * @param {FormatHandler} format Format handler of the corresponding document
      * @param {Object} data Data for this handle. Possibily a DOM element
      */
-    function updateHandle(handle, adapterType, canvasId, mimetype, data){
-        var factories = c_factories[canvasId];
+    function updateHandle(handle, adapterType, canvasId, format, data){
 
-        for ( var i = 0; i < factories.length; ++i) {
-            var fac = factories[i];
-            if (fac.aspect == adapterType && fac.supportsMimetype(mimetype)) {
-                var adapter = fac.getAdapter ? fac.getAdapter(data, mimetype) : fac.createAdapter(data, mimetype);
-                if (adapter) {
-                    handle.setAdapter(adapter, XML3D.base.AdapterHandle.STATUS.READY);
-                }
-            }
+        var factory = format.getFactory(adapterType, canvasId);
+
+        var adapter = factory.getAdapter ? factory.getAdapter(data) : factory.createAdapter(data);
+        if (adapter) {
+            handle.setAdapter(adapter, XML3D.base.AdapterHandle.STATUS.READY);
         }
+
+
     }
 
     /**
@@ -8127,7 +7982,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         if(uri.isLocal()){
             var node = XML3D.URIResolver.resolveLocal(uri);
             if(node)
-                updateHandle(handle, adapterType, canvasId, "application/xml", node);
+                updateHandle(handle, adapterType, canvasId, XML3D.base.xml3dFormatHandler, node);
             else
                 handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
         }
@@ -8151,6 +8006,16 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         }
         return handle;
     };
+    /**
+     * Get any adapter, internal or external.
+     */
+    ResourceManager.prototype.getAdapter = function(node, adapterType, canvasId){
+        var factory = XML3D.base.xml3dFormatHandler.getFactory(adapterType, canvasId);
+        if(factory){
+            return factory.getAdapter(node);
+        }
+        return null;
+    }
 
     /**
      * This function is called when an id of an element changes or if that element is now reachable
@@ -8170,7 +8035,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
             clearHandles("#" + previousId);
         }
         if(newId){
-            updateMissingHandles("#" + newId, "application/xml", node);
+            updateMissingHandles("#" + newId, XML3D.base.xml3dFormatHandler, node);
         }
     }
 
@@ -8356,6 +8221,167 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     XML3D.base.resourceManager = new ResourceManager();
 
 })();
+(function() {
+
+    /**
+     * A format handler is provide functionality for detecting format of resources
+     * and providing format-specific services.
+     * FormatHandlers are registered with XML3D.base.registerFormat() function.
+     * @constructor
+     */
+    var FormatHandler = function() {
+        this.factoryClasses = {}; // a map from an aspect name to a factory class
+        this.factoryCache = {}; // maps unique keys (aspect + "_" + canvasId) to the factory instance
+    };
+
+    FormatHandler.prototype.registerFactoryClass = function(factoryClass) {
+        if (!factoryClass.prototype.aspect || !XML3D.isSuperclassOf(XML3D.base.AdapterFactory, factoryClass))
+            throw new Error("factoryClass must be a subclass of XML3D.base.AdapterFactory");
+        this.factoryClasses[factoryClass.prototype.aspect] = factoryClass;
+    }
+
+    FormatHandler.prototype.getFactoryClassByAspect = function(aspect) {
+        return this.factoryClasses[aspect];
+    }
+
+    FormatHandler.prototype.getFactory = function(aspect, canvasId) {
+        canvasId = canvasId || 0;
+        var key = aspect+"_"+canvasId;
+        var factory = this.factoryCache[key];
+        if (!factory) {
+            var factoryClass = this.getFactoryClassByAspect(aspect);
+            if (!factoryClass)
+                return null;
+            factory = new factoryClass(canvasId);
+            this.factoryCache[key] = factory;
+        }
+        return factory;
+    }
+
+    /**
+     * Returns true if response data format is supported.
+     * response, responseType, and mimetype values are returned by XMLHttpRequest.
+     * Data type of the response is one of ArrayBuffer, Blob, Document, String, Object.
+     * responseType is one of "", "arraybuffer", "blob", "document", "json", "text"
+     *
+     * @override
+     * @param {Object} response
+     * @param {string} responseType
+     * @param {string} mimetype
+     * @return {Boolean}
+     */
+    FormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
+        return false;
+    }
+
+    /**
+     * Converts response data to format data.
+     * Default implementation returns value of response.
+     *
+     * @override
+     * @param {Object} response
+     * @param {string} responseType
+     * @param {string} mimetype
+     * @return {Object}
+     */
+    FormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
+        return response;
+    }
+
+    /**
+     * Extracts data for a fragment from document data and fragment reference.
+     *
+     * @override
+     * @param {Object} documentData
+     * @param {string} fragment Fragment without pound key which defines the part of the document
+     * @return {*}
+     */
+    FormatHandler.prototype.getFragmentData = function(documentData, fragment) {
+        if (!fragment)
+            return documentData;
+        return null;
+    }
+
+    // Export
+    XML3D.base.FormatHandler = FormatHandler;
+
+    /**
+     * XMLFormatHandler supports all XML and HTML-based documents.
+     * @constructor
+     */
+    var XMLFormatHandler = function() {
+        FormatHandler.call(this);
+    }
+    XML3D.createClass(XMLFormatHandler, FormatHandler);
+
+    XMLFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
+        return response && response.nodeType === 9 && (mimetype === "application/xml" || mimetype === "text/xml");
+    }
+
+    XMLFormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
+        return response;
+    }
+
+    XMLFormatHandler.prototype.getFragmentData = function(documentData, fragment) {
+        return documentData.querySelectorAll("*[id="+fragment+"]")[0];
+    }
+
+
+
+    // Export
+    XML3D.base.XMLFormatHandler = XMLFormatHandler;
+
+    var XML3DFormatHandler = function() {
+        XMLFormatHandler.call(this);
+    }
+    XML3D.createClass(XML3DFormatHandler, XMLFormatHandler);
+
+    XML3DFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
+        var supported = XMLFormatHandler.prototype.isFormatSupported.call(this, response, responseType, mimetype);
+        // FIXME add check by searching for 'xml3d' tags in the document
+        return supported;
+    }
+
+    XML3DFormatHandler.prototype.getFormatData = function(response, responseType) {
+        // Configure all xml3d elements:
+        var xml3dElements = response.querySelectorAll("xml3d");
+        for(var i = 0; i < xml3dElements.length; ++i) {
+            XML3D.config.element(xml3dElements[i]);
+        }
+
+        return response;
+    }
+
+    // Export
+    XML3D.base.XML3DFormatHandler = XML3DFormatHandler;
+    XML3D.base.xml3dFormatHandler = new XML3DFormatHandler();
+    XML3D.base.registerFormat(XML3D.base.xml3dFormatHandler);
+
+    var JSONFormatHandler = function() {
+        FormatHandler.call(this);
+    }
+    XML3D.createClass(JSONFormatHandler, FormatHandler);
+
+    JSONFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
+        return mimetype === "application/json";
+    }
+
+    JSONFormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
+        return response;
+    }
+
+    // Export
+    XML3D.base.JSONFormatHandler = JSONFormatHandler;
+
+    var BinaryFormatHandler = function() {
+        FormatHandler.call(this);
+    }
+    XML3D.createClass(BinaryFormatHandler, FormatHandler);
+
+    // Export
+    XML3D.base.BinaryFormatHandler = BinaryFormatHandler;
+
+}());
 (function() {
 
   var events = {
@@ -9361,7 +9387,7 @@ new (function() {
     };
 
     methods.dataGetOutputNames = function() {
-        var dataAdapter = XML3D.data.factory.getAdapter(this);
+        var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
         if(dataAdapter){
             return dataAdapter.getOutputNames();
         }
@@ -9380,7 +9406,7 @@ new (function() {
 
     methods.dataGetResult = function(filter) {
 
-        var dataAdapter = XML3D.data.factory.getAdapter(this);
+        var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
         if(dataAdapter){
             var result = dataAdapter.getComputeResult(filter);
             if(!result) return null;
@@ -9390,7 +9416,7 @@ new (function() {
     };
 
     methods.dataGetOutputChannelInfo = function(name){
-        var dataAdapter = XML3D.data.factory.getAdapter(this);
+        var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
         if(dataAdapter){
             var result = dataAdapter.getOutputChannelInfo(name);
             if(!result) return null;
@@ -15593,7 +15619,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         XML3D.base.NodeAdapterFactory.call(this, XML3D.data);
     };
     XML3D.createClass(XML3DDataAdapterFactory, XML3D.base.NodeAdapterFactory);
-
+    XML3DDataAdapterFactory.prototype.aspect = XML3D.data;
 
     var data = XML3D.data, reg = {};
 
@@ -15638,9 +15664,22 @@ XML3D.data.DataAdapter.prototype.toString = function() {
 
     // Export
     XML3D.data.XML3DDataAdapterFactory = XML3DDataAdapterFactory;
-    XML3D.data.factory = new XML3DDataAdapterFactory();
+    XML3D.base.xml3dFormatHandler.registerFactoryClass(XML3DDataAdapterFactory);
 }());// data/adapter/json/factory.js
 (function() {
+
+    var XML3DJSONFormatHandler = function() {
+        XML3D.base.JSONFormatHandler.call(this);
+    }
+    XML3D.createClass(XML3DJSONFormatHandler, XML3D.base.JSONFormatHandler);
+
+    XML3DJSONFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
+        return mimetype === "application/json" && response.format == "xml3d-json" && response.version == "0.4.0";
+    }
+
+    var xml3dJsonFormatHandler = new XML3DJSONFormatHandler();
+    XML3D.base.registerFormat(xml3dJsonFormatHandler);
+
 
     var empty = function() {};
 
@@ -15758,16 +15797,18 @@ XML3D.data.DataAdapter.prototype.toString = function() {
      */
     var JSONFactory = function()
     {
-        XML3D.base.AdapterFactory.call(this, XML3D.data, "application/json");
+        XML3D.base.AdapterFactory.call(this, XML3D.data);
     };
-
     XML3D.createClass(JSONFactory, XML3D.base.AdapterFactory);
+
+
+    JSONFactory.prototype.aspect = XML3D.data;
 
     JSONFactory.prototype.createAdapter = function(data) {
         return new JSONDataAdapter(data);
     }
 
-    var jsonFactoryInstance = new JSONFactory();
+    xml3dJsonFormatHandler.registerFactoryClass(JSONFactory);
 }());
 // data/adapter/binary/factory.js
 (function() {
@@ -15925,6 +15966,8 @@ XML3D.webgl.MAXFPS = 30;
 
     var globalCanvasId = 0;
 
+    XML3D.webgl.handlers = [];
+
     /**
      * CanvasHandler class.
      * Registers and handles the events that happen on the canvas element.
@@ -15940,6 +15983,7 @@ XML3D.webgl.MAXFPS = 30;
         this.canvas = canvas;
         this.xml3dElem = xml3dElem;
         this.id = ++globalCanvasId; // global canvas id starts at 1
+        XML3D.webgl.handlers[this.id] = this;
 
         this.needDraw = true;
         this.needPickingDraw = true;
@@ -15955,6 +15999,7 @@ XML3D.webgl.MAXFPS = 30;
         if (context) {
             this.initialize(context);
         }
+
     }
 
     /**
@@ -16053,19 +16098,19 @@ XML3D.webgl.MAXFPS = 30;
     };
 
 
-    /** 
-     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in 
-     * the GL context. The y-coordinate gets turned upside-down. The lowest possible 
-     * canvas coordinate is 0, so we need to subtract 1 from the height, too. 
-     * 
+    /**
+     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in
+     * the GL context. The y-coordinate gets turned upside-down. The lowest possible
+     * canvas coordinate is 0, so we need to subtract 1 from the height, too.
+     *
      * @param {number} canvasY
      * @return {number} the converted y-coordinate
      */
-    CanvasHandler.prototype.canvasToGlY = function(canvasY) { 
-        
-        return this.canvas.height - canvasY - 1; 
-    }; 
-    
+    CanvasHandler.prototype.canvasToGlY = function(canvasY) {
+
+        return this.canvas.height - canvasY - 1;
+    };
+
     /**
      * Binds the picking buffer and passes the request for a picking pass to the
      * renderer
@@ -16079,25 +16124,25 @@ XML3D.webgl.MAXFPS = 30;
             return null;
         if(this.needPickingDraw) {
             this.renderer.prepareRendering();
-            this.renderer.renderSceneToPickingBuffer();   
+            this.renderer.renderSceneToPickingBuffer();
         }
-        
-        /** Temporary workaround: this function is called when drawable objects are not yet 
+
+        /** Temporary workaround: this function is called when drawable objects are not yet
          *  updated. Thus, the renderer.render() updates the objects after the picking buffer
-         *  has been updated. In that case, the picking buffer needs to be updated again. 
-         *  Thus, we only set needPickingDraw to false when we are sure that objects don't 
+         *  has been updated. In that case, the picking buffer needs to be updated again.
+         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
          *  need any updates, i.e. when needDraw is false.
-         *  A better solution would be to separate drawable objects updating from rendering 
+         *  A better solution would be to separate drawable objects updating from rendering
          *  and to update the objects either during render() or renderSceneToPickingBuffer().
          */
         if(!this.needDraw)
             this.needPickingDraw = false;
-        
+
         var glY = this.canvasToGlY(canvasY);
-        
+
         this.currentPickObj = this.renderer.getRenderObjectFromPickingBuffer(canvasX, glY);
-        
-        
+
+
         return this.currentPickObj;
     };
 
@@ -16110,9 +16155,9 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.getWorldSpaceNormalByPoint = function(pickedObj, canvasX, canvasY) {
         if (!pickedObj || this._pickingDisabled)
             return null;
-        
+
         var glY = this.canvasToGlY(canvasY);
-        
+
         this.renderer.renderPickedNormals(pickedObj);
         return this.renderer.readNormalFromPickingBuffer(canvasX, glY);
     };
@@ -16127,30 +16172,30 @@ XML3D.webgl.MAXFPS = 30;
     	if (!pickedObj)
     		return null;
 
-        var glY = this.canvasToGlY(canvasY); 
-        
+        var glY = this.canvasToGlY(canvasY);
+
         this.renderer.renderPickedPosition(pickedObj);
         return this.renderer.readPositionFromPickingBuffer(canvasX, glY);
     };
-    
-    CanvasHandler.prototype.getCanvasHeight = function() { 
-    	
-    	return this.canvas.height; 
+
+    CanvasHandler.prototype.getCanvasHeight = function() {
+
+    	return this.canvas.height;
     };
-    
-    CanvasHandler.prototype.getCanvasWidth = function() { 
-    	
-    	return this.canvas.width; 
+
+    CanvasHandler.prototype.getCanvasWidth = function() {
+
+    	return this.canvas.width;
     };
 
     CanvasHandler.prototype.canvasSizeChanged = function() {
-        var rect = this.canvas.getBoundingClientRect();
-        if (rect.width !== this.lastKnownDimensions.width ||
-            rect.height !== this.lastKnownDimensions.height) {
+        var canvas = this.canvas;
+        if (canvas.clientWidth !== this.lastKnownDimensions.width ||
+            canvas.clientHeight !== this.lastKnownDimensions.height) {
 
-            this.renderer.resizeCanvas(rect.width, rect.height);
-            this.lastKnownDimensions.width = this.canvas.width = rect.width;
-            this.lastKnownDimensions.height = this.canvas.height = rect.height;
+            this.lastKnownDimensions.width = canvas.width = canvas.clientWidth;
+            this.lastKnownDimensions.height = canvas.height = canvas.clientHeight;
+            this.renderer.resizeCanvas(canvas.width, canvas.height);
 
             this.needDraw = this.needPickingDraw = true;
             return true;
@@ -16166,8 +16211,8 @@ XML3D.webgl.MAXFPS = 30;
      * @param {number} canvasY
      */
     CanvasHandler.prototype.generateRay = function(canvasX, canvasY) {
-        
-        var glY = this.canvasToGlY(canvasY); 
+
+        var glY = this.canvasToGlY(canvasY);
 
         // setup input to unproject
         var viewport = new Array();
@@ -16197,7 +16242,7 @@ XML3D.webgl.MAXFPS = 30;
         // calculate ray
         var worldToViewMat = this.renderer.currentView.getViewMatrix().inverse();
         var viewPos = new window.XML3DVec3(worldToViewMat.m41, worldToViewMat.m42, worldToViewMat.m43);
-        
+
         ray.origin.set(viewPos);
         ray.direction.set(farHit[0] - nearHit[0], farHit[1] - nearHit[1], farHit[2] - nearHit[2]);
         ray.direction.set(ray.direction.normalize());
@@ -16974,7 +17019,7 @@ XML3D.webgl.stopEvent = function(ev) {
         return {x: pageX - off.left, y: pageY - off.top};
     };
 })();
-﻿(function() {
+(function() {
 
     /***************************************************************************
      * Class XML3D.webgl.XML3DShaderManager
@@ -17034,10 +17079,10 @@ XML3D.webgl.stopEvent = function(ev) {
         }
     };
 
-    var XML3DShaderManager = function(renderer, factory) {
+    var XML3DShaderManager = function(renderer, canvasId) {
         this.renderer = renderer;
         this.gl = renderer.gl;
-        this.factory = factory;
+        this.canvasId = canvasId;
 
         this.shaderCache = {
             fragment : {},
@@ -17339,7 +17384,7 @@ XML3D.webgl.stopEvent = function(ev) {
     XML3DShaderManager.prototype.getShaderById = function(shaderId) {
         var sp = this.shaders[shaderId];
         if (!sp) {
-            var shaderAdapter = this.factory.getAdapter(document.getElementById(shaderId));
+            var shaderAdapter = XML3D.base.resourceManager.getAdapter(document.getElementById(shaderId), XML3D.webgl, this.canvasId);
             if (shaderAdapter) {
                 // This must be a shader we haven't created yet (maybe it was
                 // just added or
@@ -18275,6 +18320,8 @@ XML3D.webgl.XML3DBufferHandler.prototype.fillOptions = function(options) {
 
 (function() {
 
+XML3D.webgl.renderers = [];
+
 /**
  * Constructor for the Renderer.
  *
@@ -18288,6 +18335,7 @@ XML3D.webgl.XML3DBufferHandler.prototype.fillOptions = function(options) {
 var Renderer = function(handler, context, dimensions) {
     this.handler = handler;
     this.gl = context;
+    XML3D.webgl.renderers[handler.id] = this;
 
     this.setGlobalGLStates();
 
@@ -18302,8 +18350,7 @@ var Renderer = function(handler, context, dimensions) {
 };
 
 Renderer.prototype.initialize = function() {
-    this.factory = new XML3D.webgl.RenderAdapterFactory(this.handler, this);
-    this.shaderManager = new XML3D.webgl.XML3DShaderManager(this, this.factory);
+    this.shaderManager = new XML3D.webgl.XML3DShaderManager(this, this.handler.id);
     this.bufferHandler = new XML3D.webgl.XML3DBufferHandler(this.gl, this, this.shaderManager);
     this.changeListener = new XML3D.webgl.DataChangeListener(this);
     this.camera = this.initCamera();
@@ -18340,11 +18387,15 @@ Renderer.prototype.setGlobalGLStates = function() {
     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
 };
 
+Renderer.prototype.getAdapter = function(node){
+    return XML3D.base.resourceManager.getAdapter(node, XML3D.webgl, this.handler.id);
+}
+
 Renderer.prototype.initCamera = function() {
     var av = XML3D.util.getOrCreateActiveView(this.xml3dNode);
 
     this.currentView = av;
-    return this.factory.getAdapter(av);
+    return this.getAdapter(av);
 };
 
 var TraversalState = function(parent) {
@@ -18356,7 +18407,7 @@ var TraversalState = function(parent) {
 };
 
 Renderer.prototype.recursiveBuildScene = function(currentNode, renderObjectArray, parent) {
-    var adapter = this.factory.getAdapter(currentNode);
+    var adapter = this.getAdapter(currentNode);
 
     parent = parent || new TraversalState();
     var downstream = new TraversalState(parent);
@@ -18384,7 +18435,7 @@ Renderer.prototype.recursiveBuildScene = function(currentNode, renderObjectArray
         if (currentNode.onmouseover || currentNode.onmouseout)
             this.handler.setMouseMovePicking(true);
 
-        var meshAdapter = this.factory.getAdapter(currentNode);
+        var meshAdapter = this.getAdapter(currentNode);
         if (!meshAdapter)
             break; //TODO: error handling
 
@@ -18484,7 +18535,7 @@ Renderer.prototype.requestRedraw = function(reason, forcePickingRedraw) {
 
 Renderer.prototype.sceneTreeAddition = function(evt) {
     var target = evt.wrapped.target;
-    var adapter = this.factory.getAdapter(target);
+    var adapter = this.getAdapter(target);
 
     //If no adapter is found the added node must be a text node, or something else
     //we're not interested in
@@ -18501,7 +18552,7 @@ Renderer.prototype.sceneTreeAddition = function(evt) {
     var parentTransform = XML3D.math.mat4.identity(XML3D.math.mat4.create());
     if(parentNode && parentNode.nodeName == "group")
     {
-        var parentAdapter = this.factory.getAdapter(parentNode);
+        var parentAdapter = this.getAdapter(parentNode);
         parentTransform = parentAdapter.applyTransformMatrix(parentTransform);
         if (!shaderHandle)
     		shaderHandle = parentAdapter.getShaderHandle();
@@ -18516,7 +18567,7 @@ Renderer.prototype.sceneTreeAddition = function(evt) {
 
 Renderer.prototype.sceneTreeRemoval = function (evt) {
     var currentNode = evt.wrapped.target;
-    var adapter = this.factory.getAdapter(currentNode);
+    var adapter = this.getAdapter(currentNode);
     if (adapter && adapter.destroy)
         adapter.destroy();
 
@@ -19125,7 +19176,7 @@ Renderer.prototype.notifyDataChanged = function() {
      */
     XML3D.webgl.LightShaderRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
+        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
         this.computeRequest = this.dataAdapter.getComputeRequest(staticAttributes, this.dataChanged.bind(this));
         this.offsets = [];
         this.listeners = [];
@@ -19486,7 +19537,7 @@ Renderer.prototype.notifyDataChanged = function() {
 
     p.init = function() {
         // Create all matrices, no valid values yet
-        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
+        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
         this.matrixReady = {};
         this.matrices = {};
         this.requests = {};
@@ -19610,18 +19661,18 @@ Renderer.prototype.notifyDataChanged = function() {
         m._data.set(this.viewMatrix);
         return m;
     };
-    
-    /** 
-     * @return {XML3DMatrix} returns the inverse of the view matrix, since now we 
+
+    /**
+     * @return {XML3DMatrix} returns the inverse of the view matrix, since now we
      * want to go world2view and not view2world
      */
-    p.getWorldMatrix = function() {        
-        var m = new window.XML3DMatrix();  
-        var tmp = XML3D.math.mat4.create(); 
+    p.getWorldMatrix = function() {
+        var m = new window.XML3DMatrix();
+        var tmp = XML3D.math.mat4.create();
         XML3D.math.mat4.invert(tmp, this.viewMatrix);
         m._data.set(tmp);
-        return m; 
-    }; 
+        return m;
+    };
 
 
     p.getModelViewMatrix = function(model) {
@@ -19631,7 +19682,7 @@ Renderer.prototype.notifyDataChanged = function() {
     p.getModelViewProjectionMatrix = function(modelViewMatrix) {
         return XML3D.math.mat4.multiply(XML3D.math.mat4.create(), this.projMatrix, modelViewMatrix);
     };
-    
+
     p.getWorldSpacePosition = function() {
     	return this.worldPosition;
     };
@@ -19693,7 +19744,7 @@ Renderer.prototype.notifyDataChanged = function() {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
         this.renderer = this.factory.renderer;
 
-        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
+        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
         this.computeRequest;
     };
 
@@ -19766,34 +19817,34 @@ Renderer.prototype.notifyDataChanged = function() {
         this.gl = factory.renderer.handler.gl;
         this.factory = factory;
         this.node = node;
-        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
+        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
     };
-    
+
     XML3D.createClass(TextureRenderAdapter, XML3D.webgl.RenderAdapter);
     TextureRenderAdapter.prototype.notifyChanged = function(evt) {
         var shaderAdapter = this.factory.getAdapter(this.node.parentElement);
         if (shaderAdapter)
             shaderAdapter.notifyChanged(evt);
     };
-    
+
     TextureRenderAdapter.prototype.getDataTable = function() {
         return this.dataAdapter.createDataTable();
     };
-    
+
     TextureRenderAdapter.prototype.destroy = function() {
         if (!this.info || this.info.handle === null)
             return;
-        
+
         this.gl.deleteTexture(this.info.handle);
         this.info = null;
         this.bind = function(texUnit) { return; };
         this.unbind = function(texUnit) { return; };
     };
-    
+
     TextureRenderAdapter.prototype.dispose = function(evt) {
         //TODO: tell renderer to dispose
     };
-    
+
     XML3D.webgl.TextureRenderAdapter = TextureRenderAdapter;
 }());
 XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
@@ -19832,7 +19883,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         XML3D.webgl.RenderAdapter.call(this, factory, node);
 
         this.processListeners();
-        this.dataAdapter = XML3D.data.factory.getAdapter(this.node);
+        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
         this.parentVisible = true;
         this.renderObject = null; // This is set by renderObject itself
 
@@ -20282,7 +20333,7 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         var matrix = this.getLocalMatrixInternal();
         if (matrix)
             XML3D.math.mat4.multiply(m, m, matrix);
-    
+
         return m;
     };
 
@@ -20782,13 +20833,15 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @param {XML3D.webgl.CanvasHandler} handler
      * @param {XML3D.webgl.Renderer} renderer
      */
-    var RenderAdapterFactory = function(handler, renderer) {
-        XML3D.base.NodeAdapterFactory.call(this, XML3D.webgl, handler.id);
-        this.handler = handler;
-        this.renderer = renderer;
+    var RenderAdapterFactory = function(canvasId) {
+        XML3D.base.NodeAdapterFactory.call(this, XML3D.webgl, canvasId);
+        this.handler = XML3D.webgl.handlers[canvasId];
+        this.renderer = XML3D.webgl.renderers[canvasId];
         this.type = "RenderAdapterFactory";
     };
     XML3D.createClass(RenderAdapterFactory, XML3D.base.NodeAdapterFactory);
+    RenderAdapterFactory.prototype.aspect = XML3D.webgl;
+    XML3D.base.xml3dFormatHandler.registerFactoryClass(RenderAdapterFactory);
 
     var ns = XML3D.webgl,
         registry = {

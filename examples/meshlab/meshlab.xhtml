@@ -12,7 +12,7 @@
     <script type="text/javascript">
         window.addEventListener('load', function() {
             var controller = new XMOT.ExamineController(document.getElementById("viewGroup"),
-                {revolveAroundPoint: new XML3DVec3(-22,-149,-1600), dollySpeed: 4000});
+                {revolveAroundPoint: new XML3DVec3(-22,-149,-1600), dollySpeed: 40, sceneRadius : 365} );
             var xml3d = document.getElementById("MyXml3d");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
