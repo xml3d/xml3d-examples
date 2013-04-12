@@ -115,7 +115,7 @@ XML3D.shaders.register("sig-eyelight", {
 		//index: { optional: false, size: true },
 		texcoord : { required: true },
 		normalTex: null,
-		positionTex: null,
+		positionTex: { required: true },
 		positionTex2: null,
 		texcoordTex: null,
 		vertexCount: null
