@@ -29,6 +29,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
     {cat: "external", name: "MeshLab Format", href: "examples/meshlab/meshlab.xhtml",
         info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
+    {cat: "external", name: "OpenCTM Format", href: "examples/openctm/openctm.xhtml",
+        info: "Demonstrates extending supported formats, here using OpenCTM binary format"},
     {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.xhtml",
         info: "Demonstrates the usage of external mesh data and shaders with XML files."},
 
