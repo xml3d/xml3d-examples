@@ -30,31 +30,31 @@ function changePCAMatrix(changeTo) {
 *
 **/
 
-Xflow.registerOperator("genWithWeights", {
+Xflow.registerOperator("xflow.genWithWeights", {
     outputs: [{type: 'float3', name: 'position'}],
-    params:  [{type: 'float3', source: 'tangent'}, 
+    params:  [{type: 'float3', source: 'tangent'},
               {type: 'float', source: 'pc1'},
               {type: 'float', source: 'pc2'},
               {type: 'float', source: 'pc3'},
               {type: 'float', source: 'pc4'},
               {type: 'float', source: 'pc5'},
               {type: 'float', source: 'pc6'}],
-    
+
     //The parameter "position" is the output array holding the vertex positions of the mesh computed by applying the PCA
     evaluate: function(position, tangent, pc1, pc2, pc3, pc4, pc5, pc6) {
         var weights = [pc1[0], pc2[0], pc3[0], pc4[0], pc5[0], pc6[0]];
-        
+
         //Compute the new positions using the PCA
         for(var i=0; i < PCAMATRIX[0].length; i++) {
             var res = 0;
-            
+
             //Multiply the weights vector with column i of the PCA matrix
             for(var j=0; j < 6; j++) {
                 res += weights[j] * PCAMATRIX[j][i];
             }
-            
+
             //Add the result of the above multiplication (times the mean) to the mean
-            //'tangent' is actually the mean vertex position, it's stored in a field called 'tangent' only because of 
+            //'tangent' is actually the mean vertex position, it's stored in a field called 'tangent' only because of
             //attribute naming limitations in release 4.3. This will be fixed for 4.4
             position[i] = tangent[i] + res*tangent[i];
         }
@@ -62,16 +62,16 @@ Xflow.registerOperator("genWithWeights", {
     }
 });
 
-Xflow.registerOperator("computeNormals", {
+Xflow.registerOperator("xflow.computeNormals", {
     outputs: [{type: 'float3', name: 'normal'}],
     params:  [{type: 'float3', source: 'position'}, {type: 'int', source: 'index'}],
-    
-    evaluate: function(normal, position, index) {  
+
+    evaluate: function(normal, position, index) {
         for (var i = 0; i < normal.length; i++) normal[i] = 0;
         var e1 = e2 = norm = [0,0,0];
         var v1 = v2 = v3 = [0,0,0];
         var ind;
-        
+
         for (var i=0; i < index.length; i+=3) {
             ind = index[i] * 3;
             v1 = [position[ind], position[ind+1], position[ind+2]];
@@ -79,15 +79,15 @@ Xflow.registerOperator("computeNormals", {
             v2 = [position[ind], position[ind+1], position[ind+2]];
             ind = index[i+2] * 3;
             v3 = [position[ind], position[ind+1], position[ind+2]];
-            
+
             var x = v3[0] - v1[0]; var y = v3[1] - v1[1]; var z = v3[2] - v1[2];
             var x2 = v2[0] - v1[0]; var y2 = v2[1] - v1[1]; var z2 = v2[2] - v1[2];
 
             //Cross product
             norm[0] = y*z2 - z*y2;
             norm[1] = z*x2 - x*z2;
-            norm[2] = x*y2 - y*x2;           
-            
+            norm[2] = x*y2 - y*x2;
+
             for (var j=0; j<3; ++j) {
                 ind = index[i+j]*3;
                 normal[ind] += norm[0];
@@ -96,6 +96,6 @@ Xflow.registerOperator("computeNormals", {
             }
             //No need to normalize the result since it's normalized in the vertex shader
         }
-    
+
     }
 });

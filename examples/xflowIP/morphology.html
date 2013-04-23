@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <title>Xflip Example</title>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui-1.8.23.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+
+    <!-- Application Scrips -->
+    <script type="text/javascript" src="../../script/xflip.js"></script>
+    <script type="text/javascript" >
+        Xflip.init(["../../script/xflip-operators.js"]);
+    </script>
+</head>
+<body>
+<div id="overall">
+<div id="content">
+
+    <h1>Morphology Operations</h1>
+
+    <div class="xflipOverall" >
+
+    <div class="xflipBox">
+        <h2>Original</h2>
+        <img src="img/lena-color.gif" class="input" />
+    </div>
+
+    <div class="xflipBox">
+        <h2>Erode</h2>
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.erode(image, filter)">
+                <texture name="image" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <data compute="filter = xflip.createSquareMorphologyFilter(size)">
+                    <int id="size131" name="size">7</int>
+                </data>
+            </data>
+        </xflowimg>
+        <div class="options" >
+            Size (<font id="div131">7</font>): <input id="range131" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize131()" />
+        </div>
+    </div>
+
+    <script>
+        function updateSize131() {
+            var range = document.getElementById("range131").value;
+            document.getElementById("size131").firstChild.textContent = range;
+            document.getElementById("div131").innerHTML = range;
+        }
+    </script>
+
+    <div class="xflipBox">
+        <h2>Dilate</h2>
+
+        <xflowimg srcname="output" class="output" >
+            <data compute="output = xflip.dilate(image, filter)">
+                <texture name="image" >
+                    <img src="img/lena-color.gif" />
+                </texture>
+                <data compute="filter = xflip.createSquareMorphologyFilter(size)">
+                    <int id="size132" name="size">7</int>
+                </data>
+            </data>
+        </xflowimg>
+        <div class="options" >
+            Size (<font id="div132">7</font>): <input id="range132" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize132()" />
+        </div>
+    </div>
+
+    <script>
+        function updateSize132() {
+            var range = document.getElementById("range132").value;
+            document.getElementById("size132").firstChild.textContent = range;
+            document.getElementById("div132").innerHTML = range;
+        }
+    </script>
+
+    </div>
+	<div class="description">Hover over images to edit Xflow parameters.</div>
+
+</div>
+</div>
+
+</body>
+</html>

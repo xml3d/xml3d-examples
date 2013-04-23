@@ -1,7 +1,7 @@
 /**
  * Grid Generation
  */
-Xflow.registerOperator("mygrid", {
+Xflow.registerOperator("xflow.mygrid", {
     outputs: [	{type: 'float3', name: 'position', customAlloc: true},
 				{type: 'float3', name: 'normal', customAlloc: true},
 				{type: 'float2', name: 'texcoord', customAlloc: true},
@@ -17,21 +17,21 @@ Xflow.registerOperator("mygrid", {
     },
     evaluate: function(position, normal, texcoord, index, size) {
 		var s = size[0];
-        
+
         // Create Positions
 		for(var i = 0; i < position.length / 3; i++) {
 			var offset = i*3;
 			position[offset] =  (((i % s) / (s-1))-0.5)*2;
 			position[offset+1] = 0;
-			position[offset+2] = ((Math.floor(i/s) / (s-1))-0.5)*2; 
+			position[offset+2] = ((Math.floor(i/s) / (s-1))-0.5)*2;
 		}
-        
+
         // Create Normals
 		for(var i = 0; i < normal.length / 3; i++) {
 			var offset = i*3;
 			normal[offset] =  0;
 			normal[offset+1] = 1;
-			normal[offset+2] = 0; 
+			normal[offset+2] = 0;
 		}
         // Create Texture Coordinates
 		for(var i = 0; i < texcoord.length / 2; i++) {
@@ -39,7 +39,7 @@ Xflow.registerOperator("mygrid", {
             texcoord[offset] = (i%s) / (s-1);
             texcoord[offset+1] = Math.floor(i/s) / (s-1);
 		}
-        
+
         // Create Indices
 		var length = (s-1) * (s-1);
 		for(var i = 0; i < length; i++) {
@@ -58,7 +58,7 @@ Xflow.registerOperator("mygrid", {
 /**
  * Wave Transformation
  */
-Xflow.registerOperator("mywave", {
+Xflow.registerOperator("xflow.mywave", {
 	outputs: [	{type: 'float3', name: 'position'},
 				{type: 'float3', name: 'normal'} ],
     params:  [  {type: 'float3', source: 'position' },
@@ -74,18 +74,18 @@ Xflow.registerOperator("mywave", {
 			newpos[offset] = position[offset];
 			newpos[offset+1] = Math.sin(wavelength[0]*dist-phase[0])*strength[0];
 			newpos[offset+2] = position[offset+2];
-            
-            
-			var tmp = Math.cos(wavelength[0]*dist-phase[0]) * wavelength[0] * strength[0];            
+
+
+			var tmp = Math.cos(wavelength[0]*dist-phase[0]) * wavelength[0] * strength[0];
             var dx = position[offset] / dist * tmp;
 			var dz = position[offset+2] / dist * tmp;
-            
-			var v = vec3.create();
+
+			var v = XML3D.math.vec3.create();
             v[0] = dx; v[1] = 1; v[2] = dz;
-			vec3.normalize(v);
+            XML3D.math.vec3.normalize(v, v);
 			newnormal[offset] = v[0];
 			newnormal[offset+1] = v[1];
-			newnormal[offset+2] = v[2];    
+			newnormal[offset+2] = v[2];
 		}
 	}
 });

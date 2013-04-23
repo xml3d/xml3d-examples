@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d xmlns="http://www.w3.org/1999/xhtml">
+  <!-- 
+
+ Shaders 
+
+ -->
+  <shader script="urn:xml3d:shader:phong" id="shader_hvyweapon_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.078125</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="hvyweapon_red.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_heavy_head_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="heavy_head.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <!-- 
+
+ Mesh Base 
+
+ -->
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="heavy.json" />
+  <!-- 
+
+ Meshes 
+
+ -->
+  <data id="index_hvyweapon_red" src="heavy.json" filter="keep( {index: index_hvyweapon_red} )" />
+  <data id="index_heavy_head_red" src="heavy.json" filter="keep( {index: index_heavy_head_red} )" />
+  <data id="index_eyeball_r" src="heavy.json" filter="keep( {index: index_eyeball_r} )" />
+  <data id="index_eyeball_l" src="heavy.json" filter="keep( {index: index_eyeball_l} )" />
+  <!-- 
+
+ Animations 
+
+ -->
+  <data id="anim_taunt05h" src="heavy.json" filter="keep( {translation: taunt05h_translation, rotation: taunt05h_rotation } )" />
+</xml3d>

@@ -15,7 +15,8 @@
     <script type="text/javascript" src="../../script/xml3d-motion.js"/>
     <script type="text/javascript">
         window.addEventListener('load', function() {
-            var controller = new XMOT.ExamineController(document.getElementById("camera1"));
+            var controller = new XMOT.ExamineController(document.getElementById("camera1"),
+                    { "sceneRadius" : 8});
             var xml3d = document.getElementById("canvas");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);

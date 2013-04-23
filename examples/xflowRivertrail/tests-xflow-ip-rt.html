@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>Image Proc Tests</title>
+
+
+    <script type="text/javascript" src="../../../xml3d.js/src/xflow-ip/client.js"></script>
+    <script type="text/javascript" >
+        XflowIP.init("../../../xml3d.js/build/output/xml3d.js",
+        ["http://localhost/xml3d-examples/examples/xflowIP/xml3d-xflow-ip-module.js",
+         "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/ParallelArray.js",
+
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/narcissus/jsdefs.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/narcissus/jslex.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/narcissus/jsparse.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/narcissus/jsdecomp.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/definitions.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/helper.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/driver.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/dotviz.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/typeinference.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/rangeanalysis.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/inferblockflow.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/infermem.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/genOCL.js",
+    "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/jit/compiler/runOCL.js"
+        ]);
+    </script>
+	<style>font {width:25px; display:block; text-align:center}
+        .input { width: 200px }
+        .output { height: 200px }
+    </style>
+</head>
+<body>
+	<h1 style="text-align: center;">Demo implementation of some basic image processing filters and transformations in XFlow (XML3D)</h1>
+
+
+	<h2>Gaussian Smoothing</h2>
+
+    <img src="../xflowIP/lena_color.gif" class="input" />
+
+    <xflowimg srcname="output" class="output" >
+        <data compute="output = xflow.gaussian(image, size, sigma)">
+            <texture name="image">
+                <img src="../xflowIP/lena_color.gif" />
+            </texture>
+
+            <int id="size5" name="size">7</int>
+            <float id="sigma5" name="sigma">3</float>
+        </data>
+    </xflowimg>
+
+	Filter size (<font id="div51">7</font>): <input id="range51" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize()" />
+	Sigma (<font id="div52">3</font>): <input id="range52" type="range"  min="1" max="15" step="1" value="3" onchange="updateSigma()" />
+
+	<script>
+	function updateSize() {
+		var range = document.getElementById("range51").value;
+		document.getElementById("size5").firstChild.textContent = range;
+		document.getElementById("div51").innerHTML = range;
+	}
+
+	function updateSigma() {
+		var range = document.getElementById("range52").value;
+		document.getElementById("sigma5").firstChild.textContent = range;
+		document.getElementById("div52").innerHTML = range;
+	}
+	</script>
+
+</body>
+</html>

@@ -5,12 +5,13 @@
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
     <!-- Scripts -->
   <script type="text/javascript" src="../../script/xml3d.js"></script>
-	  <script type="text/javascript" src="./xml3d-motion.js"></script>
+	  <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
     <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function() {
-            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"), {revolveAroundPoint: [-2,-14,-160], dollySpeed: 4000});
+            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"), {revolveAroundPoint:
+                new XML3DVec3(-2,-14,-160), sceneRadius: 110});
             var xml3d = document.getElementById("MyXml3d");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
@@ -39,11 +40,7 @@
               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274"
                          scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"/>
 
-              <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
-                <bool name="castShadow">true</bool>
-                <float3 name="intensity">0.5 0.5 0.5</float3>
 
-              </lightshader>
               <shader id="Material" script="urn:xml3d:shader:phong">
                 <float name="ambientIntensity">1</float>
                 <float3 name="diffuseColor">0.400000 0.120000 0.180000</float3>
@@ -54,6 +51,11 @@
             <group id="viewGroup" transform="#t_Camera">
               <view id="defaultView"/>
             </group>
+            <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
+              <bool name="castShadow">true</bool>
+              <float3 name="intensity">0.5 0.5 0.5</float3>
+
+            </lightshader>
             <group transform="#t_Lamp">
               <light shader="#ls_Spot" intensity="1.5"/>
             </group>

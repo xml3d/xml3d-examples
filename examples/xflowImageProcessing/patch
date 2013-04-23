@@ -1,0 +1,13 @@
+diff --git a/ar_asset_xflow.js b/ar_asset_xflow.js
+index 1ab11a0..8160e35 100644
+--- a/ar_asset_xflow.js
++++ b/ar_asset_xflow.js
+@@ -79,7 +79,7 @@ function setupApp() {
+     var bgContext = null;
+ 
+     //var video = document.createElement('video');
+-    var video = document.getElementsByTagName("video")[0];
++    var video = document.getElementsByTagName("video")[0] || document.getElementsByTagName("img")[0];
+     video.width = 640;
+     video.height = 480;
+     video.loop = true;

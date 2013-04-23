@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <title>Xflip Example</title>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui-1.8.23.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+
+    <!-- Application Scrips -->
+    <script type="text/javascript" src="../../script/xflip.js"></script>
+    <script type="text/javascript" >
+        Xflip.init(["../../script/xflip-operators.js"]);
+    </script>
+</head>
+<body>
+<div id="overall">
+<div id="content">
+
+    <h1>Histogram Processing Operations</h1>
+
+    <div class="xflipOverall" >
+
+        <div class="xflipBox">
+            <h2>Original</h2>
+            <img src="img/micro.jpg" class="input" />
+        </div>
+
+
+        <div class="xflipBox">
+            <h2>Histogram Equalization (Contrast Stretching)</h2>
+            <xflowimg srcname="output" class="output">
+                <data compute="output = xflip.applyGrayscaleHST(image, transform, channel)">
+                    <int name="channel">2</int>
+                    <data compute="transform = xflip.createEqualizationHST(histogram)">
+                        <data compute="histogram = xflip.createHistogram(image, channel)">
+                            <int name="channel">1</int>
+                            <texture name="image" >
+                                <img src="img/micro.jpg" />
+                            </texture>
+                        </data>
+                    </data>
+                </data>
+            </xflowimg>
+        </div>
+
+    </div>
+	<div class="description">Hover over images to see Xflow operator.</div>
+
+</div>
+</div>
+
+</body>
+</html>

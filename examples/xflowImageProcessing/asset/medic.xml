@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d xmlns="http://www.w3.org/1999/xhtml">
+  <!-- 
+
+ Shaders 
+
+ -->
+  <shader script="urn:xml3d:shader:phong" id="shader_medic_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.078125</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="medic_red.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_medic_backpack_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.2 0.2 0.2</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="medic_backpack_red.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_medic_head">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="medic_head.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.5 0.5 0.5</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.5 0.5 0.5</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">1.171875</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <!-- 
+
+ Mesh Base 
+
+ -->
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="medic.json" />
+  <!-- 
+
+ Meshes 
+
+ -->
+  <data id="index_medic_red" src="medic.json" filter="keep( {index: index_medic_red} )" />
+  <data id="index_medic_backpack_red" src="medic.json" filter="keep( {index: index_medic_backpack_red} )" />
+  <data id="index_medic_head" src="medic.json" filter="keep( {index: index_medic_head} )" />
+  <data id="index_eyeball_r" src="medic.json" filter="keep( {index: index_eyeball_r} )" />
+  <data id="index_eyeball_l" src="medic.json" filter="keep( {index: index_eyeball_l} )" />
+  <!-- 
+
+ Animations 
+
+ -->
+  <data id="anim_taunt02m">
+    <data src="medic.json" filter="keep( {translation: taunt02m_translation, rotation: taunt02m_rotation } )" />
+    <float name="maxKey">3.16667</float>
+  </data>
+</xml3d>
