@@ -1,7 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 
 <head>
     <!-- Style -->
@@ -18,35 +16,38 @@
     <script type="text/javascript" src="script/JSARToolKit.js"></script>
     <script type="text/javascript" src="script/xflar.js"></script>
     <script type="text/javascript" src="script/phongvs.js"></script>
+    <script type="text/javascript" src="script/gl-matrix.js"></script>
+    <script type="text/javascript" src="script/ar_flying_teapot.js" ></script>
 </head>
 
 <body>
 <div id="overall">
 <div id="content">
     <div style="position: relative; width: 640px; height: 480px; margin: 0 auto" >
-    <video id="background" autoplay="true" width="640" height="480" src="../video/ar_marker.ogg"
-           style="position: absolute; top: 0; width: 640px; height: 480px;"></video>
+    <canvas id="background" width="640" height="480"
+              style="position: absolute; top: 0px; width: 640px; height: 480px;"></canvas>
 
-    <xml3d xmlns="http://www.xml3d.org/2009/xml3d"
-          style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">
+    <xml3d style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">
 
         <!-- AR Data -->
-        <data id="arBase"
-              compute="transforms, visibilities, perspective = xflar.detect(arvideo, markers, threshold, noflip)">
-            <bool name="noflip">true</bool>
-            <int name="markers">22 64</int>
-            <data compute="threshold = xflar.getOtsuThreshold(histogram)">
-              <data compute="histogram = xflip.createNormalizedHistogram(grvideo,channel)">
-                <int name="channel">0</int>
-                <data compute="grvideo = xflip.grayscale(arvideo)">
-                  <texture name="arvideo">
-                    <video autoplay="true" src="../video/ar_marker.ogg"></video>
-                  </texture>
+        <data id="arBase" >
+          <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
+            <data compute="transforms, visibilities, perspective = xflar.detect(arvideo, markers, threshold)">
+              <int name="markers">22 64</int>
+              <data compute="threshold = xflar.getOtsuThreshold(histogram)">
+                <data compute="histogram = xflip.createNormalizedHistogram(grvideo,channel)">
+                  <int name="channel">0</int>
+                  <data compute="grvideo = xflip.grayscale(arvideo)">
+                    <texture name="arvideo">
+                      <video autoplay="true" src="../video/ar_marker.ogg"></video>
+                    </texture>
+                  </data>
                 </data>
               </data>
-            </data>
-        </data>
 
+            </data>
+          </data>
+        </data>
 
         <!-- Viewpoint with connection to AR data -->
         <view id="View" perspective="#arBase" />
@@ -56,7 +57,7 @@
         <data id="obj1AR" compute="transform = xflow.selectTransform(index, transforms)">
           <data compute="visibility = xflow.selectBool(index, visibilities)">
             <int name="index">0</int>
-            <data src="#arBase"/>
+            <data src="#arBase"></data>
           </data>
         </data>
         <!-- Shader -->
@@ -64,37 +65,19 @@
           <float3 name="diffuseColor">1.0 0.4 0.2</float3>
           <float name="ambientIntensity">0.2</float>
           <!-- Take visibility from AR -->
-          <data filter="keep(visibility)" src="#obj1AR" />
+          <data filter="keep(visibility)" src="#obj1AR" ></data>
         </shader>
-        <!-- Group taking transformation from AR data -->
-        <group transform="#obj1AR" shader="#obj1Shader" >
-          <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-            <mesh type="triangles" src="res/teapot.xml#mesh" />
+        <!-- Transformations modified by XML3DDataObserver -->
+        <transform id="t_teapot_ar" />
+        <transform id="t_teapot_local" />
+        <!-- Hierarchy of the displayed teapot -->
+        <group transform="#t_teapot_ar" shader="#obj1Shader" >
+          <group transform="#t_teapot_local" >
+            <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
+              <mesh type="triangles" src="res/teapot.xml#mesh" />
+            </group>
           </group>
         </group>
-
-        <!-- Object 2: -->
-        <!-- Extract visibility and transformation -->
-        <data id="obj2AR" compute="transform = xflow.selectTransform(index, transforms)">
-          <data compute="visibility = xflow.selectBool(index, visibilities)">
-            <int name="index">1</int>
-            <data src="#arBase"/>
-          </data>
-        </data>
-        <!-- Shader -->
-        <shader id="obj2Shader" script="urn:xml3d:shader:phongvs">
-          <float3 name="diffuseColor">0.2 0.4 1.0</float3>
-          <float name="ambientIntensity">0.2</float>
-          <!-- Take visibility from AR -->
-          <data filter="keep(visibility)" src="#obj2AR" />
-        </shader>
-        <!-- Group taking transformation from AR data -->
-        <group transform="#obj2AR" shader="#obj2Shader" >
-          <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-            <mesh type="triangles" src="res/teapot.xml#mesh" />
-          </group>
-        </group>
-
 
         <!-- Lights -->
 
@@ -116,13 +99,13 @@
     </xml3d>
     </div>
     <div class="webcam" >
+      <p>Current Threshold: <span id="thresholdView" ></span></p>
       <p><input type="checkbox" id="check"/><label for="check">Activate Webcam</label></p>
       <p><a href="markers.xhtml" target="_blank" >Print Markers</a></p>
     </div>
 </div>
 </div>
 <script type="text/javascript">
-  <![CDATA[
   window.URL = window.URL || window.webkitURL;
   navigator.getUserMedia  =
       navigator.getUserMedia || navigator.webkitGetUserMedia ||
@@ -133,7 +116,7 @@
       return;
     navigator.getUserMedia(
         {video: true, audio: false},
-		function(stream) {
+        function(stream) {
           var url = window.URL.createObjectURL(stream);
           for(var i = 0; i < videos.length; ++i){
             videos[i].autoplay = true;
@@ -162,8 +145,9 @@
 
     });
   });
-  ]]>
 </script>
+
+
 
 </body>
 

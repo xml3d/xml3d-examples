@@ -4577,7 +4577,7 @@ XMOT.CombinedAnimation = CombinedAnimation;
         if(!el)
             return null;
 
-        if(el.tagName == "xml3d")
+        if(el.tagName.toLowerCase() == "xml3d")
             return el;
 
         if(el.parentNode)
@@ -4631,7 +4631,7 @@ XMOT.CombinedAnimation = CombinedAnimation;
      */
     u.transform = function(grp, xfm)
     {
-        if(grp.tagName !== "group")
+        if(grp.tagName.toLowerCase() !== "group")
             throw "XMOT.util.transform(): given element is not a group.";
 
         return getOrSetRefNode(grp, "transform", xfm);
@@ -4648,7 +4648,7 @@ XMOT.CombinedAnimation = CombinedAnimation;
      */
     u.shader = function(grp, sh)
     {
-        if(grp.tagName !== "group")
+        if(grp.tagName.toLowerCase() !== "group")
             throw "XMOT.util.shader(): given element is not a group.";
 
         return getOrSetRefNode(grp, "shader", sh);
@@ -6218,17 +6218,17 @@ XMOT.util.Plane = new XMOT.Class({
                 if(!node)
                     node = this.targetNode;
 
-                if(node.tagName == "xml3d")
+                if(node.tagName.toLowerCase() == "xml3d")
                     return;
 
-                if(node.tagName == "group")
+                if(node.tagName.toLowerCase() == "group")
                 {
                     node.addEventListener("DOMAttrModified",
                         XMOT.util.wrapCallback(this, this._onGrpAttrModified), false);
 
                     this._attachToTransformOfGrp(node);
                 }
-                else if(node.tagName == "view")
+                else if(node.tagName.toLowerCase() == "view")
                 {
                     node.addEventListener("DOMAttrModified",
                         XMOT.util.wrapCallback(this, this._onViewAttrModified), false);
@@ -6255,17 +6255,17 @@ XMOT.util.Plane = new XMOT.Class({
                 if(!node)
                     node = this.targetNode;
 
-                if(node.tagName == "xml3d")
+                if(node.tagName.toLowerCase() == "xml3d")
                     return;
 
-                if(node.tagName == "group")
+                if(node.tagName.toLowerCase() == "group")
                 {
                     node.removeEventListener("DOMAttrModified",
                         XMOT.util.wrapCallback(this, this._onGrpAttrModified), false);
 
                     this._detachFromTransformOfGrp(node);
                 }
-                else if(node.tagName == "view")
+                else if(node.tagName.toLowerCase() == "view")
                 {
                     node.removeEventListener("DOMAttrModified",
                         XMOT.util.wrapCallback(this, this._onViewAttrModified), false);
@@ -7038,7 +7038,7 @@ XMOT.TransformSensor = new XMOT.Class(
 
             this._xml3dCanvas = this.xml3d.parentNode.previousElementSibling;
 
-            if(this._xml3dCanvas.tagName !== "canvas")
+            if(this._xml3dCanvas.tagName.toLowerCase() !== "canvas")
                 throw new Error("XML3DOverlay: associated element must be a canvas.");
 
             var registerFn = this._xml3dCanvas.addEventListener.bind(this._xml3dCanvas);
@@ -8327,7 +8327,7 @@ XMOT.TransformSensor = new XMOT.Class(
     	_onMouseOutOfCanvas: function(evt)
     	{
     		if(this._sensorIsActive)
-    			if(evt.fromElement.tagName == "canvas")
+    			if(evt.fromElement.tagName.toLowerCase() == "canvas")
     				this._onMouseUp(evt);
     	},
 
@@ -9488,7 +9488,7 @@ XMOT.TransformSensor = new XMOT.Class(
          */
         initialize: function(id, target, options)
         {
-            if(target.object.parentNode.tagName !== "group")
+            if(target.object.parentNode.tagName.toLowerCase() !== "group")
                 throw new Error("XMOT.interaction.widgets.Widget: target's parent node must be a group.");
 
             if(!options)
@@ -9799,7 +9799,7 @@ XMOT.TransformSensor = new XMOT.Class(
             this._selfCreatedMirror = (options.target !== undefined);
             if(this._selfCreatedMirror)
             {
-                if(options.target.object.parentNode.tagName !== "group")
+                if(options.target.object.parentNode.tagName.toLowerCase() !== "group")
                     throw new Error("XMOT.interaction.widgets.TranslateGizmo: target's parent node must be a group.");
                 this._mirror = new XMOT.xml3doverlay.GroupMirror(
                     id, options.target, options.xml3dOverlay);
@@ -10803,7 +10803,7 @@ XMOT.TransformSensor = new XMOT.Class(
          */
         _isArrowMesh: function(el)
         {
-            if(el.tagName !== "mesh")
+            if(el.tagName.toLowerCase() !== "mesh")
                 return false;
 
             if(!el.src)

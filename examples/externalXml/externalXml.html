@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -12,7 +12,7 @@
 
     <!-- Camera Control: -->
 
-    <script type="text/javascript" src="../../script/xml3d-motion.js"/>
+    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function() {
             var controller = new XMOT.ExamineController(document.getElementById("camera1"),
@@ -20,6 +20,7 @@
             var xml3d = document.getElementById("canvas");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+                e.preventDefault();
             }, false);
             window.addEventListener("mouseup", function() {
                 controller.stop();
@@ -34,7 +35,7 @@
     <body>
         <div id="overall"><div id="content">
             <h1>External XML References</h1>
-            <xml3d id="canvas" xmlns="http://www.xml3d.org/2009/xml3d" class="xml3d"
+            <xml3d id="canvas" class="xml3d"
                 activeView="#cameraShape1" style="width: 800px;height:600px;background-color:black;">
                 <defs>
 

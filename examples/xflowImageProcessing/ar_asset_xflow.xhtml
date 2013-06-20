@@ -52,35 +52,35 @@
         <data id="TV1" compute="transform = xflow.selectTransform(index, transforms)">
             <data compute="visibility = xflow.selectBool(index, visibilities)">
                 <int name="index">0</int>
-                <data src="#ardata"/>
+                <data src="#ardata"></data>
             </data>
         </data>
 
         <data id="TV2" compute="transform = xflow.selectTransform(index, transforms)">
             <data compute="visibility = xflow.selectBool(index, visibilities)">
                 <int name="index">1</int>
-                <data src="#ardata"/>
+                <data src="#ardata"></data>
             </data>
         </data>
 
         <data id="TV3" compute="transform = xflow.selectTransform(index, transforms)">
             <data compute="visibility = xflow.selectBool(index, visibilities)">
                 <int name="index">2</int>
-                <data src="#ardata"/>
+                <data src="#ardata"></data>
             </data>
         </data>
 
         <data id="TV4" compute="transform = xflow.selectTransform(index, transforms)">
             <data compute="visibility = xflow.selectBool(index, visibilities)">
                 <int name="index">3</int>
-                <data src="#ardata"/>
+                <data src="#ardata"></data>
             </data>
         </data>
 
         <data id="TV5" compute="transform = xflow.selectTransform(index, transforms)">
             <data compute="visibility = xflow.selectBool(index, visibilities)">
                 <int name="index">4</int>
-                <data src="#ardata"/>
+                <data src="#ardata"></data>
             </data>
         </data>
 
@@ -107,8 +107,8 @@
         <defs>
             <transform id="Engineer_PosXfm" translation="0.0 0.0 0.0" rotation="1 0 0 1.57079633" scale="4 4 4"/>
             <!--<shader id="shader_engineer_red">-->
-                <!--<data src="asset/engineer.xml#shader_engineer_red"/>-->
-                <!--&lt;!&ndash;<data src="#TV1"/>&ndash;&gt;-->
+                <!--<data src="asset/engineer.xml#shader_engineer_red"></data>-->
+                <!--&lt;!&ndash;<data src="#TV1"></data>&ndash;&gt;-->
             <!--</shader>-->
             <shader script="urn:xml3d:shader:phongvs" id="shader_engineer_red">
               <float3 name="diffuseColor">1 1 1</float3>
@@ -119,7 +119,7 @@
               <texture name="diffuseTexture">
                 <img src="asset/engineer_red.jpg" />
               </texture>
-              <data src="#TV1"/>
+              <data src="#TV1"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_engineer_head">
               <float3 name="diffuseColor">1 1 1</float3>
@@ -130,7 +130,7 @@
               <texture name="diffuseTexture">
                 <img src="asset/engineer_head.jpg" />
               </texture>
-              <data src="#TV1"/>
+              <data src="#TV1"></data>
             </shader>
 
         </defs>
@@ -138,21 +138,21 @@
             <!-- Engineer -->
             <defs>
                 <data id="engineerSkinned" proto="protos.xml#skinning">
-                    <data src="asset/engineer.xml#meshbase" />
-                    <data src="asset/engineer.xml#anim_taunt01e" />
+                    <data src="asset/engineer.xml#meshbase" ></data>
+                    <data src="asset/engineer.xml#anim_taunt01e" ></data>
                     <float id="keyEngineer" name="key">0.0</float>
                 </data>
             </defs>
             <group shader="#shader_engineer_red">
                 <mesh type="triangle">
-                    <data src="#engineerSkinned" />
-                    <data src="asset/engineer.xml#index_engineer_red" />
+                    <data src="#engineerSkinned" ></data>
+                    <data src="asset/engineer.xml#index_engineer_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_engineer_head">
                 <mesh type="triangle">
-                    <data src="#engineerSkinned" />
-                    <data src="asset/engineer.xml#index_engineer_head" />
+                    <data src="#engineerSkinned" ></data>
+                    <data src="asset/engineer.xml#index_engineer_head" ></data>
                 </mesh>
             </group>
         </group>
@@ -172,7 +172,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/hvyweapon_red.jpg" />
                 </texture>
-                <data src="#TV2"/>
+                <data src="#TV2"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_heavy_head_red">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -183,7 +183,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/heavy_head.jpg" />
                 </texture>
-                <data src="#TV2"/>
+                <data src="#TV2"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_r">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -194,7 +194,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV2"/>
+                <data src="#TV2"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_l">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -205,38 +205,38 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV2"/>
+                <data src="#TV2"></data>
             </shader>
 
         </defs>
         <group transform="#Heavy_PosXfm">
             <data id="heavySkinned" proto="protos.xml#skinning" >
-                <data src="asset/heavy.xml#meshbase" />
-                <data src="asset/heavy.xml#anim_taunt05h" />
+                <data src="asset/heavy.xml#meshbase" ></data>
+                <data src="asset/heavy.xml#anim_taunt05h" ></data>
                 <float id="keyHeavy" name="key" >0.0</float>
             </data>
             <group shader="#shader_hvyweapon_red">
                 <mesh type="triangles"  >
-                    <data src="#heavySkinned" />
-                    <data src="asset/heavy.xml#index_hvyweapon_red" />
+                    <data src="#heavySkinned" ></data>
+                    <data src="asset/heavy.xml#index_hvyweapon_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_heavy_head_red">
                 <mesh type="triangles"  >
-                    <data src="#heavySkinned" />
-                    <data src="asset/heavy.xml#index_heavy_head_red" />
+                    <data src="#heavySkinned" ></data>
+                    <data src="asset/heavy.xml#index_heavy_head_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_r">
                 <mesh type="triangles"  >
-                    <data src="#heavySkinned" />
-                    <data src="asset/heavy.xml#index_eyeball_r" />
+                    <data src="#heavySkinned" ></data>
+                    <data src="asset/heavy.xml#index_eyeball_r" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_l">
                 <mesh type="triangles"  >
-                    <data src="#heavySkinned" />
-                    <data src="asset/heavy.xml#index_eyeball_l" />
+                    <data src="#heavySkinned" ></data>
+                    <data src="asset/heavy.xml#index_eyeball_l" ></data>
                 </mesh>
             </group>
         </group>
@@ -255,7 +255,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/sniper_head.jpg" />
                 </texture>
-                <data src="#TV3"/>
+                <data src="#TV3"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_l">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -266,7 +266,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV3"/>
+                <data src="#TV3"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_r">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -277,7 +277,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV3"/>
+                <data src="#TV3"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_sniper_red">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -288,7 +288,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/sniper_red.jpg" />
                 </texture>
-                <data src="#TV3"/>
+                <data src="#TV3"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_sniper_lens">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -299,7 +299,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/sniper_lens.jpg" />
                 </texture>
-                <data src="#TV3"/>
+                <data src="#TV3"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_c_arrow">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -310,50 +310,50 @@
                 <texture name="diffuseTexture">
                     <img src="asset/c_arrow.jpg" />
                 </texture>
-                <data src="#TV3"/>
+                <data src="#TV3"></data>
             </shader>
 
         </defs>
         <group transform="#Sniper_PosXfm">
             <data id="sniperSkinned" proto="protos.xml#skinning">
-                <data src="asset/sniper.xml#meshbase" />
-                <data src="asset/sniper.xml#anim_taunt02_heelClick" />
+                <data src="asset/sniper.xml#meshbase" ></data>
+                <data src="asset/sniper.xml#anim_taunt02_heelClick" ></data>
                 <float id="keySniper" name="key">0.0</float>
             </data>
             <group shader="#shader_sniper_head">
                 <mesh type="triangle">
-                    <data src="#sniperSkinned" />
-                    <data src="asset/sniper.xml#index_sniper_head" />
+                    <data src="#sniperSkinned" ></data>
+                    <data src="asset/sniper.xml#index_sniper_head" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_l">
                 <mesh type="triangle">
-                    <data src="#sniperSkinned" />
-                    <data src="asset/sniper.xml#index_eyeball_l" />
+                    <data src="#sniperSkinned" ></data>
+                    <data src="asset/sniper.xml#index_eyeball_l" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_r">
                 <mesh type="triangle">
-                    <data src="#sniperSkinned" />
-                    <data src="asset/sniper.xml#index_eyeball_r" />
+                    <data src="#sniperSkinned" ></data>
+                    <data src="asset/sniper.xml#index_eyeball_r" ></data>
                 </mesh>
             </group>
             <group shader="#shader_sniper_red">
                 <mesh type="triangle">
-                    <data src="#sniperSkinned" />
-                    <data src="asset/sniper.xml#index_sniper_red" />
+                    <data src="#sniperSkinned" ></data>
+                    <data src="asset/sniper.xml#index_sniper_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_sniper_lens">
                 <mesh type="triangle">
-                    <data src="#sniperSkinned" />
-                    <data src="asset/sniper.xml#index_sniper_lens" />
+                    <data src="#sniperSkinned" ></data>
+                    <data src="asset/sniper.xml#index_sniper_lens" ></data>
                 </mesh>
             </group>
             <group shader="#shader_c_arrow">
                 <mesh type="triangle">
-                    <data src="#sniperSkinned" />
-                    <data src="asset/sniper.xml#index_c_arrow" />
+                    <data src="#sniperSkinned" ></data>
+                    <data src="asset/sniper.xml#index_c_arrow" ></data>
                 </mesh>
             </group>
         </group>
@@ -372,7 +372,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/medic_red.jpg" />
                 </texture>
-                <data src="#TV4"/>
+                <data src="#TV4"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_medic_backpack_red">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -383,7 +383,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/medic_backpack_red.jpg" />
                 </texture>
-                <data src="#TV4"/>
+                <data src="#TV4"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_medic_head">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -394,7 +394,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/medic_head.jpg" />
                 </texture>
-                <data src="#TV4"/>
+                <data src="#TV4"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_r">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -405,7 +405,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV4"/>
+                <data src="#TV4"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_l">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -416,44 +416,44 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV4"/>
+                <data src="#TV4"></data>
             </shader>
 
         </defs>
         <group transform="#Medic_PosXfm">
             <data id="medicSkinned" proto="protos.xml#skinning">
-                <data src="asset/medic.xml#meshbase" />
-                <data src="asset/medic.xml#anim_taunt02m" />
+                <data src="asset/medic.xml#meshbase" ></data>
+                <data src="asset/medic.xml#anim_taunt02m" ></data>
                 <float id="keyMedic" name="key">0.0</float>
             </data>
             <group shader="#shader_medic_red">
                 <mesh type="triangle">
-                    <data src="#medicSkinned" />
-                    <data src="asset/medic.xml#index_medic_red" />
+                    <data src="#medicSkinned" ></data>
+                    <data src="asset/medic.xml#index_medic_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_medic_backpack_red">
                 <mesh type="triangle">
-                    <data src="#medicSkinned" />
-                    <data src="asset/medic.xml#index_medic_backpack_red" />
+                    <data src="#medicSkinned" ></data>
+                    <data src="asset/medic.xml#index_medic_backpack_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_medic_head">
                 <mesh type="triangle">
-                    <data src="#medicSkinned" />
-                    <data src="asset/medic.xml#index_medic_head" />
+                    <data src="#medicSkinned" ></data>
+                    <data src="asset/medic.xml#index_medic_head" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_r">
                 <mesh type="triangle">
-                    <data src="#medicSkinned" />
-                    <data src="asset/medic.xml#index_eyeball_r" />
+                    <data src="#medicSkinned" ></data>
+                    <data src="asset/medic.xml#index_eyeball_r" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_l">
                 <mesh type="triangle">
-                    <data src="#medicSkinned" />
-                    <data src="asset/medic.xml#index_eyeball_l" />
+                    <data src="#medicSkinned" ></data>
+                    <data src="asset/medic.xml#index_eyeball_l" ></data>
                 </mesh>
             </group>
         </group>
@@ -472,7 +472,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/scout_red.jpg" />
                 </texture>
-                <data src="#TV5"/>
+                <data src="#TV5"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_scout_head">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -483,7 +483,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/scout_head.jpg" />
                 </texture>
-                <data src="#TV5"/>
+                <data src="#TV5"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_r">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -494,7 +494,7 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV5"/>
+                <data src="#TV5"></data>
             </shader>
             <shader script="urn:xml3d:shader:phongvs" id="shader_eyeball_l">
                 <float3 name="diffuseColor">1 1 1</float3>
@@ -505,38 +505,38 @@
                 <texture name="diffuseTexture">
                     <img src="asset/eye-iris-blue.jpg" />
                 </texture>
-                <data src="#TV5"/>
+                <data src="#TV5"></data>
             </shader>
 
         </defs>
         <group transform="#Scout_PosXfm">
             <data id="scoutSkinned" proto="protos.xml#skinning">
-                <data src="asset/scout.xml#meshbase" />
-                <data src="asset/scout.xml#anim_taunt05_DeathTaunt" />
+                <data src="asset/scout.xml#meshbase" ></data>
+                <data src="asset/scout.xml#anim_taunt05_DeathTaunt" ></data>
                 <float id="keyScout" name="key">0.0</float>
             </data>
             <group shader="#shader_scout_red">
                 <mesh type="triangle">
-                    <data src="#scoutSkinned" />
-                    <data src="asset/scout.xml#index_scout_red" />
+                    <data src="#scoutSkinned" ></data>
+                    <data src="asset/scout.xml#index_scout_red" ></data>
                 </mesh>
             </group>
             <group shader="#shader_scout_head">
                 <mesh type="triangle">
-                    <data src="#scoutSkinned" />
-                    <data src="asset/scout.xml#index_scout_head" />
+                    <data src="#scoutSkinned" ></data>
+                    <data src="asset/scout.xml#index_scout_head" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_r">
                 <mesh type="triangle">
-                    <data src="#scoutSkinned" />
-                    <data src="asset/scout.xml#index_eyeball_r" />
+                    <data src="#scoutSkinned" ></data>
+                    <data src="asset/scout.xml#index_eyeball_r" ></data>
                 </mesh>
             </group>
             <group shader="#shader_eyeball_l">
                 <mesh type="triangle">
-                    <data src="#scoutSkinned" />
-                    <data src="asset/scout.xml#index_eyeball_l" />
+                    <data src="#scoutSkinned" ></data>
+                    <data src="asset/scout.xml#index_eyeball_l" ></data>
                 </mesh>
             </group>
         </group>

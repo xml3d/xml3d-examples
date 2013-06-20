@@ -49,7 +49,7 @@
                 <data compute="output = xflip.createSpectrumImage(inter)">
                     <data id="lpfResult" compute="inter = xflip.applyGaussianLPF(inter, sigma)">
                         <float id="sigma201" name="sigma">10</float>
-                        <data src="#dftResult" />
+                        <data src="#dftResult" ></data>
                     </data>
                 </data>
             </xflowimg>
@@ -64,7 +64,7 @@
             <h2>+ DFTInv</h2>
             <xflowimg srcname="output" class="output">
                 <data compute="output = xflip.applyDFTInv(inter)">
-                    <data src="#lpfResult" />
+                    <data src="#lpfResult" ></data>
                 </data>
             </xflowimg>
         </div>
@@ -111,7 +111,7 @@
                 <data compute="output = xflip.createSpectrumImage(inter)">
                     <data id="hpfResult" compute="inter = xflip.applyGaussianHPF(inter, sigma)">
                         <float id="sigma211" name="sigma">10</float>
-                        <data src="#fftResult" />
+                        <data src="#fftResult" ></data>
                     </data>
                 </data>
             </xflowimg>
@@ -127,7 +127,7 @@
                 <data compute="output = xflip.crop(inter, origin, oSize)">
                     <int name="origin">0 0</int>
                     <data compute="inter = xflip.applyFFTInv(inter)">
-                        <data src="#hpfResult" />
+                        <data src="#hpfResult" ></data>
                     </data>
                 </data>
             </xflowimg>

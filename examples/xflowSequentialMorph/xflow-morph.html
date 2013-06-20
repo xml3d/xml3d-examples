@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
   <!-- Style -->
   <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -15,16 +15,16 @@
 <body>
 <div id="overall">
   <div id="content">
-    <h1>CSS Transforms</h1>
+    <h1>Xflow Sequential Morphing</h1>
+    <input type="checkbox" id="check"/><label for="check">Animate</label>
 
     <xml3d id="MyXml3d" class="xml3d"
            width="600px" height="400px"
-           xmlns="http://www.xml3d.org/2009/xml3d"
         >
-      <view position="0 0 20"/>
+      <view position="0 0 40"/>
       <defs>
 
-      <!-- Shaders -->
+        <!-- Shaders -->
 
         <shader id="GroundShader" script="urn:xml3d:shader:phong">
           <float name="transparency" >0.5</float>
@@ -44,42 +44,29 @@
           <float3 name="attenuation">1 1 0</float3>
         </lightshader>
 
+        <!-- Xflow Computations -->
+
+        <data id="morphedMesh" compute="normal = xflow.normalize(normal)">
+          <data compute="normal = xflow.lerpSeq(normal, key)">
+            <data compute="position = xflow.lerpSeq(position, key)">
+              <data src="mesh.xml#base"></data>
+              <data src="mesh.xml#animation"></data>
+              <float name="key" id="morphKey">0</float>
+            </data>
+          </data>
+        </data>
+
       </defs>
 
       <!-- Scene Graph -->
 
+      <group shader="#ObjectShader" style="transform: translate3d(0px, -5px, 0px)" >
+        <mesh type="triangles" src="#morphedMesh"/>
+      </group>
+
       <group shader="#GroundShader"
-             style="transform: translate3d(0px, -2px, 0px) scale3d(10px, 10px, 10px) rotate3d(1, 0, 0, -90deg)" >
-        <mesh src="basic.xml#mesh_ground" />
-      </group>
-
-
-      <group shader="#ObjectShader"  >
-        <mesh type="triangles" src="basic.xml#mesh_cube"/>
-      </group>
-
-      <group shader="#ObjectShader" style="transform: translateX(5px)" >
-        <mesh type="triangles" src="basic.xml#mesh_cube" />
-      </group>
-
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)" >
-        <mesh type="triangles" src="basic.xml#mesh_cube" />
-      </group>
-
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) " >
-        <mesh type="triangles" src="basic.xml#mesh_cube" />
-      </group>
-
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px)  rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)" >
-          <mesh type="triangles" src="basic.xml#mesh_cube" />
-      </group>
-
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)
-              rotate3d(0,0,1,-45deg) translate3d(0, -5px, 0px) scale3d(1,1,0.5)" >
-        <mesh type="triangles" src="basic.xml#mesh_cube" />
+             style="transform: translate3d(0px, -10px, 0px) scale3d(20px, 20px, 20px) rotate3d(1, 0, 0, -90deg)" >
+        <mesh src="mesh.xml#ground"/>
       </group>
 
       <group style="transform: translate3d(0px, 40px, 40px)" >
@@ -88,9 +75,37 @@
 
     </xml3d>
 
+
+    <!-- Java Script to animate scene -->
+    <script type="text/javascript">
+      var shouldAnimate = false;
+
+      $(function () {
+        $("#check").button();
+        $("#check").click(function (e) {
+          shouldAnimate = e.target.checked;
+          animate();
+        });
+      });
+      var anim_i = 0;
+
+      function animate() {
+        var target = document.getElementById("morphKey");
+        ++anim_i;
+        var numFrames = 10;
+        var time = anim_i / 40;
+        target.childNodes[0].nodeValue = time;
+        if (time >= numFrames)
+          anim_i = 0;
+
+        if (shouldAnimate)
+          window.requestAnimFrame(animate);
+      }
+    </script>
+
     <div class="description">
-      An example on how to use css transformations.<br />
-      Note that css transformations are currently only supported via the element's <i>style</i> attribute.
+      Sequential morphing of different shapes with Xflow.<br/>
+      You will find all shape data stores in sequences inside the external <i>mesh.xml</i> file.
     </div>
   </div>
 </div>

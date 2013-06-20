@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -16,6 +16,7 @@
             var xml3d = document.getElementById("MyXml3d");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+                e.preventDefault();
             }, false);
             window.addEventListener("mouseup", function() {
                 controller.stop();
@@ -40,8 +41,7 @@
         <h1>Laurana - External Reference in MeshLab's JSON format</h1>
 
         <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d"
-               style="width: 600px; height: 400px;"
-               xmlns="http://www.xml3d.org/2009/xml3d">
+               style="width: 600px; height: 400px;" >
             <defs id="mainDef">
                 <transform id="t_Lamp" translation="0 -200 -700"/>
                 <lightshader id="ls_Spot" script="urn:xml3d:lightshader:point">

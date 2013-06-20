@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (31.10.2013 15:47:18 MEZ)
+@version: DEVELOPMENT SNAPSHOT (31.10.2013 14:50:17 CET)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (31.10.2013 15:47:18 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (31.10.2013 14:50:17 CET)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -7547,8 +7547,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
             this._axis._data[2] = q[2] * s;
             this._angle = 2 * Math.acos(q[3]);
         }
-        if (q !== this._data)
-            XML3D.math.quat.copy(this._data, q);
+        this._data = XML3D.math.quat.copy(XML3D.math.quat.create(), q);
         if (this._callback)
             this._callback(this);
     };
@@ -7561,9 +7560,9 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
      * @return {XML3DVec3} The result
      */
     p.multiply = function(rot1) {
-        var result = new XML3DRotation();
-        XML3D.math.quat.multiply(result._data, this._data, rot1._data);
-        result._setQuaternion(result._data);
+        var result = new XML3DRotation(), q = XML3D.math.quat.create();
+        XML3D.math.quat.multiply(q, this._data, rot1._data);
+        result._setQuaternion(q);
         return result;
     };
 
@@ -7593,8 +7592,9 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
      * @param {XML3DVec3} zAxis
      */
     p.setFromBasis = function(xAxis, yAxis, zAxis) {
-        XML3D.math.quat.setFromBasis(xAxis._data, yAxis._data, zAxis._data, this._data);
-        this._setQuaternion(this._data);
+        var q = XML3D.math.quat.create();
+        XML3D.math.quat.setFromBasis(xAxis._data, yAxis._data, zAxis._data, q);
+        this._setQuaternion(q);
     };
 
     XML3D.XML3DRotation = XML3DRotation;
@@ -10445,7 +10445,9 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
 // methods.js
 XML3D.methods = XML3D.methods || {};
 
-(function(methods) {
+new (function() {
+
+    var methods = {};
 
     methods.xml3dCreateXML3DVec3 = function() {
         return new window.XML3DVec3();
@@ -10510,50 +10512,41 @@ XML3D.methods = XML3D.methods || {};
         }
     };
 
-    XML3D.math.quat.setFromBasis = (function() {
-
-        var c_matrix = XML3D.math.mat3.create();
-
-        return function(X,Y,Z,dest) {
+    XML3D.math.quat.setFromBasis = function(X,Y,Z,dest) {
         var lx = 1.0 / XML3D.math.vec3.length(X);
         var ly = 1.0 / XML3D.math.vec3.length(Y);
         var lz = 1.0 / XML3D.math.vec3.length(Z);
+        var m = XML3D.math.mat3.create();
+        m[0] = X[0] * lx;
+        m[1] = Y[0] * ly;
+        m[2] = Z[0] * lz;
+        m[3] = X[1] * lx;
+        m[4] = Y[1] * ly;
+        m[5] = Z[1] * lz;
+        m[6] = X[2] * lx;
+        m[7] = Y[2] * ly;
+        m[8] = Z[2] * lz;
+        XML3D.math.quat.setFromMat3(m,dest);
+    };
 
-        c_matrix[0] = X[0] * lx;
-        c_matrix[1] = Y[0] * ly;
-        c_matrix[2] = Z[0] * lz;
-        c_matrix[3] = X[1] * lx;
-        c_matrix[4] = Y[1] * ly;
-        c_matrix[5] = Z[1] * lz;
-        c_matrix[6] = X[2] * lx;
-        c_matrix[7] = Y[2] * ly;
-        c_matrix[8] = Z[2] * lz;
-        XML3D.math.quat.setFromMat3(c_matrix,dest);
-    }}());
+    methods.viewSetDirection = function(direction) {
+        direction = direction || new window.XML3DVec3(0,0,-1);
+        direction = direction.normalize();
 
-    methods.viewSetDirection = (function() {
-        var q = XML3D.math.quat.create();
-        var MINUS_Z = new window.XML3DVec3(0,0,-1);
-        var UP = new window.XML3DVec3(0,1,0);
-        var RIGHT = new window.XML3DVec3(1,0,0);
+        var up = this.orientation.rotateVec3(new window.XML3DVec3(0,1,0));
+        up = up.normalize();
 
-        return function(direction) {
-            direction = direction ? direction.normalize() : MINUS_Z;
-
-            var up = this.orientation.rotateVec3(UP);
-            up = up.normalize();
-
-            XML3D.math.vec3.cross(tmpX,direction._data,up._data);
-            if(!XML3D.math.vec3.length(tmpX)) {
-                tmpX = this.orientation.rotateVec3(RIGHT)._data;
-            }
-            XML3D.math.vec3.cross(tmpY,tmpX,direction._data);
-            XML3D.math.vec3.negate(tmpZ,direction._data);
-
-            XML3D.math.quat.setFromBasis(tmpX, tmpY, tmpZ, q);
-            this.orientation._setQuaternion(q);
+        XML3D.math.vec3.cross(tmpX,direction._data,up._data);
+        if(!XML3D.math.vec3.length(tmpX)) {
+                tmpX = this.orientation.rotateVec3(new window.XML3DVec3(1,0,0))._data;
         }
-    }());
+        XML3D.math.vec3.cross(tmpY,tmpX,direction._data);
+        XML3D.math.vec3.negate(tmpZ,direction._data);
+
+        var q = XML3D.math.quat.create();
+        XML3D.math.quat.setFromBasis(tmpX, tmpY, tmpZ, q);
+        this.orientation._setQuaternion(q);
+    };
 
     methods.viewSetUpVector = function(up) {
         up = up || new window.XML3DVec3(0,1,0);
@@ -10784,7 +10777,9 @@ XML3D.methods = XML3D.methods || {};
 
     };
 
-}(XML3D.methods));
+    // Export to xml3d namespace
+    XML3D.extend(XML3D.methods, methods);
+});
 /* START GENERATED: All following code is generated from the specification. Do not edit manually */
 // MeshTypes
 XML3D.MeshTypes = {};
@@ -10887,6 +10882,15 @@ XML3D.classInfo['xml3d'] = {
     activeView: {a: XML3D.ReferenceHandler},
     _term: undefined
 };
+
+XML3D.classInfo['compute'] = {
+    id: {a: XML3D.IDHandler},
+    className: {a: XML3D.StringAttributeHandler, id: 'class'},
+    // TODO: Handle style for script
+    value: {a: XML3D.StringValueHandler},
+    _term: undefined
+};
+
 /**
  * Properties and methods for <data>
  **/
@@ -10904,6 +10908,20 @@ XML3D.classInfo['data'] = {
     getResult: {m: XML3D.methods.XML3DNestedDataContainerTypeGetResult},
     src: {a: XML3D.ReferenceHandler},
     proto: {a: XML3D.ReferenceHandler},
+    _term: undefined
+};
+
+XML3D.classInfo['dataflow'] = {
+    id: {a: XML3D.IDHandler},
+    className: {a: XML3D.StringAttributeHandler, id: 'class'},
+    // TODO: Handle style for data
+    out: {a: XML3D.StringAttributeHandler},
+    getOutputNames: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputNames},
+    getOutputChannelInfo: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputChannelInfo},
+    getComputeInfo: {m: XML3D.methods.XML3DNestedDataContainerTypeGetComputeInfo},
+    getProtoInfo: {m: XML3D.methods.XML3DNestedDataContainerTypeGetProtoInfo},
+    isOutputConnected: {m: XML3D.methods.XML3DNestedDataContainerTypeIsOutputConnected},
+    getResult: {m: XML3D.methods.XML3DNestedDataContainerTypeGetResult},
     _term: undefined
 };
 /**
@@ -12321,6 +12339,14 @@ Object.defineProperty(InputNode.prototype, "data", {
     get: function(){ return this._data; }
 });
 
+InputNode.prototype._getParamNames = function(){
+    return this._paramGlobal ? null : this._paramName;
+}
+InputNode.prototype._getGlobalParamNames = function(){
+    return this._paramGlobal ? this._paramName : null;
+}
+
+
 /**
  * Helper class to create a InputNode with a newly created BufferDataEntry.
  * @param {string} type Type of the DataEntry A string key from Xflow.DATA_TYPE_MAP
@@ -12372,17 +12398,22 @@ Xflow.DataNode = function(graph, protoNode){
     this._isProtoNode = protoNode;
     this._children = [];
     this._sourceNode = null;
-    this._protoNode = null;
     this._userData = null;
 
     this._filterType = 0;
-    this._filterMapping = new Xflow.OrderMapping(this);
+    this._filterMapping = null;
 
     this._computeOperator = "";
-    this._computeInputMapping = new Xflow.OrderMapping(this);
-    this._computeOutputMapping = new Xflow.OrderMapping(this);
+    this._computeUsesDataflow = false;
+    this._computeInputMapping = null;
+    this._computeOutputMapping = null;
+    this._dataflowNode = null;
 
     this._channelNode = new Xflow.ChannelNode(this);
+    this._substitutionNodes = {};
+    this._paramNames = null;
+    this._globalParamNames = null;
+
     this._listeners = [];
 
 };
@@ -12395,8 +12426,8 @@ var DataNode = Xflow.DataNode;
  * @abstract
  * @param {Xflow.DataNode} owner
  */
-Xflow.Mapping = function(owner){
-    this._owner = owner;
+Xflow.Mapping = function(){
+    this._owners = [];
 };
 
 
@@ -12409,8 +12440,8 @@ Xflow.Mapping = function(owner){
  * @extends {Xflow.Mapping}
  * @param {Xflow.DataNode} owner
  */
-Xflow.OrderMapping = function(owner){
-    Xflow.Mapping.call(this, owner);
+Xflow.OrderMapping = function(){
+    Xflow.Mapping.call(this);
     this._names = [];
 };
 Xflow.createClass(Xflow.OrderMapping, Xflow.Mapping);
@@ -12424,8 +12455,8 @@ Xflow.createClass(Xflow.OrderMapping, Xflow.Mapping);
  * @extends {Xflow.Mapping}
  * @param {Xflow.DataNode} owner
  */
-Xflow.NameMapping = function(owner){
-    Xflow.Mapping.call(this, owner);
+Xflow.NameMapping = function(){
+    Xflow.Mapping.call(this);
     this._destNames = [];
     this._srcNames = [];
 
@@ -12446,19 +12477,35 @@ Object.defineProperty(DataNode.prototype, "sourceNode", {
     /** @return {?Xflow.DataNode} */
     get: function(){ return this._sourceNode; }
 });
+// TODO: Remove this property once the XML3D part is adapted
 Object.defineProperty(DataNode.prototype, "protoNode", {
     /** @param {?Xflow.DataNode} v */
     set: function(v){
-        if(this._protoNode) removeParent(this, this._protoNode);
-        this._protoNode = v;
-        if(this._protoNode) addParent(this, this._protoNode);
+        this._computeUsesDataflow = !!v;
+        this._computeInputMapping = null;
+        this._computeOutputMapping = null;
+        this.dataflowNode = v;
+    },
+    /** @return {?Xflow.DataNode} */
+    get: function(){ return this._dataflowNode; }
+});
+Object.defineProperty(DataNode.prototype, "dataflowNode", {
+    /** @param {?Xflow.DataNode} v */
+    set: function(v){
+        if(v && !this._computeUsesDataflow)
+            throw new Error("Cannot set dataflowNode when compute doesn't use dataflow.");
+        if(this._dataflowNode) removeParent(this, this._dataflowNode);
+        this._dataflowNode = v;
+        if(this._dataflowNode) addParent(this, this._dataflowNode);
         if(!updateNodeLoading(this))
             this.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
         Xflow._callListedCallback();
     },
     /** @return {?Xflow.DataNode} */
-    get: function(){ return this._protoNode; }
+    get: function(){ return this._dataflowNode; }
 });
+
+
 Object.defineProperty(DataNode.prototype, "userData", {
     /** @param {?Xflow.DataNode} v */
     set: function(v){
@@ -12499,7 +12546,10 @@ Object.defineProperty(DataNode.prototype, "filterType", {
 
 Object.defineProperty(DataNode.prototype, "filterMapping", {
     /** @param {Xflow.Mapping} v */
-    set: function(v){ throw new Error("filterMapping is readonly!");
+    set: function(v){
+        swapMapping(this, "_filterMapping", v);
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {Xflow.Mapping} */
     get: function(){ return this._filterMapping; }
@@ -12509,22 +12559,42 @@ Object.defineProperty(DataNode.prototype, "computeOperator", {
     /** @param {string} v */
     set: function(v){
         this._computeOperator = v;
+        this._computeUsesDataflow = false;
         this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
         Xflow._callListedCallback();
     },
     /** @return {string} */
-    get: function(){ return this._computeOperator; }
+    get: function(){ return this._computeUsesDataflow ? null : this._computeOperator; }
 });
+
+Object.defineProperty(DataNode.prototype, "computeDataflowUrl", {
+    /** @param {string} v */
+    set: function(v){
+        this._computeOperator = v;
+        this._computeUsesDataflow = true;
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
+    },
+    /** @return {string} */
+    get: function(){ return this._computeUsesDataflow ? this._computeOperator : null; }
+});
+
 Object.defineProperty(DataNode.prototype, "computeInputMapping", {
     /** @param {Xflow.Mapping} v */
-    set: function(v){ throw new Error("computeInputMapping is readonly!");
+    set: function(v){
+        swapMapping(this, "_computeInputMapping", v);
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {Xflow.Mapping} */
     get: function(){ return this._computeInputMapping; }
 });
 Object.defineProperty(DataNode.prototype, "computeOutputMapping", {
     /** @param {Xflow.Mapping} v */
-    set: function(v){ throw new Error("computeOutputMapping is readonly!");
+    set: function(v){
+        swapMapping(this, "_computeOutputMapping", v);
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {Xflow.Mapping} */
     get: function(){ return this._computeOutputMapping; }
@@ -12590,8 +12660,8 @@ DataNode.prototype.detachFromParents = function(){
         var parent = this._parents[i];
         if(parent._sourceNode == this)
             parent.sourceNode = null;
-        else if(parent._protoNode == this){
-            parent.protoNode = null;
+        else if(parent._dataflowNode == this){
+            parent.dataflowNode = null;
         }
         else{
             parent.removeChild(this);
@@ -12631,17 +12701,18 @@ DataNode.prototype.setFilter = function(filterString){
         }
     }
     if(!newMapping){
-        newMapping = new Xflow.OrderMapping(this);
+        // TODO Remove this? (Mapping can be null from now on)
+        newMapping = new Xflow.OrderMapping();
     }
-    removeMappingOwner(this._filterMapping);
-    this._filterMapping = newMapping;
+    swapMapping(this, "_filterMapping", newMapping);
     this._filterType = newType;
     this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
     Xflow._callListedCallback();
 };
 
-var computeParser = /^(([^=]+)\=)?([^(]+)\(([^()]*)\)$/;
+var computeParser = /^(([^=]+)\=)?([^'(]+('[^']+')?[^'(]+)(\(([^()]*)?\))?$/;
 var bracketsParser = /^\(([^()]*)\)$/;
+var dataflowParser = /^dataflow\['([^']+)'\]$/;
 
 /**
  * Set compute by string
@@ -12655,22 +12726,29 @@ DataNode.prototype.setCompute = function(computeString){
     if(result){
         var output = result[2] ? result[2].trim() : "";
         newOperator = result[3].trim();
-        var input = result[4] ? result[4].trim() : "";
+        var input = result[6] ? result[6].trim() : "";
         if(result = output.match(bracketsParser)){
             output = result[1];
         }
-        inputMapping = Xflow.Mapping.parse(input, this);
-        outputMapping = Xflow.Mapping.parse(output, this);
+        if(input)
+            inputMapping = Xflow.Mapping.parse(input, this);
+        if(output)
+            outputMapping = Xflow.Mapping.parse(output, this);
+
+        if(result = newOperator.match(dataflowParser)){
+            this._computeUsesDataflow = true;
+            newOperator = result[1];
+        }
+        else{
+            this._computeUsesDataflow = false;
+        }
+        this._dataflowNode = null;
     }
     else if(computeString){
         Xflow.notifyError("Error parsing Compute value '" + computeString + "'", this);
     }
-    if(!inputMapping) inputMapping = new Xflow.OrderMapping(this);
-    if(!outputMapping) outputMapping = new Xflow.OrderMapping(this);
-    removeMappingOwner(this._computeInputMapping);
-    removeMappingOwner(this._computeOutputMapping);
-    this._computeInputMapping = inputMapping;
-    this._computeOutputMapping = outputMapping;
+    swapMapping(this, "_computeInputMapping", inputMapping);
+    swapMapping(this, "_computeOutputMapping", outputMapping);
     this._computeOperator = newOperator;
     this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
     Xflow._callListedCallback();
@@ -12685,7 +12763,10 @@ DataNode.prototype.notify = function(changeType, senderNode){
        changeType == Xflow.RESULT_STATE.LOAD_START ||
        changeType == Xflow.RESULT_STATE.LOAD_END )
     {
+        this._paramNames = null;
+        this._globalParamNames = null;
         this._channelNode.setStructureOutOfSync();
+        clearSubstitutionNodes(this);
 
         if(changeType == Xflow.RESULT_STATE.CHANGED_STRUCTURE)
             notifyParentsOnChanged(this, changeType);
@@ -12723,24 +12804,91 @@ DataNode.prototype.getOutputChannelInfo = function(name){
     return getForwardNode(this)._channelNode.getOutputChannelInfo(name);
 }
 DataNode.prototype.getParamNames = function(){
-    return getForwardNode(this)._channelNode.getParamNames();
+    return this._getParamNames();
 }
 
 DataNode.prototype._getResult = function(type, filter){
-    return getForwardNode(this)._channelNode.getResult(type, filter);
+    return getForwardNode(this, filter)._channelNode.getResult(type, filter);
 }
 
-DataNode.prototype._getForwardNode = function(){
-    return getForwardNode(this);
+DataNode.prototype._getForwardNode = function(filter){
+    return getForwardNode(this, filter);
 }
 
-function getForwardNode(dataNode){
-    if(!dataNode._filterMapping.isEmpty()  || dataNode._computeOperator || dataNode._protoNode)
-        return dataNode;
-    if(dataNode._sourceNode && dataNode._children.length == 0)
-        return getForwardNode(dataNode._sourceNode);
-    if(dataNode._children.length == 1 && dataNode._children[0] instanceof DataNode)
-        return getForwardNode(dataNode._children[0]);
+DataNode.prototype._getParamNames = function(){
+    if(!this._paramNames){
+        this._paramNames = [];
+        if(this._sourceNode)
+            Xflow.nameset.add(this._paramNames, this._sourceNode._getParamNames());
+        else{
+            for(var i = 0; i < this._children.length; ++i){
+                Xflow.nameset.add(this._paramNames, this._children[i]._getParamNames());
+            }
+        }
+    }
+    return this._paramNames;
+};
+DataNode.prototype._getGlobalParamNames = function(){
+    if(!this._globalParamNames){
+        this._globalParamNames = [];
+        if(this._dataflowNode)
+            Xflow.nameset.add(this._globalParamNames, this._dataflowNode._getGlobalParamNames());
+
+        if(this._sourceNode)
+            Xflow.nameset.add(this._globalParamNames, this._sourceNode._getGlobalParamNames());
+        else{
+            for(var i = 0; i < this._children.length; ++i){
+                Xflow.nameset.add(this._globalParamNames, this._children[i]._getGlobalParamNames());
+            }
+        }
+    }
+    return this._globalParamNames;
+};
+
+DataNode.prototype._getChannelNode = function(substitution){
+    if(!substitution)
+        return this._channelNode
+    else{
+        var key = substitution.getKey(this);
+        if(!this._substitutionNodes[key])
+            this._substitutionNodes[key] = new Xflow.ChannelNode(this, substitution);
+        else
+            this._substitutionNodes[key].increaseRef();
+        return this._substitutionNodes[key];
+    }
+}
+
+DataNode.prototype._removeSubstitutionNode = function(substitutionNode){
+    var key = substitutionNode.substitution.getKey(this);
+    if(this._substitutionNodes[key] && this._substitutionNodes[key].decreaseRef())
+        delete this._substitutionNodes[key];
+}
+
+function clearSubstitutionNodes(dataNode){
+    for(var name in dataNode._substitutionNodes){
+        dataNode._substitutionNodes[name].clear();
+    }
+    dataNode._substitutionNodes = {};
+}
+
+
+function getForwardNode(dataNode, filter){
+    var filteredBadly = (dataNode._filterMapping && !dataNode._filterMapping.isEmpty());
+    if(!filteredBadly){
+        if(!dataNode._computeOperator ){
+            if(dataNode._sourceNode && dataNode._children.length == 0)
+                return getForwardNode(dataNode._sourceNode);
+            if(dataNode._children.length == 1 && dataNode._children[0] instanceof DataNode)
+                return getForwardNode(dataNode._children[0]);
+        }
+        var idx = dataNode._channelNode.getChildDataIndex(filter);
+        if(idx != -1 && idx != undefined){
+            if(dataNode._sourceNode)
+                return getForwardNode(dataNode._sourceNode);
+            else
+                return getForwardNode(dataNode._children[idx]);
+        }
+    }
     return dataNode;
 }
 
@@ -12757,7 +12905,7 @@ function updateImageLoading(node){
                 child._data && child._data.isLoading && child._data.isLoading();
     }
     if(!imageLoading && node._sourceNode) imageLoading = node._sourceNode._imageLoading;
-    if(!imageLoading && node._protoNode) imageLoading = node._protoNode._imageLoading;
+    if(!imageLoading && node._dataflowNode) imageLoading = node._dataflowNode._imageLoading;
 
     imageLoading = imageLoading || false;
     if(imageLoading != node._imageLoading){
@@ -12774,7 +12922,7 @@ function updateSubtreeLoading(node){
         subtreeLoading = child instanceof Xflow.DataNode ? child._subTreeLoading : false;
     }
     if(!subtreeLoading && node._sourceNode) subtreeLoading = node._sourceNode._subTreeLoading;
-    if(!subtreeLoading && node._protoNode) subtreeLoading = node._protoNode._subTreeLoading;
+    if(!subtreeLoading && node._dataflowNode) subtreeLoading = node._dataflowNode._subTreeLoading;
 
     if(subtreeLoading != node._subTreeLoading){
         node._subTreeLoading = subtreeLoading;
@@ -12822,15 +12970,11 @@ function notifyParentsOnChanged(node, changeType){
     }
 };
 
-/**
- * Remove owner from mapping, small helper function
- * @param {Xflow.Mapping} mapping
- * @private
- */
-function removeMappingOwner(mapping){
-    if(mapping)
-        mapping._owner = null;
-};
+function swapMapping(dataNode, key, mapping){
+    dataNode[key] && dataNode[key]._removeOwner(dataNode);
+    dataNode[key] = mapping;
+    dataNode[key] && dataNode[key]._addOwner(dataNode);
+}
 
 
 })();
@@ -12860,6 +13004,17 @@ Mapping.parse = function(string, dataNode){
     return null;
 }
 
+Xflow.Mapping.prototype._addOwner = function(owner){
+    var idx = this._owners.indexOf(owner);
+    if(idx == -1)
+        this._owners.push(owner);
+}
+
+Xflow.Mapping.prototype._removeOwner = function(owner){
+    var idx = this._owners.indexOf(owner);
+    if(idx != -1)
+        this._owners.splice(idx, -1);
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.OrderMapping
@@ -12914,14 +13069,23 @@ OrderMapping.prototype.isEmpty = function(){
 
 var orderMappingParser = /^([^:,{}]+)(,[^:{},]+)*$/;
 
-OrderMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, destSubstitution, srcSubstitution, filterType, callback){
-    for(var i in sourceMap.map){
-        var idx = this._names.indexOf(i);
-        if(filterType == Xflow.DATA_FILTER_TYPE.RENAME ||
-            ( filterType == Xflow.DATA_FILTER_TYPE.KEEP && idx != -1) ||
-            (filterType == Xflow.DATA_FILTER_TYPE.REMOVE && idx == -1))
-            callback(destMap, i, sourceMap, i, destSubstitution, srcSubstitution);
+OrderMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, filterType, callback){
+    if(filterType == Xflow.DATA_FILTER_TYPE.KEEP){
+        for(var i = 0; i < this._names.length; ++i){
+            var name = this._names[i];
+            if(sourceMap.map[name])
+                callback(destMap, name, sourceMap, name);
+        }
     }
+    else{
+        for(var i in sourceMap.map){
+            var idx = this._names.indexOf(i);
+            if(filterType == Xflow.DATA_FILTER_TYPE.RENAME ||
+                (filterType == Xflow.DATA_FILTER_TYPE.REMOVE && idx == -1))
+                callback(destMap, i, sourceMap, i);
+        }
+    }
+
 };
 OrderMapping.prototype.getScriptInputName = function(index, destName){
     if(this._names[index])
@@ -13059,21 +13223,21 @@ NameMapping.prototype.filterNameset = function(nameset, filterType)
 
 }
 
-NameMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, destSubstitution, srcSubstitution, filterType, callback)
+NameMapping.prototype.applyFilterOnChannelMap = function(destMap, sourceMap, filterType, callback)
 {
     if(filterType == Xflow.DATA_FILTER_TYPE.REMOVE){
         for(var i in sourceMap.map)
             if(this._srcNames.indexOf(i) == -1)
-                callback(destMap, i, sourceMap, i, destSubstitution, srcSubstitution);
+                callback(destMap, i, sourceMap, i);
     }
     else{
         if(filterType == Xflow.DATA_FILTER_TYPE.RENAME){
             for(var i in sourceMap.map)
                 if(this._srcNames.indexOf(i) == -1)
-                    callback(destMap, i, sourceMap, i, destSubstitution, srcSubstitution);
+                    callback(destMap, i, sourceMap, i);
         }
         for(var i in this._destNames){
-            callback(destMap, this._destNames[i], sourceMap, this._srcNames[i], destSubstitution, srcSubstitution);
+            callback(destMap, this._destNames[i], sourceMap, this._srcNames[i]);
         }
     }
 };
@@ -13110,8 +13274,8 @@ NameMapping.prototype.applyScriptOutputOnMap= function(destMap, sourceMap){
 
 
 function mappingNotifyOwner(mapping){
-    if(mapping._owner)
-        mapping._owner.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    for(var i = 0; i < mapping._owners.length; ++i)
+        mapping._owners[i].notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
     Xflow._callListedCallback();
 };
 
@@ -13244,7 +13408,7 @@ VertexShaderRequest.prototype.getResult = function(){
 
 VertexShaderRequest.prototype._onDataNodeChange = function(notification){
     if(notification == Xflow.RESULT_STATE.CHANGED_STRUCTURE){
-        var newVSConnectedNode = getVsConnectNode(this._dataNode, this._vsConfig);
+        var newVSConnectedNode = getVsConnectNode(this._dataNode, this._vsConfig, this._filter);
         if(newVSConnectedNode != this._vsConnectNode){
             clearVsConnectNode(this._vsConnectNode, this._dataNode, this._vsConfig);
             this._vsConnectNode = newVSConnectedNode;
@@ -13257,18 +13421,20 @@ VertexShaderRequest.prototype._onResultChanged = function(result, notification){
     this._onDataNodeChange(notification);
 }
 
-function getVsConnectNode(dataNode, vsConfig){
-    var forwardNode = dataNode._getForwardNode();
+function getVsConnectNode(dataNode, vsConfig, filter){
+    var forwardNode = dataNode._getForwardNode(filter);
 
-    var key = getDataNodeShaderKey(dataNode, vsConfig);
+    var key = getDataNodeShaderKey(forwardNode, vsConfig);
     var connectNode;
     if(!(connectNode = c_vsConnectNodeCache[key])){
-        var graph = dataNode._graph;
+        var graph = forwardNode._graph;
         connectNode = graph.createDataNode(false);
-        connectNode.appendChild(dataNode);
+        connectNode.appendChild(forwardNode);
 
         var operator = vsConfig.getOperator();
         connectNode.computeOperator = operator;
+        connectNode.computeInputMapping = new Xflow.OrderMapping();
+        connectNode.computeOutputMapping = new Xflow.OrderMapping();
         vsConfig.setInputMapping(connectNode._computeInputMapping);
         vsConfig.setOutputMapping(connectNode._computeOutputMapping);
 
@@ -13680,173 +13846,102 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
         return result;
     }
 
-
-    ChannelMap.prototype.getChannel = function(name, substitution)
+    ChannelMap.prototype.getChannel = function(name)
     {
         if(!this.map[name])
             return null;
-
-        var entry = this.map[name];
-        var key = getEntryKey(entry, substitution);
-        return entry.channels[key] ? entry.channels[key].channel : null;
+        return this.map[name].channel;
     }
 
-    ChannelMap.prototype.getProtoNames = function(name){
-        if(!this.map[name])
-            return null;
-        return this.map[name].protoNames;
-    }
-
-    ChannelMap.prototype.mergeProtoNames = function(otherChannelMap){
-        for(var name in otherChannelMap.map){
-            this.addProtoNames(name, otherChannelMap.getProtoNames(name));
-        }
-    }
-    ChannelMap.prototype.addProtoNames = function(name, protoNames){
-
-        var entry = getEntry(this.map, name);
-        Xflow.nameset.add(entry.protoNames, protoNames);
-    }
-
-
-    ChannelMap.prototype.merge = function(otherChannelMap, substitution){
-        for(var name in otherChannelMap.map){
-            this.addChannel(name, otherChannelMap.getChannel(name, substitution), substitution);
-        }
-    }
-
-    ChannelMap.prototype.addChannel = function(name, channel, substitution){
-        var entry = getEntry(this.map, name);
-        mergeChannelsIntoMapEntry(this, entry, channel, substitution);
-    }
-
-
-    ChannelMap.prototype.addDataEntry = function(name, dataSlot, paramName, substitution)
+    ChannelMap.prototype.getChildDataIndex = function(name)
     {
-        var entry = getEntry(this.map, name);
-        if(paramName && substitution){
-            if(substitution.map[paramName]){
-                mergeChannelsIntoMapEntry(this, entry, substitution.map[paramName], substitution);
-                return;
-            }else{
-                // TODO: at this point we use default values - we need to show an error, if a default values does not exists.
-            }
+        if(!this.map[name])
+            return undefined;
+        return this.map[name].childDataIndex;
+    }
+    ChannelMap.prototype.getChildDataIndexForFilter = function(filter){
+        var result;
+        filter = filter || this.getNames();
+        for(var i = 0; i < filter.length; ++i){
+            var idx = this.getChildDataIndex(filter[i]);
+            if(idx == undefined) continue;
+            if(result != undefined && result != idx)
+                result = -1;
+            else
+                result = idx;
         }
-        mergeDataSlotIntoMapEntry(this, entry, dataSlot, substitution);
+        return result;
     }
 
-    ChannelMap.prototype.addOutputDataSlot = function(name, dataSlot, creatorNode, substitution){
-        var entry = getEntry(this.map, name);
-        var channel = mergeDataSlotIntoMapEntry(this, entry, dataSlot, substitution);
-        channel.creatorProcessNode = creatorNode;
-    }
-
-    ChannelMap.prototype.markAsDone = function(substitution){
-        for(var name in this.map){
-            var entry = this.map[name];
-            var entryKey = getEntryKey(entry, substitution);
-            entry.channels[entryKey].done = true;
-        }
-    }
-
-    ChannelMap.prototype.clearSubstitution = function(substitution){
-        for(var name in this.map){
-            var entry = this.map[name];
-            var entryKey = getEntryKey(entry, substitution);
-            var channel = entry.channels[entryKey] && entry.channels[entryKey].channel;
-            if(channel){
-                if(channel.map == this){
-                    channel.useCount--;
-                    if(channel.useCount == 0)
-                        channel.clear();
-                }
-                if(channel.useCount == 0){
-                    delete entry.channels[entryKey];
-                }
-            }
-
+    ChannelMap.prototype.merge = function(otherChannelMap, childDataIndex){
+        for(var name in otherChannelMap.map){
+            var index = childDataIndex == undefined ? otherChannelMap.getChildDataIndex(name) : childDataIndex;
+            this.addChannel(name, otherChannelMap.getChannel(name), index);
         }
     }
 
-    ChannelMap.prototype.clearAll = function(){
+    ChannelMap.prototype.addChannel = function(name, channel, childDataIndex){
+        if(!channel) return;
+        if(childDataIndex == undefined) childDataIndex = -1;
+        mergeChannelIntoChannel(this, name, channel, childDataIndex);
+    }
+
+    ChannelMap.prototype.addDataEntry = function(name, dataSlot)
+    {
+        mergeDataSlotIntoChannel(this, name, dataSlot, -1);
+    }
+
+    ChannelMap.prototype.addOutputDataSlot = function(name, dataSlot, creatorNode){
+        var finalChannel = mergeDataSlotIntoChannel(this, name, dataSlot, -1);
+        finalChannel.creatorProcessNode = creatorNode;
+    }
+
+    ChannelMap.prototype.clear = function(){
         for(var name in this.map){
-            var entry = this.map[name];
-            for(var key in entry.channels){
-                var channel = entry.channels[key].channel;
-                if(channel && channel.map == this)
-                    channel.clear();
-            }
+            var channel = this.map[name];
+            if(channel && channel.map == this)
+                channel.clear();
         }
         this.map = {};
     }
 
-    Xflow.ChannelMap.Entry = function(){
-        this.protoNames = [];
-        this.origins = 0;
-        this.channels = {};
-    };
-
-    function getEntry(map, name){
-        if(!map[name])
-            map[name] = new Xflow.ChannelMap.Entry();
-        return map[name];
-    }
-
-    function getEntryKey(entry, substitution){
-        if(substitution && entry.protoNames.length > 0){
-            return substitution.getKey(entry.protoNames);
+    function initChannelSlot(channelMap, name){
+        if(!channelMap.map[name]){
+            channelMap.map[name] = {
+                channel: null,
+                childDataIndex: undefined
+            }
         }
-        else
-            return 0;
     }
 
-    function mergeChannelsIntoMapEntry(map, entry, newChannel, substitution){
-        var entryKey = getEntryKey(entry, substitution);
-        if(!entry.channels[entryKey])
-            entry.channels[entryKey] = {done: false, channel: null};
-        var channelEntry = entry.channels[entryKey];
-        if(channelEntry.done){
-            if(channelEntry.channel.map == this)
-                channelEntry.useCount++;
-            return;
-        }
-
-        var finalChannel = mergeChannelIntoChannel(map, entry.channel, newChannel);
-        channelEntry.channel = finalChannel;
-    }
-
-    function mergeChannelIntoChannel(map, currentChannel, newChannel){
-        if(!currentChannel) return newChannel;
-        if(!currentChannel.willMergeWithChannel(newChannel))
+    function mergeChannelIntoChannel(channelMap, name, newChannel, childDataIndex){
+        initChannelSlot(channelMap, name);
+        var currentChannel = channelMap.map[name].channel;
+        if(!currentChannel || !currentChannel.willMergeWithChannel(newChannel)) {
+            channelMap.map[name].channel = newChannel;
+            channelMap.map[name].childDataIndex = childDataIndex;
             return newChannel;
-        currentChannel = getMapOwnedChannel(map, currentChannel);
+        }
+        currentChannel = getMapOwnedChannel(channelMap, currentChannel);
         currentChannel.addChannelEntries(newChannel);
+        channelMap.map[name].channel = currentChannel;
+        channelMap.map[name].childDataIndex = -1;
         return currentChannel;
     }
 
-
-    function mergeDataSlotIntoMapEntry(map, entry, dataSlot, substitution){
-        var entryKey = getEntryKey(entry, substitution);
-        if(!entry.channels[entryKey])
-            entry.channels[entryKey] = {done: false, channel: null};
-        var channelEntry = entry.channels[entryKey];
-        if(channelEntry.done){
-            if(channelEntry.channel.map == this)
-                channelEntry.useCount++;
-            return channelEntry.channel;
+    function mergeDataSlotIntoChannel(channelMap, name, dataSlot, childDataIndex){
+        initChannelSlot(channelMap, name);
+        var currentChannel = channelMap.map[name].channel;
+        if(!currentChannel || !currentChannel.willMergeWithDataSlot(dataSlot)){
+            var channel = new Xflow.Channel(channelMap, dataSlot);
+            channelMap.map[name].channel = channel;
+            channelMap.map[name].childDataIndex = childDataIndex;
+            return channel;
         }
-        var finalChannel = mergeDataSlotIntoChannel(map, channelEntry.channel, dataSlot);
-        channelEntry.channel = finalChannel;
-        return finalChannel;
-    }
-
-    function mergeDataSlotIntoChannel(map, currentChannel, dataSlot){
-        if(!currentChannel)
-            return new Xflow.Channel(map, dataSlot);
-        if(!currentChannel.willMergeWithDataSlot(dataSlot))
-            return new Xflow.Channel(map, dataSlot);
-        currentChannel = getMapOwnedChannel(map, currentChannel);
+        currentChannel = getMapOwnedChannel(channelMap, currentChannel);
         currentChannel.addDataSlot(dataSlot);
+        channelMap.map[name].channel = currentChannel;
+        channelMap.map[name].childDataIndex = -1;
         return currentChannel;
     }
 
@@ -13877,7 +13972,6 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
         this.map = map;
         this.id = generateChannelId();
         this.listeners = [];
-        this.useCount = 1;
         this.creatorProcessNode = null;
 
         if(dataSlot){
@@ -14048,117 +14142,88 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
      * @constructor
      * @extends {Xflow.GraphNode}
      */
-    Xflow.ChannelNode = function(dataNode){
+    Xflow.ChannelNode = function(dataNode, substitution){
         this.owner = dataNode;
+        this.substitution = substitution;
         this.loading = false;
         this.inputSlots = {};
         this.inputChannels = new Xflow.ChannelMap();
-        this.protoInputChannels = new Xflow.ChannelMap();
-        this.finalOutputChannels = new Xflow.ChannelMap();
+        this.computedChannels = new Xflow.ChannelMap();
+        this.outputChannels = new Xflow.ChannelMap();
 
         this.operator = null;
-        this.protoNames = [];
-        this.subtreeProtoNames = [];
-        this.operatorProtoNames = [];
-        this.emptySubstitutionNode = null;
-        this.processNodes = {};
+        this.dataflowChannelNode = null;
+        this.processNode = null;
         this.requestNodes = {};
-
+        this.useCount = 1;
         // State:
         this.outOfSync = true; // true if ChannelNode is not synchronized for no substitution
     };
-    var ChannelNode = Xflow.ChannelNode;
 
-    ChannelNode.prototype.synchronize = function(){
+
+    Xflow.ChannelNode.prototype.synchronize = function(){
         if(this.outOfSync){
-            synchronizeChildren(this, this.owner);
-            setInputProtoNames(this);
-            setOperatorProtoNames(this);
-            setProtoInputProtoNames(this);
-            setFinalOutputProtoNames(this);
+            synchronizeChildren(this);
+            updateInputChannels(this);
+            updateComputedChannels(this);
+            updateOutputChannels(this);
             this.outOfSync = false;
         }
     }
 
-    ChannelNode.prototype.getSubstitutionNode = function(substitution){
+    Xflow.ChannelNode.prototype.clear = function(){
+        this.useCount = 0;
+         this.inputChannels.clear();
+         this.outputChannels.clear();
+         // TODO: Make sure everything is cleaned up there!
+        return true;
+    }
+
+    Xflow.ChannelNode.prototype.increaseRef = function(){
+        this.useCount++;
+    }
+
+    Xflow.ChannelNode.prototype.decreaseRef = function(){
+        this.useCount--;
+        if(this.useCount == 0){
+            this.clear();
+        }
+        return false;
+    }
+
+    Xflow.ChannelNode.prototype.getOutputNames = function(){
         this.synchronize();
-        if(!substitution){
-            if(!this.emptySubstitutionNode)
-                this.emptySubstitutionNode = new Xflow.SubstitutionNode(this, null);
-
-            return this.emptySubstitutionNode;
-        }
-        else{
-            return new Xflow.SubstitutionNode(this, substitution);
-        }
+        return this.outputChannels.getNames();
     }
 
-    ChannelNode.prototype.getProcessNode = function(substitution){
-        if(!this.operator)
-            return null;
-
-        var key = substitution ? substitution.getKey(this.operatorProtoNames) : 0;
-        if(!this.processNodes[key])
-            this.processNodes[key] = new Xflow.ProcessNode(this, this.operator, substitution);
-
-        this.processNodes[key].useCount++;
-        return this.processNodes[key];
+    Xflow.ChannelNode.prototype.getChildDataIndex = function(filter){
+        this.synchronize();
+        return this.outputChannels.getChildDataIndexForFilter(filter);
     }
 
-    ChannelNode.prototype.clearProcessNode = function(substitution){
-        if(!this.operator)
-            return;
-        var key = substitution ? substitution.getKey(this.operatorProtoNames) : 0;
-        var procNode = this.processNodes[key];
-        if(procNode){
-            procNode.useCount--;
-            if(procNode.useCount == 0)
-                delete this.processNodes[key];
+    Xflow.ChannelNode.prototype.setStructureOutOfSync = function()
+    {
+        if(!this.outOfSync){
+            this.outOfSync = true;
+            this.inputChannels.clear();
+            this.computedChannels.clear();
+            this.outputChannels.clear();
+            this.processNode && this.processNode.clear();
+            for(var key in this.requestNodes){
+                this.requestNodes[key].setStructureOutOfSync();
+            }
         }
     }
 
-    ChannelNode.prototype.notifyDataChange = function(inputNode, changeType){
+    Xflow.ChannelNode.prototype.notifyDataChange = function(inputNode, changeType){
         var key = inputNode._name + ";" + inputNode._key;
         if(this.inputSlots[key])
             this.inputSlots[key].setDataEntry(inputNode._data, changeType);
     }
 
-
-    ChannelNode.prototype.setStructureOutOfSync = function()
-    {
-        if(!this.outOfSync){
-            this.outOfSync = true;
-            this.inputChannels.clearAll();
-            this.protoInputChannels.clearAll();
-            this.finalOutputChannels.clearAll();
-            if(this.emptySubstitutionNode)
-                this.emptySubstitutionNode.clear();
-            this.emptySubstitutionNode = null;
-
-            for(var key in this.requestNodes){
-                this.requestNodes[key].setStructureOutOfSync();
-            }
-
-        }
-    }
-
-    ChannelNode.prototype.getOutputNames = function(){
-        this.synchronize();
-        this.getSubstitutionNode(null); // create emptySubstitutionNode if not available
-        return this.finalOutputChannels.getNames();
-    }
-
-
-    ChannelNode.prototype.getParamNames = function(){
-        this.synchronize();
-        this.getSubstitutionNode(null); // create emptySubstitutionNode if not available
-        return this.protoNames;
-    }
-
-    ChannelNode.prototype.getResult = function(type, filter)
+    Xflow.ChannelNode.prototype.getResult = function(type, filter)
     {
         this.synchronize();
-        this.getSubstitutionNode(null); // create emptySubstitutionNode if not available
 
         var key = filter ? filter.join(";") : "[null]";
         if(!this.requestNodes[key]){
@@ -14168,11 +14233,10 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
     }
 
 
-    ChannelNode.prototype.getOutputChannelInfo = function(name){
+    Xflow.ChannelNode.prototype.getOutputChannelInfo = function(name){
         this.synchronize();
-        this.getSubstitutionNode(null); // create emptySubstitutionNode if not available
 
-        var channel = this.finalOutputChannels.getChannel(name);
+        var channel = this.outputChannels.getChannel(name);
         if(!channel)
             return null;
         var result = {
@@ -14183,10 +14247,10 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
             origin: 0,
             originalName: ""
         }
-        var preFilterName = this.owner._filterMapping.getRenameSrcName(name);
+        var preFilterName = this.owner._filterMapping ? this.owner._filterMapping.getRenameSrcName(name) : name;
         var dataEntry = channel.getDataEntry();
-        if(this.owner._protoNode){
-            var protoInputChannel = this.protoInputChannels.getChannel(preFilterName);
+        if(this.dataflowChannelNode){
+            var protoInputChannel = this.inputChannels.getChannel(preFilterName);
             if(!protoInputChannel || dataEntry != protoInputChannel.getDataEntry()){
                 result.origin = Xflow.ORIGIN.PROTO;
                 result.originalName = preFilterName;
@@ -14206,54 +14270,90 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
         return result;
     }
 
-    function synchronizeChildren(channelNode, dataNode){
+
+
+    function synchronizeChildren(channelNode){
+
+
+        var dataNode = channelNode.owner;
         channelNode.loading = dataNode._subTreeLoading;
+
+        if(channelNode.substitution)
+            dataNode._channelNode.synchronize();
+
         if(dataNode._sourceNode){
-            dataNode._sourceNode._channelNode.synchronize();
+            dataNode._sourceNode._getChannelNode(channelNode.substitution).synchronize();
         }
         else{
-            var child;
             for(var i = 0; i < dataNode._children.length; ++i){
-                if((child = dataNode._children[i]._channelNode) && !dataNode._children[i].isProtoNode()){
-                    child.synchronize();
+                if(dataNode._children[i]._getChannelNode){
+                    dataNode._children[i]._getChannelNode(channelNode.substitution).synchronize();
                 }
             }
         }
     }
 
-    function setInputProtoNames(channelNode){
-        var owner = channelNode.owner, child;
+    function updateInputChannels(channelNode){
+        var owner = channelNode.owner;
         if(owner._sourceNode){
-            channelNode.inputChannels.mergeProtoNames(owner._sourceNode._channelNode.finalOutputChannels);
+            channelNode.inputChannels.merge(owner._sourceNode._getChannelNode(channelNode.substitution).outputChannels, 0);
         }
         else{
-            for(var i = 0; i < owner._children.length; ++i){
-                if((child = owner._children[i]._channelNode)  && !owner._children[i].isProtoNode()){
-                    channelNode.inputChannels.mergeProtoNames(child.finalOutputChannels);
-                    Xflow.nameset.add(channelNode.protoNames, child.protoNames);
-                    Xflow.nameset.add(channelNode.subtreeProtoNames, child.subtreeProtoNames);
+            var children = owner._children;
+            for(var i = 0; i < children.length; ++i){
+                if(children[i]._getChannelNode){
+                    channelNode.inputChannels.merge(children[i]._getChannelNode(channelNode.substitution).outputChannels, i);
                 }
             }
-            for(var i = 0; i < owner._children.length; ++i){
-                if((child = owner._children[i]) && !child._channelNode){
-                    if(child._paramName){
-                        channelNode.inputChannels.addProtoNames(child._name, child._paramName);
-                        Xflow.nameset.add(channelNode.protoNames, child._paramName);
-                        if(child._paramGlobal){
-                            Xflow.nameset.add(channelNode.subtreeProtoNames, child._paramName);
+            for(var i = 0; i < children.length; ++i){
+                if(!children[i]._getChannelNode){
+                    var child = children[i];
+                    var key = child._name + ";" + child._key;
+                    if(!channelNode.substitution){
+                        var slot = new Xflow.DataSlot(child._data, child._key);
+                        channelNode.inputSlots[key] = slot;
+                        channelNode.inputChannels.addDataEntry(child._name, slot);
+                    }
+                    else{
+                        if(child._paramName && channelNode.substitution.hasChannel(child._paramName)){
+                            channelNode.inputChannels.addChannel(child._name,
+                                channelNode.substitution.getChannel(child._paramName));
+                        }
+                        else{
+                            channelNode.inputChannels.addDataEntry(child._name, owner._channelNode.inputSlots[key]);
                         }
                     }
-                    var key = child._name + ";" + child._key;
-                    channelNode.inputSlots[key] = new Xflow.DataSlot(child._data, child._key);
-
                 }
             }
         }
     }
 
-    function setOperatorProtoNames(channelNode){
-        if(typeof channelNode.owner._computeOperator == "string"){
-            var operatorName = channelNode.owner._computeOperator, operator = null;
+    function updateComputedChannels(channelNode){
+        var owner = channelNode.owner;
+        channelNode.computedChannels.merge(channelNode.inputChannels);
+
+        var oldDataflowChannelNode = channelNode.dataflowChannelNode;
+
+        if( owner._computeUsesDataflow && owner._dataflowNode){
+            channelNode.operator = null;
+            updateDataflowChannelNode(channelNode);
+            updateComputedChannelsFromDataflow(channelNode);
+        }
+        else if(!owner._computeUsesDataflow && owner._computeOperator){
+            channelNode.dataflowChannelNode = null;
+            updateOperator(channelNode);
+            updateComputedChannelsFromOperator(channelNode);
+        }
+
+        if(oldDataflowChannelNode && oldDataflowChannelNode != channelNode.dataflowChannelNode){
+            oldDataflowChannelNode.owner._removeSubstitutionNode(oldDataflowChannelNode);
+        }
+    }
+
+    function updateOperator(channelNode){
+        var owner = channelNode.owner;
+        if(typeof owner._computeOperator == "string"){
+            var operatorName = owner._computeOperator, operator = null;
             if(operatorName){
                 operator = Xflow.getOperator(operatorName);
                 if(!operator){
@@ -14263,198 +14363,107 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
             channelNode.operator = operator;
         }
         else{
-            channelNode.operator = channelNode.owner._computeOperator;
+            channelNode.operator = owner._computeOperator;
         }
+    }
 
+    function updateComputedChannelsFromOperator(channelNode){
+        var owner = channelNode.owner;
         if(channelNode.operator){
-            var operator = channelNode.operator, inputMapping = channelNode.owner._computeInputMapping;
-            for(var i = 0; i < operator.params.length; ++i){
-                var dataName = inputMapping.getScriptInputName(i, operator.params[i].source);
-                if(dataName){
-                    Xflow.nameset.add(channelNode.operatorProtoNames, channelNode.inputChannels.getProtoNames(dataName));
-                }
-            }
-        }
-    }
-
-    function setProtoInputProtoNames(channelNode){
-        var dataNode = channelNode.owner;
-        channelNode.protoInputChannels.mergeProtoNames(channelNode.inputChannels);
-        var operator = channelNode.operator;
-        if(operator){
-            for(var i = 0; i < operator.outputs.length; ++i){
-                var name = operator.outputs[i].name;
-                var destName = dataNode._computeOutputMapping.getScriptOutputName(i, name);
-                channelNode.protoInputChannels.addProtoNames(destName, channelNode.operatorProtoNames);
-            }
-        }
-    }
-
-    function setFinalOutputProtoNames(channelNode){
-        var dataNode = channelNode.owner;
-        dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, channelNode.protoInputChannels,
-            null, null, dataNode._filterType, setChannelMapProtoName);
-
-        if(dataNode._protoNode){
-            var protoChannelNode = dataNode._protoNode._channelNode;
-            Xflow.nameset.add(channelNode.protoNames, protoChannelNode.subtreeProtoNames);
-            Xflow.nameset.add(channelNode.subtreeProtoNames, protoChannelNode.subtreeProtoNames);
-
-            var protoOutput = protoChannelNode.finalOutputChannels;
-            dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, protoOutput,
-                channelNode.protoNames, null, dataNode._filterType, setChannelMapProtoProtoName);
-        }
-    }
-
-    function setChannelMapProtoName(destMap, destName, srcMap, srcName){
-        var protoNames = srcMap.getProtoNames(srcName);
-        destMap.addProtoNames(destName, protoNames);
-    }
-
-    function setChannelMapProtoProtoName(destMap, destName, srcMap, srcName, protoNames){
-        destMap.addProtoNames(destName, protoNames);
-    }
-
-//----------------------------------------------------------------------------------------------------------------------
-// Xflow.SubstitutionNode
-//----------------------------------------------------------------------------------------------------------------------
-
-    /**
-     * @constructor
-     * @extends {Xflow.GraphNode}
-     */
-    Xflow.SubstitutionNode = function(channelNode, substitution){
-        this.owner = channelNode;
-        this.substitution = substitution;
-        this.childSubNodes = [];
-        this.processNode = null;
-        this.protoSubNode = null;
-
-        constructSubNode(this, channelNode, substitution);
-    };
-    var SubstitutionNode = Xflow.SubstitutionNode;
-
-    SubstitutionNode.prototype.clear = function(){
-        if(this.substitution){
-            clearSubstitution(this.owner, this.substitution);
-            for(var i = 0; i < this.childSubNodes.length; ++i){
-                this.childSubNodes[i].clear();
-            }
-        }
-        if(this.protoSubNode){
-            this.protoSubNode.clear();
-        }
-        if(this.processNode){
-            this.owner.clearProcessNode(this.substitution);
-        }
-    }
-
-
-    function constructSubNode(subNode, channelNode, substitution){
-        setSubNodeChildren(subNode, channelNode.owner, substitution);
-        setSubNodeInputChannels(channelNode, substitution);
-        setSubNodeProcessNode(subNode, channelNode, substitution);
-        setSubNodeProtoInputChannels(subNode, channelNode, substitution);
-        setSubNodeFinalOutputChannels(subNode, channelNode, substitution);
-        markChannelsAsDone(channelNode, substitution);
-    }
-
-    function setSubNodeChildren(subNode, dataNode, substitution){
-        if(dataNode._sourceNode)
-            subNode.childSubNodes.push(dataNode._sourceNode._channelNode.getSubstitutionNode(substitution));
-        else{
-            var child;
-            for(var i = 0; i < dataNode._children.length; ++i){
-                if((child = dataNode._children[i]._channelNode) && !dataNode._children[i].isProtoNode() ){
-                    subNode.childSubNodes.push(child.getSubstitutionNode(substitution));
-                }
-            }
-        }
-    }
-
-    function setSubNodeInputChannels(channelNode, substitution){
-        var owner = channelNode.owner, child;
-        if(owner._sourceNode){
-            channelNode.inputChannels.merge(owner._sourceNode._channelNode.finalOutputChannels, substitution);
-        }
-        else{
-            for(var i = 0; i < owner._children.length; ++i){
-                if((child = owner._children[i]._channelNode) && !owner._children[i].isProtoNode()){
-                    channelNode.inputChannels.merge(child.finalOutputChannels, substitution);
-                }
-            }
-            for(var i = 0; i < owner._children.length; ++i){
-                if((child = owner._children[i]) && !child._channelNode){
-                    var key = child._name + ";" + child._key;
-                    channelNode.inputChannels.addDataEntry(child._name, channelNode.inputSlots[key],
-                        child._paramName, substitution);
-                }
-            }
-        }
-    }
-
-    function setSubNodeProcessNode(subNode, channelNode, substitution)
-    {
-        subNode.processNode = channelNode.getProcessNode(substitution);
-    }
-
-    function setSubNodeProtoInputChannels(subNode, channelNode, substitution){
-        mergeOperatorOutput(subNode, channelNode, substitution);
-
-        var dataNode = channelNode.owner;
-        if(dataNode._protoNode){
-            var subSubstitution = new Xflow.Substitution(channelNode.protoInputChannels, substitution, channelNode.subtreeProtoNames);
-            subNode.protoSubNode = dataNode._protoNode._channelNode.getSubstitutionNode(subSubstitution);
-        }
-    }
-
-    function mergeOperatorOutput(subNode, channelNode, substitution){
-        var dataNode = channelNode.owner;
-        channelNode.protoInputChannels.merge(channelNode.inputChannels, substitution);
-        var procNode = subNode.processNode;
-        if(procNode){
+            var procNode = channelNode.processNode = new Xflow.ProcessNode(channelNode);
             var index = 0;
             for(var name in procNode.outputDataSlots){
-                var destName = dataNode._computeOutputMapping.getScriptOutputName(index, name);
+                var destName = owner._computeOutputMapping.getScriptOutputName(index, name);
                 if(destName){
-                    channelNode.protoInputChannels.addOutputDataSlot(destName, procNode.outputDataSlots[name],
-                        procNode, substitution);
+                    channelNode.computedChannels.addOutputDataSlot(destName, procNode.outputDataSlots[name], procNode);
                 }
                 index++;
             }
         }
     }
 
-    function setSubNodeFinalOutputChannels(subNode, channelNode, substitution){
-        var dataNode = channelNode.owner;
-        dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, channelNode.protoInputChannels,
-            substitution, substitution, dataNode._filterType, setChannelMapChannel);
+    function updateDataflowChannelNode(channelNode){
+        var owner = channelNode.owner;
+        var subSubstitution = new Xflow.Substitution(owner._dataflowNode, channelNode);
+        channelNode.dataflowChannelNode = owner._dataflowNode._getChannelNode(subSubstitution);
+    }
 
-        if(subNode.protoSubNode){
-            var protoChannelNode = subNode.protoSubNode.owner;
-            var protoOutput = protoChannelNode.finalOutputChannels;
-            dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, protoOutput,
-                substitution, subNode.protoSubNode.substitution, dataNode._filterType, setChannelMapChannel);
+    function updateComputedChannelsFromDataflow(channelNode){
+        var owner = channelNode.owner;
+        if(channelNode.dataflowChannelNode){
+            var dataflowCNode = channelNode.dataflowChannelNode;
+            dataflowCNode.synchronize();
+            // TODO: We have to make sure to get outputNames in the right order to apply output mapping correctly
+            var outputNames = dataflowCNode.outputChannels.getNames();
+            for(var i = 0; i < outputNames.length; ++i){
+                var srcName = outputNames[i], destName = srcName;
+                if(owner._computeOutputMapping)
+                    destName = owner._computeOutputMapping.getScriptOutputName(i, srcName);
+                if(destName)
+                    channelNode.computedChannels.addChannel(destName, dataflowCNode.outputChannels.getChannel(srcName));
+            }
         }
     }
 
-    function setChannelMapChannel(destMap, destName, srcMap, srcName, destSub, srcSub){
-        var channel = srcMap.getChannel(srcName, srcSub);
-        destMap.addChannel(destName, channel, destSub);
+    function updateOutputChannels(channelNode){
+        var dataNode = channelNode.owner;
+        if(dataNode._filterMapping)
+            dataNode._filterMapping.applyFilterOnChannelMap(channelNode.outputChannels, channelNode.computedChannels,
+                dataNode._filterType, setChannelFilterCallback);
+        else
+            channelNode.outputChannels.merge(channelNode.computedChannels);
     }
 
-    function markChannelsAsDone(channelNode, substitution){
-        channelNode.inputChannels.markAsDone(substitution);
-        channelNode.protoInputChannels.markAsDone(substitution);
-        channelNode.finalOutputChannels.markAsDone(substitution);
+    function setChannelFilterCallback(destMap, destName, srcMap, srcName){
+        var channel = srcMap.getChannel(srcName);
+        destMap.addChannel(destName, channel, srcMap.getChildDataIndex(srcName));
     }
 
+//----------------------------------------------------------------------------------------------------------------------
+// Xflow.Substitution
+//----------------------------------------------------------------------------------------------------------------------
 
+    Xflow.Substitution = function(dataflowNode, userChannelNode){
+        this.map = {};
 
-    function clearSubstitution(channelNode, substitution){
-        channelNode.inputChannels.clearSubstitution(substitution);
-        channelNode.protoInputChannels.clearSubstitution(substitution);
-        channelNode.finalOutputChannels.clearSubstitution(substitution);
+        createSubstitution(this, dataflowNode, userChannelNode);
+    }
+
+    Xflow.Substitution.prototype.hasChannel = function(name){
+        return !!this.map[name];
+    }
+    Xflow.Substitution.prototype.getChannel = function(name){
+        return this.map[name];
+    }
+    Xflow.Substitution.prototype.getKey = function(subDataflowNode){
+        var key = "";
+        var globalParamNames = subDataflowNode._getGlobalParamNames();
+        for(var i = 0; i < globalParamNames.length; ++i){
+            var channel = this.map[globalParamNames[i]];
+            key+= (channel && channel.id || "-") + "!";
+        }
+        var paramNames = subDataflowNode._getParamNames();
+        for(var i = 0; i < paramNames.length; ++i){
+            var channel = this.map[paramNames[i]];
+            key+= (channel && channel.id || "-") + ".";
+        }
+        return key;
+    }
+
+    function createSubstitution(substitution, dataflowNode, userChannelNode){
+        var userOwner = userChannelNode.owner;
+        var globalParamNames = dataflowNode._getGlobalParamNames();
+        for(var i = 0; i < globalParamNames.length; ++i){
+            substitution.map[globalParamNames[i]] = userChannelNode.inputChannels.getChannel(globalParamNames[i]);
+        }
+        var paramNames = dataflowNode._getParamNames();
+        for(var i = 0; i < paramNames.length; ++i){
+            var destName = paramNames[i], srcName = destName;
+            if(userOwner._computeInputMapping){
+                srcName = userOwner._computeInputMapping.getScriptInputName(i, destName);
+            }
+            substitution.map[destName] = userChannelNode.inputChannels.getChannel(srcName);
+        }
     }
 
 })();
@@ -14470,18 +14479,17 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
  * @constructor
  * @extends {Xflow.GraphNode}
  */
-Xflow.ProcessNode = function(channelNode, operator, substitution){
+Xflow.ProcessNode = function(channelNode){
     this.owner = channelNode;
-    this.operator = operator;
+    this.operator = channelNode.operator;
     this.inputChannels = {};
     this.outputDataSlots = {};
     this.status = Xflow.PROCESS_STATE.MODIFIED;
-    this.useCount = 0;
 
     this.children = [];
     this.descendants = [];
     this.executers = [];
-    constructProcessNode(this, channelNode, operator, substitution);
+    constructProcessNode(this, channelNode);
 };
 var ProcessNode = Xflow.ProcessNode;
 
@@ -14498,7 +14506,7 @@ ProcessNode.prototype.onXflowChannelChange = function(channel, state){
 
 ProcessNode.prototype.clear = function(){
     for(var name in this.inputChannels){
-        this.inputChannels[name].removeListener(this);
+        this.inputChannels[name] && this.inputChannels[name].removeListener(this);
     }
 }
 
@@ -14534,20 +14542,20 @@ ProcessNode.prototype.process = function(){
     }
 }
 
-function constructProcessNode(processNode, channelNode, operator, substitution){
+function constructProcessNode(processNode, channelNode){
     var dataNode = channelNode.owner;
-    synchronizeInputChannels(processNode, channelNode, dataNode, substitution);
+    synchronizeInputChannels(processNode, channelNode, dataNode);
     synchronizeChildren(processNode.children, processNode.descendants, processNode.inputChannels);
     synchronizeOutput(processNode.operator, processNode.outputDataSlots);
 }
 
-function synchronizeInputChannels(processNode, channelNode, dataNode, substitution){
+function synchronizeInputChannels(processNode, channelNode, dataNode){
     var operator = processNode.operator, inputMapping = dataNode._computeInputMapping;
     for(var i = 0; i < operator.params.length; ++i){
         var sourceName = operator.params[i].source;
-        var dataName = inputMapping.getScriptInputName(i, sourceName);
+        var dataName = inputMapping ? inputMapping.getScriptInputName(i, sourceName) : sourceName;
         if(dataName){
-            var channel = channelNode.inputChannels.getChannel(dataName, substitution);
+            var channel = channelNode.inputChannels.getChannel(dataName);
             if(channel) channel.addListener(processNode);
             processNode.inputChannels[sourceName] = channel;
         }
@@ -14570,7 +14578,7 @@ function checkInput(processNode, operator, inputMapping, inputChannels){
     var dataNode = processNode.owner.owner;
     for(var i in operator.params){
         var entry = operator.params[i];
-        var dataName = inputMapping.getScriptInputName(i, entry.source);
+        var dataName = inputMapping ? inputMapping.getScriptInputName(i, entry.source) : entry.source;
         if(!entry.optional && !dataName){
             Xflow.notifyError("Xflow: operator " + operator.name + ": Missing input argument for "
                 + entry.source, dataNode);
@@ -14743,20 +14751,16 @@ RequestNode.prototype.onXflowChannelChange = function(channel, state){
 function synchronizeRequestChannels(requestNode, channelNode){
     var names = requestNode.filter;
     if(!names){
-        names = [];
-        for(var name in channelNode.finalOutputChannels.map){
-            names.push(name);
-        }
+        names = channelNode.outputChannels.getNames();
     }
 
     for(var i = 0; i < names.length; ++i){
         var name = names[i];
-        var channel = channelNode.finalOutputChannels.getChannel(name);
+        var channel = channelNode.outputChannels.getChannel(name);
         if(channel){
             requestNode.channels[name] = channel;
             channel.addListener(requestNode);
         }
-
     }
 }
 
@@ -14862,10 +14866,10 @@ function getRequestVSResult(requestNode)
     function initRequestNode(cData, executer, ownerNode){
         if(ownerNode instanceof Xflow.RequestNode){
             cData.finalOutput = {};
-            var filter = ownerNode.filter || ownerNode.owner.finalOutputChannels.getNames();
+            var filter = ownerNode.filter || ownerNode.owner.outputChannels.getNames();
             for(var i = 0; i < filter.length; ++i){
                 var name = filter[i];
-                var channel = ownerNode.owner.finalOutputChannels.getChannel(name);
+                var channel = ownerNode.owner.outputChannels.getChannel(name);
                 if(channel && channel.creatorProcessNode)
                     cData.finalOutput[name] = channel.getDataEntry();
             }
@@ -17886,6 +17890,48 @@ var IDataAdapter = function() {
 IDataAdapter.prototype.getOutputs = function() {
 };
 
+
+/**
+ *
+ * @extends XML3D.base.NodeAdapter
+ * @implements IDataAdapter
+ * @abtract
+ *
+ * @param factory
+ * @param node
+ */
+XML3D.data.BaseDataAdapter = function(factory, node) {
+    XML3D.base.NodeAdapter.call(this, factory, node);
+    this.xflowDataNode = null;
+};
+XML3D.createClass(XML3D.data.BaseDataAdapter, XML3D.base.NodeAdapter);
+
+
+XML3D.data.BaseDataAdapter.prototype.getXflowNode = function(){
+    return this.xflowDataNode;
+}
+
+XML3D.data.BaseDataAdapter.prototype.getComputeRequest = function(filter, callback){
+    return new Xflow.ComputeRequest(this.xflowDataNode, filter, callback);
+}
+
+XML3D.data.BaseDataAdapter.prototype.getComputeResult = function(filter)
+{
+    var result = this.xflowDataNode._getResult(Xflow.RESULT_TYPE.COMPUTE, filter);
+    return result;
+}
+
+XML3D.data.BaseDataAdapter.prototype.getOutputNames = function()
+{
+    return this.xflowDataNode.getOutputNames();
+}
+
+XML3D.data.BaseDataAdapter.prototype.getOutputChannelInfo = function(name)
+{
+    return this.xflowDataNode.getOutputChannelInfo(name);
+}
+
+
 /**
  * Constructor of XML3D.data.DataAdapter The DataAdapter implements the
  * DataCollector concept and serves as basis of all DataAdapter classes. In
@@ -17901,13 +17947,10 @@ IDataAdapter.prototype.getOutputs = function() {
  * @param node
  */
 XML3D.data.DataAdapter = function(factory, node) {
-    XML3D.base.NodeAdapter.call(this, factory, node);
-
-    // Node handles for src and proto
-    this.handles = {};
+    XML3D.data.BaseDataAdapter.call(this, factory, node);
     this.xflowDataNode = null;
 };
-XML3D.createClass(XML3D.data.DataAdapter, XML3D.base.NodeAdapter);
+XML3D.createClass(XML3D.data.DataAdapter, XML3D.data.BaseDataAdapter);
 
 XML3D.data.DataAdapter.prototype.init = function() {
     //var xflow = this.resolveScript();
@@ -17918,12 +17961,10 @@ XML3D.data.DataAdapter.prototype.init = function() {
     this.xflowDataNode = XML3D.data.xflowGraph.createDataNode(protoNode);
     this.xflowDataNode.userData = this.node;
 
-    this.updateHandle("src");
-    this.updateHandle("proto");
+    updateAdapterHandle(this, "src", this.node.getAttribute("src"));
     this.xflowDataNode.setFilter(this.node.getAttribute("filter"));
-    this.xflowDataNode.setCompute(this.node.getAttribute("compute"));
+    updateCompute(this);
     recursiveDataAdapterConstruction(this);
-
 };
 
 function recursiveDataAdapterConstruction(adapter){
@@ -17935,29 +17976,6 @@ function recursiveDataAdapterConstruction(adapter){
     }
 }
 
-XML3D.data.DataAdapter.prototype.getXflowNode = function(){
-    return this.xflowDataNode;
-}
-
-XML3D.data.DataAdapter.prototype.getComputeRequest = function(filter, callback){
-    return new Xflow.ComputeRequest(this.xflowDataNode, filter, callback);
-}
-
-XML3D.data.DataAdapter.prototype.getComputeResult = function(filter)
-{
-    var result = this.xflowDataNode._getResult(Xflow.RESULT_TYPE.COMPUTE, filter);
-    return result;
-}
-
-XML3D.data.DataAdapter.prototype.getOutputNames = function()
-{
-    return this.xflowDataNode.getOutputNames();
-}
-
-XML3D.data.DataAdapter.prototype.getOutputChannelInfo = function(name)
-{
-    return this.xflowDataNode.getOutputChannelInfo(name);
-}
 
 /**
  * The notifyChanged() method is called by the XML3D data structure to
@@ -17970,9 +17988,9 @@ XML3D.data.DataAdapter.prototype.getOutputChannelInfo = function(name)
  */
 XML3D.data.DataAdapter.prototype.notifyChanged = function(evt) {
     if(evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED){
-        this.connectedAdapterChanged(evt.key, evt.adapter);
+        this.connectedAdapterChanged(evt.key, evt.adapter, evt.handleStatus);
         if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
-            XML3D.debug.logError("Could not find <data> element of url '" + evt.url + "' for " + evt.key);
+            XML3D.debug.logError("Could not find <data> element of url '" + evt.url + "' for " + evt.key, this.node);
         }
         return;
     }
@@ -18003,10 +18021,10 @@ XML3D.data.DataAdapter.prototype.notifyChanged = function(evt) {
             this.xflowDataNode.setFilter(this.node.getAttribute(attr))
         }
         else if(attr == "compute"){
-            this.xflowDataNode.setCompute(this.node.getAttribute(attr))
+            updateCompute(this);
         }
-        else if(attr == "src" || attr == "proto"){
-            this.updateHandle(attr);
+        else if(attr == "src"){
+            updateAdapterHandle(this, attr, this.node.getAttribute(attr));
         }
         return;
     } else if (evt.type == XML3D.events.THIS_REMOVED) {
@@ -18014,36 +18032,12 @@ XML3D.data.DataAdapter.prototype.notifyChanged = function(evt) {
     }
 };
 
-function updateLoadState(dataAdpater){
-    var loading = false;
-    var handle = dataAdpater.getAdapterHandle(dataAdpater.node.getAttribute("src"));
-    if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
-        loading = true;
-    }
-    var handle = dataAdpater.getAdapterHandle(dataAdpater.node.getAttribute("proto"));
-    if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
-        loading = true;
-    }
-    dataAdpater.xflowDataNode.setLoading(loading);
-}
-
-XML3D.data.DataAdapter.prototype.updateHandle = function(attributeName) {
-    var adapterHandle = this.getAdapterHandle(this.node.getAttribute(attributeName));
-    if(adapterHandle && adapterHandle.status == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
-        XML3D.debug.logError("Could not find <data> element of url '" + adapterHandle.url + "' for " + attributeName);
-    }
-
-    this.connectAdapterHandle(attributeName, adapterHandle);
-    this.connectedAdapterChanged(attributeName, adapterHandle ? adapterHandle.getAdapter() : null);
-    updateLoadState(this);
-};
-
-XML3D.data.DataAdapter.prototype.connectedAdapterChanged = function(key, adapter) {
+XML3D.data.DataAdapter.prototype.connectedAdapterChanged = function(key, adapter, status) {
     if(key == "src"){
         this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
     }
-    if(key == "proto"){
-        this.xflowDataNode.protoNode = adapter ? adapter.getXflowNode() : null;
+    if(key == "dataflow"){
+        this.xflowDataNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
     }
     updateLoadState(this);
 };
@@ -18053,6 +18047,192 @@ XML3D.data.DataAdapter.prototype.connectedAdapterChanged = function(key, adapter
 XML3D.data.DataAdapter.prototype.toString = function() {
     return "XML3D.data.DataAdapter";
 };
+
+function updateCompute(dataAdapter){
+    var xflowNode = dataAdapter.xflowDataNode;
+    xflowNode.setCompute(dataAdapter.node.getAttribute("compute"));
+    if(xflowNode.computeDataflowUrl){
+        updateAdapterHandle(dataAdapter, "dataflow", xflowNode.computeDataflowUrl);
+    }
+    else{
+        dataAdapter.disconnectAdapterHandle("dataflow");
+        updateLoadState(dataAdapter);
+    }
+}
+
+function updateLoadState(dataAdpater){
+    var loading = false;
+    var handle = dataAdpater.getConnectedAdapterHandle("src");
+    if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
+        loading = true;
+    }
+
+    var handle = dataAdpater.getConnectedAdapterHandle("dataflow");
+    if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
+        loading = true;
+    }
+    dataAdpater.xflowDataNode.setLoading(loading);
+}
+
+function updateAdapterHandle(adapter, key, url){
+    var adapterHandle = adapter.getAdapterHandle(url);
+    var status = (adapterHandle && adapterHandle.status);
+    if(status == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+        XML3D.debug.logError("Could not find element of url '" + adapterHandle.url + "' for " + key, adapter.node);
+    }
+    adapter.connectAdapterHandle(key, adapterHandle);
+    adapter.connectedAdapterChanged(key, adapterHandle ? adapterHandle.getAdapter() : null, status);
+}
+
+
+/**
+ * DataAdapter handling a <dataflow> element
+ * @param factory
+ * @param node
+ * @constructor
+ */
+XML3D.data.DataflowDataAdapter = function(factory, node) {
+    XML3D.data.BaseDataAdapter.call(this, factory, node);
+    this.xflowDataNode = null;
+};
+XML3D.createClass(XML3D.data.DataflowDataAdapter, XML3D.data.BaseDataAdapter);
+
+XML3D.data.DataflowDataAdapter.prototype.init = function() {
+    this.xflowDataNode = XML3D.data.xflowGraph.createDataNode();
+    this.dataflowRefs = [];
+    updateDataflowXflowNode(this, this.node);
+};
+
+/**
+ * @param evt notification of type XML3D.Notification
+ */
+XML3D.data.DataflowDataAdapter.prototype.notifyChanged = function(evt) {
+    if(evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED){
+
+    }
+    switch(evt.type){
+        case XML3D.events.ADAPTER_HANDLE_CHANGED:
+            this.connectedAdapterChanged(evt.key, evt.adapter, evt.handleStatus);
+            if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+                XML3D.debug.logError("Could not find dataflow of url '" + evt.url, this.node);
+            }
+            break;
+
+        case XML3D.events.NODE_INSERTED:
+        case XML3D.events.NODE_REMOVED:
+            updateDataflowXflowNode(this);
+            break;
+        case XML3D.events.VALUE_MODIFIED:
+            var attr = evt.wrapped.attrName;
+            if(attr == "out"){
+                updateDataflowOut(this);
+            }
+            break;
+    }
+};
+
+XML3D.data.DataflowDataAdapter.prototype.updateXflowNode = function(){
+    updateDataflowXflowNode(this, this.node);
+}
+
+XML3D.data.DataflowDataAdapter.prototype.connectedAdapterChanged = function(key, adapter, status) {
+    var xflowNode = this.dataflowRefs[key];
+    if(xflowNode){
+        xflowNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
+        xflowNode.setLoading(status == XML3D.base.AdapterHandle.STATUS.LOADING);
+    }
+};
+
+function updateDataflowOut(adapter){
+    var out = adapter.node.getAttribute("out");
+    if(out)
+        adapter.xflowDataNode.setFilter("keep(" + out + ")");
+    else
+        adapter.xflowDataNode.setFilter("");
+}
+
+function updateDataflowXflowNode(adapter, node){
+    adapter.xflowDataNode.clearChildren();
+    adapter.xflowDataNode.setCompute("");
+    adapter.clearAdapterHandles();
+    adapter.dataflowRefs = [];
+    updateDataflowOut(adapter);
+
+    var child = node.lastElementChild, firstNode = true, prevNode = null, currentNode = adapter.xflowDataNode;
+    do{
+        var subAdapter = adapter.factory.getAdapter(child);
+        if(!subAdapter) continue;
+
+        if(subAdapter.getXflowNode){
+             var xflowNode = subAdapter.getXflowNode();
+             if(prevNode)
+                currentNode.insertBefore(xflowNode, prevNode);
+             else
+                currentNode.appendChild(xflowNode);
+             prevNode = xflowNode;
+        }
+        else if(subAdapter.getComputeCode){
+            var statements = subAdapter.getComputeCode().split(";");
+            var j = statements.length;
+            while(j--)
+            {
+                var compute = statements[j].trim();
+                if(!compute) continue;
+                if(firstNode){
+                    firstNode = false;
+                }
+                else{
+                    var xflowNode = XML3D.data.xflowGraph.createDataNode();
+                    if(prevNode)
+                        currentNode.insertBefore(xflowNode, prevNode);
+                    else
+                        currentNode.appendChild(xflowNode);
+                    currentNode = xflowNode; prevNode = null;
+                }
+                currentNode.userData = child;
+                currentNode.setCompute(statements[j].trim());
+                if(currentNode.computeDataflowUrl){
+                    var idx = adapter.dataflowRefs.length;
+                    adapter.dataflowRefs.push(currentNode);
+                    updateAdapterHandle(adapter, idx, currentNode.computeDataflowUrl);
+                }
+            }
+        }
+
+    }while(child = child.previousElementSibling);
+}
+
+/**
+ * DataAdapter handling a <dataflow> element
+ * @param factory
+ * @param node
+ * @constructor
+ */
+XML3D.data.ComputeDataAdapter = function(factory, node) {
+    XML3D.base.NodeAdapter.call(this, factory, node);
+};
+XML3D.createClass(XML3D.data.ComputeDataAdapter, XML3D.base.NodeAdapter);
+
+XML3D.data.ComputeDataAdapter.prototype.getComputeCode = function(){
+    return this.node.value;
+}
+
+/**
+ * @param evt notification of type XML3D.Notification
+ */
+XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
+    switch(evt.type){
+        case XML3D.events.VALUE_MODIFIED:
+        case XML3D.events.NODE_INSERTED:
+        case XML3D.events.NODE_REMOVED:
+            var parent = this.node.parentNode;
+            if(parent){
+                var parentAdapter = this.factory.getAdapter(parent);
+                parentAdapter && parentAdapter.updateXflowNode();
+            }
+    }
+};
+
 
 }());
 // data/values.js
@@ -18308,7 +18488,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     }
 
     ScriptDataAdapter.prototype.getScriptCode = function(){
-        return this.node.innerText;
+        return this.node.value;
     }
 
     ScriptDataAdapter.prototype.notifyChanged = function(evt) {
@@ -18623,6 +18803,8 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     reg['texture']     = data.TextureDataAdapter;
     reg['data']        = data.DataAdapter;
     reg['proto']       = data.DataAdapter;
+    reg['dataflow']    = data.DataflowDataAdapter;
+    reg['compute']     = data.ComputeDataAdapter;
     reg['iframe']      = data.IFrameDataAdapter;
     reg['video']       = data.VideoDataAdapter;
     reg['script']       = data.ScriptDataAdapter;
@@ -21033,12 +21215,13 @@ XML3D.webgl.stopEvent = function(ev) {
                 XML3D.math.bbox.transform(bb, t_mat, bb);
 
                 var bounds = { zMin: bb[2], zMax: bb[5] };
+                var length = XML3D.math.bbox.longestSide(bb);
 
                 // Expand the view frustum a bit to ensure 2D objects parallel to the camera are rendered
-                bounds.zMin *= -1.005;
-                bounds.zMax *= -0.995;
+                bounds.zMin -= length * 0.005;
+                bounds.zMax += length * 0.005;
 
-                return {near: Math.max(bounds.zMax, 1), far: bounds.zMin};
+                return {near: Math.max(-bounds.zMax, 0.01*length), far: -bounds.zMin};
             }
         })(),
 

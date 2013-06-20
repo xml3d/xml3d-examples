@@ -41,10 +41,10 @@
       XML3D.debug.logError("No getUserMedia");
       }
       }
-      
+
       window.onload = activateWebCam;
     </script>
-    
+
     <h1>Fun Mirror</h1>
     <div style="color: white;">
       <xml3d id="MyXml3d" xmlns="http://www.xml3d.org/2009/xml3d"
@@ -79,19 +79,19 @@
           <shader id="texture1" script="urn:xml3d:shader:phong">
             <float3 name="diffuseColor">1.5 1.5 1.5</float3>
             <float name="ambientIntensity">1.0</float>
-            <data src="#kernels" filter="rename({diffuseTexture:outlineImage})" />
+            <data src="#kernels" filter="rename({diffuseTexture:outlineImage})" ></data>
           </shader>
 
           <shader id="texture2" script="urn:xml3d:shader:phong">
             <float3 name="diffuseColor">1.5 1.5 1.5</float3>
             <float name="ambientIntensity">1.0</float>
-            <data src="#kernels" filter="rename({diffuseTexture:funMirrorImage})" />
+            <data src="#kernels" filter="rename({diffuseTexture:funMirrorImage})" ></data>
           </shader>
 
           <shader id="texture3" script="urn:xml3d:shader:phong">
             <float3 name="diffuseColor">1.5 1.5 1.5</float3>
             <float name="ambientIntensity">1.0</float>
-            <data src="#kernels" filter="rename({diffuseTexture:popartImage})" />
+            <data src="#kernels" filter="rename({diffuseTexture:popartImage})" ></data>
           </shader>
 
 
