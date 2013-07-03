@@ -132,12 +132,16 @@
     if (!navigator.getUserMedia)
       return;
     navigator.getUserMedia(
-        {video: true, audio: true}, function(stream) {
+        {video: true, audio: false},
+		function(stream) {
           var url = window.URL.createObjectURL(stream);
           for(var i = 0; i < videos.length; ++i){
             videos[i].autoplay = true;
             videos[i].src = url;
           }
+        },
+        function(err) {
+            console.log("The following error occured: " + err);
         });
   }
   function enableVideo(videos) {
