@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (08.08.2013 12:37:31 MESZ)
+@version: DEVELOPMENT SNAPSHOT (08.08.2013 14:29:22 CEST)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (08.08.2013 12:37:31 MESZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (08.08.2013 14:29:22 CEST)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -12591,7 +12591,7 @@ DataNode.prototype.notify = function(changeType, senderNode){
         if(changeType == Xflow.RESULT_STATE.IMAGE_LOAD_START ||
            changeType == Xflow.RESULT_STATE.IMAGE_LOAD_END )
             updateImageLoading(this);
-        this._channelNode.notifyDataChange(senderNode, changeType);
+        senderNode && this._channelNode.notifyDataChange(senderNode, changeType);
     }
     for(var i = 0; i < this._listeners.length; ++i)
         this._listeners[i](changeType);
@@ -12647,7 +12647,7 @@ function updateImageLoading(node){
     }
     if(imageLoading != node._imageLoading){
         node._imageLoading = imageLoading;
-        for(var i = 0; node._parents.length; ++i)
+        for(var i = 0; i < node._parents.length; ++i)
             node._parents[i].notify(imageLoading ? Xflow.RESULT_STATE.IMAGE_LOAD_START :
             Xflow.RESULT_STATE.IMAGE_LOAD_END);
     }
@@ -14298,7 +14298,7 @@ ProcessNode.prototype.onXflowChannelChange = function(channel, state){
     if(state == Xflow.DATA_ENTRY_STATE.CHANGED_VALUE &&
         this.status > Xflow.PROCESS_STATE.UNPROCESSED)
         this.status = Xflow.PROCESS_STATE.UNPROCESSED;
-    else if(state == Xflow.DATA_ENTRY_STATE.CHANGED_SIZE)
+    else
         this.status = Xflow.PROCESS_STATE.MODIFIED;
     for(var name in this.outputDataSlots){
         this.outputDataSlots[name].notifyOnChange(state);
@@ -22256,7 +22256,7 @@ XML3D.webgl.stopEvent = function(ev) {
             try {
                 return (this.vertexCount != null ? this.vertexCount : this.buffers.position.length / 3);
             } catch (e) {
-                XML3D.debug.logError("Could not calculate vertex count.", e);
+                //XML3D.debug.logError("Could not calculate vertex count.", e);
                 return 0;
             }
         },
