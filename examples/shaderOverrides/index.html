@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Shader Overrides</title>
+    <script src="http://localhost:8080/xml3d.js/build/output/xml3d.js"></script>
+	<script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <link href="../../style/page.css" media="all" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+        <h1>Shader Overrides</h1>
+  <xml3d style="background-color: grey; width:100%;" onload="init(event);">
+      <defs>
+	      <shader id="baseShader" script="urn:xml3d:shader:phong">
+              <float name="ambientIntensity">0.25</float>
+			  <float3 name="emissiveColor">0 0 0</float3>
+			  <float name="shininess">0.4</float>
+			  <float3 name="specularColor">1 1 1</float3>
+          </shader>
+	  </defs>
+      <view></view>
+	  <light intensity="0.9"></light>
+      <group shader="#baseShader"></group>
+  </xml3d>
+
+  <script>
+      function createInstances(parent, shape) {
+          // make a grid of transforms and put a sphere instance on each one
+          for (var x = 0; x < 5; x++) {
+              for (var y = 0; y < 5; y++) {
+                  for (var z = 0; z < 5; z++) {
+                      var group = document.createElement("group");
+                      var transform3d = "transform: translate3d(";
+                      transform3d += (x - 2.5) * 100;
+                      transform3d += "px, ";
+                      transform3d += (y - 2.5) * 100;
+                      transform3d += "px, ";
+                      transform3d += (z - 2.5) * 100;
+                      transform3d += "px);";
+                      group.setAttribute("style", transform3d);
+
+                      parent.appendChild(group);
+                      var mesh = document.createElement("mesh");
+                      var data = document.createElement("data");
+                      data.setAttribute("src", "./teapot.json");
+                      var color = document.createElement("float3");
+                      color.setAttribute("name", "diffuseColor");
+                      color.textContent = "" + (x*0.111) + " " + (y*0.111) + " " + (z*0.111);
+
+                      mesh.appendChild(data);
+                      mesh.appendChild(color);
+                      group.appendChild(mesh);
+
+                  }
+              }
+          }
+      }
+
+      var fd = null, lastTime = 0, dir = new XML3DVec3(), clock = 0;
+      var update = function(evt) {
+          var view = document.querySelector("view");
+          var timeStamp = 0;
+          if(evt) {
+              var elapsed = (evt.timeStamp - lastTime) / 1000.0;
+              clock += elapsed;
+             // console.log(elapsed);
+			  var x = Math.sin(clock * 0.3) * 1000;
+			  var z = Math.cos(clock * 0.3) * 1000;
+              var y = Math.sin(clock * 0.7) * 500;
+			  dir.set(x,y,z);
+			  //console.log(dir.x, dir.y, dir.z);
+              timeStamp = evt.timeStamp;
+          } else {
+				dir.set(0,0,-1);
+		  }
+    	  view.lookAt(dir);
+          lastTime = timeStamp;
+
+
+
+      }
+
+      var init = function(evt) {
+          if(!fd) {
+              var xml3d = document.querySelector("xml3d");
+              xml3d.addEventListener("framedrawn", update);
+              update();
+          }
+      }
+
+      var def =  document.querySelector("defs"),
+          group = document.querySelector("group");
+
+      createInstances(group) ;
+  </script>
+</div>
+</div>
+</body>
+</html>

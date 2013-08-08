@@ -38,7 +38,11 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
-    {cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
+    {cat: "shader", name: "Shader Overrides", href: "examples/shaderOverrides/index.html",
+        info: "Demonstrates overriding of shader attributes in the mesh."},
+    
+	
+	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
         info: "Demonstrates mesh morphing with Xflow"},
     {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
         info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},

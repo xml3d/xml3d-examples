@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: 4.4
+@version: DEVELOPMENT SNAPSHOT (08.08.2013 12:37:31 MESZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = '4.4';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (08.08.2013 12:37:31 MESZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -44,10 +44,20 @@ XML3D.createElement = function(tagName) {
 
 XML3D.extend = function(a, b) {
     for ( var prop in b) {
-        if (b[prop] === undefined) {
-            delete a[prop];
-        } else if (prop !== "constructor" || a !== window) {
-            a[prop] = b[prop];
+        var g = b.__lookupGetter__(prop), s = b.__lookupSetter__(prop);
+        if (g||s) {
+            if (g) {
+                a.__defineGetter__(prop, g);
+            }
+            if (s) {
+                a.__defineSetter__(prop, s);
+            }
+        } else {
+            if (b[prop] === undefined) {
+                delete a[prop];
+            } else if (prop !== "constructor" || a !== window) {
+                a[prop] = b[prop];
+            }
         }
     }
     return a;
@@ -73,7 +83,7 @@ XML3D.isSuperclassOf = function(ctor, subclassCtor) {
  * @param {Object} ctor Constructor
  * @param {Object} parent Parent class
  * @param {Object=} methods Methods to add to the class
- * @returns
+ * @return {Object!}
  */
 XML3D.createClass = function(ctor, parent, methods) {
     methods = methods || {};
@@ -94,101 +104,187 @@ XML3D.createClass = function(ctor, parent, methods) {
 };
 
 (function() {
-    var onload = function() {
+    function displayWebGLNotSupportedInfo(xml3dElement) {
+
+        // Place xml3dElement inside an invisible div
+        var hideDiv = document.createElementNS(XML3D.xhtmlNS, 'div');
+
+        xml3dElement.parentNode.insertBefore(hideDiv, xml3dElement);
+        hideDiv.appendChild(xml3dElement);
+        hideDiv.style.display = "none";
+
+        var infoDiv = document.createElementNS(XML3D.xhtmlNS, 'div');
+        infoDiv.setAttribute("class", xml3dElement.getAttribute("class"));
+        infoDiv.setAttribute("style", xml3dElement.getAttribute("style"));
+        infoDiv.style.border = "2px solid red";
+        infoDiv.style.color = "red";
+        infoDiv.style.padding = "10px";
+        infoDiv.style.backgroundColor = "rgba(255, 0, 0, 0.3)";
+
+        var width = xml3dElement.getAttribute("width");
+        if (width !== null) {
+            infoDiv.style.width = width;
+        }
+
+        var height = xml3dElement.getAttribute("height");
+        if (height !== null) {
+            infoDiv.style.height = height;
+        }
+
+        var hElement = document.createElement("h3");
+        var hTxt = document.createTextNode("Your browser doesn't appear to support XML3D.");
+        hElement.appendChild(hTxt);
+
+        var pElement = document.createElement("p");
+        pElement.appendChild(document.createTextNode("Please visit "));
+        var link = document.createElement("a");
+        link.setAttribute("href", "http://www.xml3d.org");
+        link.appendChild(document.createTextNode("http://www.xml3d.org"));
+        pElement.appendChild(link);
+        pElement.appendChild(document.createTextNode(" to get information about browsers supporting XML3D."));
+        infoDiv.appendChild(hElement);
+        infoDiv.appendChild(pElement);
+
+        hideDiv.parentNode.insertBefore(infoDiv, hideDiv);
+    };
+
+    /*  a list of elements that are currently initialized. More specifically,
+     *  they're currently in a call to the method below.
+     *
+     *  Why?
+     *  In webgl we actually reattach the xml3d element in the DOM. Thus, when
+     *  we're in the middle of working on a onNodeInserted event, there will probably
+     *  come right another event which we actually don't care for.
+     *  So we use this list to keep track of which elements are currently initializing.
+     */
+    var curXML3DInitElements = [];
+
+    /**
+     * @param {Element} xml3dElement
+     */
+    function initXML3DElement(xml3dElement) {
+
+        if (XML3D._native)
+            return;
+
+        if(-1 < curXML3DInitElements.indexOf(xml3dElement))
+            return;
+
+        curXML3DInitElements.push(xml3dElement);
+
+        var debug = XML3D.debug.setup();
+
+        if (!(XML3D.webgl && XML3D.webgl.supported())) {
+            debug && XML3D.debug.logWarning("Could not initialise WebGL, sorry :-(");
+            displayWebGLNotSupportedInfo(xml3dElement);
+            curXML3DInitElements.splice(curXML3DInitElements.indexOf(xml3dElement), 1);
+            return;
+        }
+
+        try {
+            XML3D.config.configure(xml3dElement);
+        } catch (e) {
+            debug && XML3D.debug.logException(e);
+            curXML3DInitElements.splice(curXML3DInitElements.indexOf(xml3dElement), 1);
+            return;
+        }
+        try {
+            XML3D.webgl.configure(xml3dElement);
+        } catch (e) {
+            debug && XML3D.debug.logException(e);
+            curXML3DInitElements.splice(curXML3DInitElements.indexOf(xml3dElement), 1);
+            return;
+        }
+
+        // initialize all attached adapters
+        XML3D.base.sendAdapterEvent(xml3dElement, {onConfigured : []});
+
+        curXML3DInitElements.splice(curXML3DInitElements.indexOf(xml3dElement), 1);
+    };
+
+    /**
+     * @param {Element} xml3dElement
+     */
+    function destroyXML3DElement(xml3dElement)
+    {
+        if(-1 < curXML3DInitElements.indexOf(xml3dElement))
+            return;
+
+        xml3dElement._configured = undefined;
+
+        if(!xml3dElement.parentNode)
+            return; // already removed
+
+        var canvas = xml3dElement.parentNode.previousElementSibling;
+
+        var grandParentNode = xml3dElement.parentNode.parentNode;
+        if(!grandParentNode)
+            return; // subtree containing canvas is not attached, can't remove it
+
+        if(!canvas || canvas.tagName !== "canvas")
+            return; // an element we didn't create, skip deletion
+
+        grandParentNode.removeChild(xml3dElement.parentNode);
+        grandParentNode.removeChild(canvas);
+    };
+
+    /**
+     * @param {Event} evt
+     */
+    function onNodeInserted(evt) {
+
+        if(evt.target.tagName === "xml3d") {
+            initXML3DElement(evt.target);
+        }
+    };
+
+    /**
+     * @param {Event} evt
+     */
+    function onNodeRemoved(evt) {
+
+        if(evt.target.tagName === "xml3d") {
+            destroyXML3DElement(evt.target);
+        }
+    };
+
+    function onLoad() {
 
         XML3D.css.init();
 
         var debug = XML3D.debug.setup();
         debug && XML3D.debug.logInfo("xml3d.js version: " + XML3D.version);
 
-        // Find all the XML3D tags in the document
+        /**
+         * Find all the XML3D tags in the document
+         * @type {NodeList}
+         */
         var xml3ds = document.querySelectorAll("xml3d");
-        xml3ds = Array.map(xml3ds, function(n) {
-            return n;
-        });
 
         debug && XML3D.debug.logInfo("Found " + xml3ds.length + " xml3d nodes...");
 
-        if (xml3ds.length) {
-            if (XML3D._native) {
-                debug && XML3D.debug.logInfo("Using native implementation.");
-                return;
-            }
-        }
-
-        if (!(XML3D.webgl && XML3D.webgl.supported())) {
-            debug && XML3D.debug.logWarning("Could not initialise WebGL, sorry :-(");
-
-            for ( var i = 0; i < xml3ds.length; i++) {
-                // Place xml3dElement inside an invisible div
-                var hideDiv = document.createElementNS(XML3D.xhtmlNS, 'div');
-                var xml3dElement = xml3ds[i];
-
-                xml3dElement.parentNode.insertBefore(hideDiv, xml3dElement);
-                hideDiv.appendChild(xml3dElement);
-                hideDiv.style.display = "none";
-
-                var infoDiv = document.createElementNS(XML3D.xhtmlNS, 'div');
-                infoDiv.setAttribute("class", xml3dElement.getAttribute("class"));
-                infoDiv.setAttribute("style", xml3dElement.getAttribute("style"));
-                infoDiv.style.border = "2px solid red";
-                infoDiv.style.color = "red";
-                infoDiv.style.padding = "10px";
-                infoDiv.style.backgroundColor = "rgba(255, 0, 0, 0.3)";
-
-                var width = xml3dElement.getAttribute("width");
-                if (width !== null) {
-                    infoDiv.style.width = width;
-                }
-
-                var height = xml3dElement.getAttribute("height");
-                if (height !== null) {
-                    infoDiv.style.height = height;
-                }
-
-                var hElement = document.createElement("h3");
-                var hTxt = document.createTextNode("Your browser doesn't appear to support XML3D.");
-                hElement.appendChild(hTxt);
-
-                var pElement = document.createElement("p");
-                pElement.appendChild(document.createTextNode("Please visit "));
-                var link = document.createElement("a");
-                link.setAttribute("href", "http://www.xml3d.org");
-                link.appendChild(document.createTextNode("http://www.xml3d.org"));
-                pElement.appendChild(link);
-                pElement.appendChild(document.createTextNode(" to get information about browsers supporting XML3D."));
-                infoDiv.appendChild(hElement);
-                infoDiv.appendChild(pElement);
-
-                hideDiv.parentNode.insertBefore(infoDiv, hideDiv);
-            }
-
+        if (xml3ds.length && XML3D._native) {
+            debug && XML3D.debug.logInfo("Using native implementation.");
             return;
         }
 
-        try {
-            XML3D.config.configure(xml3ds);
-        } catch (e) {
-            debug && XML3D.debug.logException(e);
-        }
-        try {
-            XML3D.webgl.configure(xml3ds);
-        } catch (e) {
-            debug && XML3D.debug.logException(e);
-        }
+        XML3D.xhtml = (document.xmlEncoding != null);
 
-        // initialize all attached adapters
-        for (i in xml3ds) {
-            XML3D.base.sendAdapterEvent(xml3ds[i], {onConfigured : []});
+        for(var i = 0; i < xml3ds.length; i++) {
+            initXML3DElement(xml3ds[i]);
         }
     };
-    var onunload = function() {
+
+    function onUnload() {
         if (XML3D.document)
             XML3D.document.onunload();
     };
-    window.addEventListener('DOMContentLoaded', onload, false);
-    window.addEventListener('unload', onunload, false);
-    window.addEventListener('reload', onunload, false);
+
+    window.addEventListener('DOMContentLoaded', onLoad, false);
+    window.addEventListener('unload', onUnload, false);
+    window.addEventListener('reload', onUnload, false);
+    document.addEventListener('DOMNodeInserted', onNodeInserted, false);
+    document.addEventListener('DOMNodeRemoved', onNodeRemoved, false);
 
 })();
 // utils/misc.js
@@ -224,12 +320,12 @@ window.requestAnimFrame = (function(){
   })();
 
 (function() {
-    
-    if(!XML3D.util) 
+
+    if(!XML3D.util)
         XML3D.util = {};
-    
-    var u = XML3D.util; 
-    
+
+    var u = XML3D.util;
+
     /**
      * Dispatch HTML event
      *
@@ -265,7 +361,7 @@ window.requestAnimFrame = (function(){
         event.initCustomEvent(eventType, canBubble, cancelable, detail);
         target.dispatchEvent(event);
     };
-    
+
     u.getStyle = function(oElm, strCssRule) {
         var strValue = "";
         if (document.defaultView && document.defaultView.getComputedStyle) {
@@ -281,59 +377,66 @@ window.requestAnimFrame = (function(){
         return strValue;
     };
 
-    /** Evaluates the given XPath expression in the given xml3d element on 
-     *  xml3d elements and returns the result. 
-     *  
-     * @param {!Object} xml3d the xml3d element on which to evaluate the expression 
-     * @param {!Object} xpathExpr the XPath expression to be evaluated 
-     * 
+    /** Evaluates the given XPath expression in the given xml3d element on
+     *  xml3d elements and returns the result.
+     *
+     * @param {!Object} xml3d the xml3d element on which to evaluate the expression
+     * @param {!Object} xpathExpr the XPath expression to be evaluated
+     *
      * @return {XPathResult} the result of the evaluation
      */
     u.evaluateXPathExpr = function(xml3d, xpathExpr)
     {
         return document.evaluate(
-            xpathExpr, xml3d, 
-            function() {return XML3D.xml3dNS;}, 
-            XPathResult.FIRST_ORDERED_NODE_TYPE, null);         
-    }; 
-    
-    var __autoCreatedViewId = 0; 
-    /** 
-     * Returns the active view element corresponding to the given xml3d element. 
-     * 
+            xpathExpr, xml3d,
+            function() {return XML3D.xml3dNS;},
+            XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+    };
+
+    var __autoCreatedViewId = 0;
+    /**
+     * Returns the active view element corresponding to the given xml3d element.
+     *
      * @param {!Object} xml3d
      * @return {Object} the active view element
-     */ 
+     */
     u.getOrCreateActiveView = function(xml3d)
     {
         // try to resolve reference
-        var ref = xml3d.activeView; 
+        var ref = xml3d.activeView;
         if(ref)
-        {       
-            var v = XML3D.URIResolver.resolveLocal(ref);      
+        {
+            var v = XML3D.URIResolver.resolveLocal(ref);
             if(!v)
-                throw "XML3D Error: xml3d references view that is not defined: '" + ref + "'."; 
-            
-            return v; 
+                throw "XML3D Error: xml3d references view that is not defined: '" + ref + "'.";
+
+            return v;
         }
-        
-        // didn't succeed, so now try to just take the first view 
-        var firstView = XML3D.util.evaluateXPathExpr(
+
+        // didn't succeed, so now try to just take the first view
+        var firstView;
+        if(XML3D.xhtml){
+            firstView = XML3D.util.evaluateXPathExpr(
                 xml3d, './/xml3d:view[1]').singleNodeValue;
-        
+        }
+        else{
+            firstView = xml3d.getElementsByTagName("view")[0];
+        }
+
+
         if(firstView)
         {
-            // if it has an id, set it as active 
+            // if it has an id, set it as active
             if(firstView.id && firstView.id.length > 0)
-                xml3d.activeView = "#" + firstView.id; 
-            
-            return firstView; 
+                xml3d.activeView = "#" + firstView.id;
+
+            return firstView;
         }
-        
+
         // didn't find any: create new one
         XML3D.debug.logWarning("xml3d element has no view defined: creating one.");
-        
-        var vid = "xml3d.autocreatedview_" + __autoCreatedViewId++; 
+
+        var vid = "xml3d.autocreatedview_" + __autoCreatedViewId++;
         var v = XML3D.createElement("view");
         v.setAttribute("id", vid);
 
@@ -558,12 +661,19 @@ XML3D.URI.prototype.isLocal = function(){
 }
 
 /**
+ * @return {boolean} true if URI is absolute
+ */
+XML3D.URI.prototype.isAbsolute = function(){
+    return this.scheme != null;
+}
+
+/**
  * Get absolute URI relative to the provided document uri
  * @param {string} docUri uri of document from which this uri originates
  * @returns {XML3D.URI}
  */
 XML3D.URI.prototype.getAbsoluteURI = function(docUri){
-    if (!this.valid || this.authority || this.scheme == "blob") {
+    if (!this.valid || this.isAbsolute()) {
         return this;
     }
 
@@ -735,7 +845,7 @@ XML3D.css.getCSSMatrix = function(node){
         result = new XML3D.css.CSSMatrix(style);
     }
     catch(e){
-        XML3D.debug.logException(e, "Error parsing transform property: " + style);
+        XML3D.debug.logError("Error parsing transform property: " + style);
     }
     return result;
 
@@ -1587,10 +1697,6 @@ XML3D.css.convertCssToMat4 = function(cssMatrix, m){
 
 // gl-matrix namespace
 XML3D.math = {};
-var exports = XML3D.math;
-
-// fix for define variable non-existence 
-var define = {};
 /*jslint white: false, onevar: false, undef: true, nomen: true, eqeqeq: true, plusplus: true, bitwise: true, regexp: true, newcap: true, immed: true, sub: true, nomen: false */
 
 /**
@@ -1791,7 +1897,7 @@ var GLU = {};
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
  * @author Colin MacKenzie IV
- * @version 2.0.1
+ * @version 2.2.0
  */
 
 /* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
@@ -1802,12 +1908,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1817,25 +1923,11 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 
-(function() {
+(function(_global) {
   "use strict";
 
   var shim = {};
-  if (typeof(exports) === 'undefined') {
-    if(typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
-      shim.exports = {};
-      define(function() {
-        return shim.exports;
-      });
-    } else {
-      // gl-matrix lives in a browser, define its namespaces in global
-      shim.exports = window;
-    }    
-  }
-  else {
-    // gl-matrix lives in commonjs, define its namespaces in exports
-    shim.exports = exports;
-  }
+  shim.exports = _global;
 
   (function(exports) {
     /* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
@@ -1846,12 +1938,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1867,6 +1959,10 @@ if(!GLMAT_EPSILON) {
 
 if(!GLMAT_ARRAY_TYPE) {
     var GLMAT_ARRAY_TYPE = (typeof Float32Array !== 'undefined') ? Float32Array : Array;
+}
+
+if(!GLMAT_RANDOM) {
+    var GLMAT_RANDOM = Math.random;
 }
 
 /**
@@ -1896,12 +1992,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -1998,7 +2094,7 @@ vec2.add = function(out, a, b) {
 };
 
 /**
- * Subtracts two vec2's
+ * Subtracts vector b from vector a
  *
  * @param {vec2} out the receiving vector
  * @param {vec2} a the first operand
@@ -2096,6 +2192,21 @@ vec2.max = function(out, a, b) {
 vec2.scale = function(out, a, b) {
     out[0] = a[0] * b;
     out[1] = a[1] * b;
+    return out;
+};
+
+/**
+ * Adds two vec2's after scaling the second operand by a scalar value
+ *
+ * @param {vec2} out the receiving vector
+ * @param {vec2} a the first operand
+ * @param {vec2} b the second operand
+ * @param {Number} scale the amount to scale b by before adding
+ * @returns {vec2} out
+ */
+vec2.scaleAndAdd = function(out, a, b, scale) {
+    out[0] = a[0] + (b[0] * scale);
+    out[1] = a[1] + (b[1] * scale);
     return out;
 };
 
@@ -2251,6 +2362,21 @@ vec2.lerp = function (out, a, b, t) {
 };
 
 /**
+ * Generates a random vector with the given scale
+ *
+ * @param {vec2} out the receiving vector
+ * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
+ * @returns {vec2} out
+ */
+vec2.random = function (out, scale) {
+    scale = scale || 1.0;
+    var r = GLMAT_RANDOM() * 2.0 * Math.PI;
+    out[0] = Math.cos(r) * scale;
+    out[1] = Math.sin(r) * scale;
+    return out;
+};
+
+/**
  * Transforms the vec2 with a mat2
  *
  * @param {vec2} out the receiving vector
@@ -2261,8 +2387,59 @@ vec2.lerp = function (out, a, b, t) {
 vec2.transformMat2 = function(out, a, m) {
     var x = a[0],
         y = a[1];
-    out[0] = x * m[0] + y * m[1];
-    out[1] = x * m[2] + y * m[3];
+    out[0] = m[0] * x + m[2] * y;
+    out[1] = m[1] * x + m[3] * y;
+    return out;
+};
+
+/**
+ * Transforms the vec2 with a mat2d
+ *
+ * @param {vec2} out the receiving vector
+ * @param {vec2} a the vector to transform
+ * @param {mat2d} m matrix to transform with
+ * @returns {vec2} out
+ */
+vec2.transformMat2d = function(out, a, m) {
+    var x = a[0],
+        y = a[1];
+    out[0] = m[0] * x + m[2] * y + m[4];
+    out[1] = m[1] * x + m[3] * y + m[5];
+    return out;
+};
+
+/**
+ * Transforms the vec2 with a mat3
+ * 3rd vector component is implicitly '1'
+ *
+ * @param {vec2} out the receiving vector
+ * @param {vec2} a the vector to transform
+ * @param {mat3} m matrix to transform with
+ * @returns {vec2} out
+ */
+vec2.transformMat3 = function(out, a, m) {
+    var x = a[0],
+        y = a[1];
+    out[0] = m[0] * x + m[3] * y + m[6];
+    out[1] = m[1] * x + m[4] * y + m[7];
+    return out;
+};
+
+/**
+ * Transforms the vec2 with a mat4
+ * 3rd vector component is implicitly '0'
+ * 4th vector component is implicitly '1'
+ *
+ * @param {vec2} out the receiving vector
+ * @param {vec2} a the vector to transform
+ * @param {mat4} m matrix to transform with
+ * @returns {vec2} out
+ */
+vec2.transformMat4 = function(out, a, m) {
+    var x = a[0],
+        y = a[1];
+    out[0] = m[0] * x + m[4] * y + m[12];
+    out[1] = m[1] * x + m[5] * y + m[13];
     return out;
 };
 
@@ -2290,7 +2467,7 @@ vec2.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-        
+
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -2302,7 +2479,7 @@ vec2.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1];
         }
-        
+
         return a;
     };
 })();
@@ -2329,12 +2506,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2439,7 +2616,7 @@ vec3.add = function(out, a, b) {
 };
 
 /**
- * Subtracts two vec3's
+ * Subtracts vector b from vector a
  *
  * @param {vec3} out the receiving vector
  * @param {vec3} a the first operand
@@ -2543,6 +2720,22 @@ vec3.scale = function(out, a, b) {
     out[0] = a[0] * b;
     out[1] = a[1] * b;
     out[2] = a[2] * b;
+    return out;
+};
+
+/**
+ * Adds two vec3's after scaling the second operand by a scalar value
+ *
+ * @param {vec3} out the receiving vector
+ * @param {vec3} a the first operand
+ * @param {vec3} b the second operand
+ * @param {Number} scale the amount to scale b by before adding
+ * @returns {vec3} out
+ */
+vec3.scaleAndAdd = function(out, a, b, scale) {
+    out[0] = a[0] + (b[0] * scale);
+    out[1] = a[1] + (b[1] * scale);
+    out[2] = a[2] + (b[2] * scale);
     return out;
 };
 
@@ -2709,6 +2902,26 @@ vec3.lerp = function (out, a, b, t) {
 };
 
 /**
+ * Generates a random vector with the given scale
+ *
+ * @param {vec3} out the receiving vector
+ * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
+ * @returns {vec3} out
+ */
+vec3.random = function (out, scale) {
+    scale = scale || 1.0;
+
+    var r = GLMAT_RANDOM() * 2.0 * Math.PI;
+    var z = (GLMAT_RANDOM() * 2.0) - 1.0;
+    var zScale = Math.sqrt(1.0-z*z) * scale;
+
+    out[0] = Math.cos(r) * zScale;
+    out[1] = Math.sin(r) * zScale;
+    out[2] = z * scale;
+    return out;
+};
+
+/**
  * Transforms the vec3 with a mat4.
  * 4th vector component is implicitly '1'
  *
@@ -2726,6 +2939,22 @@ vec3.transformMat4 = function(out, a, m) {
 };
 
 /**
+ * Transforms the vec3 with a mat3.
+ *
+ * @param {vec3} out the receiving vector
+ * @param {vec3} a the vector to transform
+ * @param {mat4} m the 3x3 matrix to transform with
+ * @returns {vec3} out
+ */
+vec3.transformMat3 = function(out, a, m) {
+    var x = a[0], y = a[1], z = a[2];
+    out[0] = x * m[0] + y * m[3] + z * m[6];
+    out[1] = x * m[1] + y * m[4] + z * m[7];
+    out[2] = x * m[2] + y * m[5] + z * m[8];
+    return out;
+};
+
+/**
  * Transforms the vec3 with a quat
  *
  * @param {vec3} out the receiving vector
@@ -2734,6 +2963,8 @@ vec3.transformMat4 = function(out, a, m) {
  * @returns {vec3} out
  */
 vec3.transformQuat = function(out, a, q) {
+    // benchmarks: http://jsperf.com/quaternion-transform-vec3-implementations
+
     var x = a[0], y = a[1], z = a[2],
         qx = q[0], qy = q[1], qz = q[2], qw = q[3],
 
@@ -2774,7 +3005,7 @@ vec3.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-        
+
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -2786,7 +3017,7 @@ vec3.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2];
         }
-        
+
         return a;
     };
 })();
@@ -2813,12 +3044,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -2931,7 +3162,7 @@ vec4.add = function(out, a, b) {
 };
 
 /**
- * Subtracts two vec4's
+ * Subtracts vector b from vector a
  *
  * @param {vec4} out the receiving vector
  * @param {vec4} a the first operand
@@ -3041,6 +3272,23 @@ vec4.scale = function(out, a, b) {
     out[1] = a[1] * b;
     out[2] = a[2] * b;
     out[3] = a[3] * b;
+    return out;
+};
+
+/**
+ * Adds two vec4's after scaling the second operand by a scalar value
+ *
+ * @param {vec4} out the receiving vector
+ * @param {vec4} a the first operand
+ * @param {vec4} b the second operand
+ * @param {Number} scale the amount to scale b by before adding
+ * @returns {vec4} out
+ */
+vec4.scaleAndAdd = function(out, a, b, scale) {
+    out[0] = a[0] + (b[0] * scale);
+    out[1] = a[1] + (b[1] * scale);
+    out[2] = a[2] + (b[2] * scale);
+    out[3] = a[3] + (b[3] * scale);
     return out;
 };
 
@@ -3197,6 +3445,26 @@ vec4.lerp = function (out, a, b, t) {
 };
 
 /**
+ * Generates a random vector with the given scale
+ *
+ * @param {vec4} out the receiving vector
+ * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
+ * @returns {vec4} out
+ */
+vec4.random = function (out, scale) {
+    scale = scale || 1.0;
+
+    //TODO: This is a pretty awful way of doing this. Find something better.
+    out[0] = GLMAT_RANDOM();
+    out[1] = GLMAT_RANDOM();
+    out[2] = GLMAT_RANDOM();
+    out[3] = GLMAT_RANDOM();
+    vec4.normalize(out, out);
+    vec4.scale(out, out, scale);
+    return out;
+};
+
+/**
  * Transforms the vec4 with a mat4.
  *
  * @param {vec4} out the receiving vector
@@ -3262,7 +3530,7 @@ vec4.forEach = (function() {
         if(!offset) {
             offset = 0;
         }
-        
+
         if(count) {
             l = Math.min((count * stride) + offset, a.length);
         } else {
@@ -3274,7 +3542,7 @@ vec4.forEach = (function() {
             fn(vec, vec, arg);
             a[i] = vec[0]; a[i+1] = vec[1]; a[i+2] = vec[2]; a[i+3] = vec[3];
         }
-        
+
         return a;
     };
 })();
@@ -3301,12 +3569,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3321,11 +3589,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  */
 
 var mat2 = {};
-
-var mat2Identity = new Float32Array([
-    1, 0,
-    0, 1
-]);
 
 /**
  * Creates a new identity mat2
@@ -3404,7 +3667,7 @@ mat2.transpose = function(out, a) {
         out[2] = a[1];
         out[3] = a[3];
     }
-    
+
     return out;
 };
 
@@ -3425,7 +3688,7 @@ mat2.invert = function(out, a) {
         return null;
     }
     det = 1.0 / det;
-    
+
     out[0] =  a3 * det;
     out[1] = -a1 * det;
     out[2] = -a2 * det;
@@ -3510,7 +3773,7 @@ mat2.rotate = function (out, a, rad) {
  *
  * @param {mat2} out the receiving matrix
  * @param {mat2} a the matrix to rotate
- * @param {mat2} v the vec2 to scale the matrix by
+ * @param {vec2} v the vec2 to scale the matrix by
  * @returns {mat2} out
  **/
 mat2.scale = function(out, a, v) {
@@ -3545,12 +3808,267 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+
+/**
+ * @class 2x3 Matrix
+ * @name mat2d
+ *
+ * @description
+ * A mat2d contains six elements defined as:
+ * <pre>
+ * [a, b,
+ *  c, d,
+ *  tx,ty]
+ * </pre>
+ * This is a short form for the 3x3 matrix:
+ * <pre>
+ * [a, b, 0
+ *  c, d, 0
+ *  tx,ty,1]
+ * </pre>
+ * The last column is ignored so the array is shorter and operations are faster.
+ */
+
+var mat2d = {};
+
+/**
+ * Creates a new identity mat2d
+ *
+ * @returns {mat2d} a new 2x3 matrix
+ */
+mat2d.create = function() {
+    var out = new GLMAT_ARRAY_TYPE(6);
+    out[0] = 1;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 1;
+    out[4] = 0;
+    out[5] = 0;
+    return out;
+};
+
+/**
+ * Creates a new mat2d initialized with values from an existing matrix
+ *
+ * @param {mat2d} a matrix to clone
+ * @returns {mat2d} a new 2x3 matrix
+ */
+mat2d.clone = function(a) {
+    var out = new GLMAT_ARRAY_TYPE(6);
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[4] = a[4];
+    out[5] = a[5];
+    return out;
+};
+
+/**
+ * Copy the values from one mat2d to another
+ *
+ * @param {mat2d} out the receiving matrix
+ * @param {mat2d} a the source matrix
+ * @returns {mat2d} out
+ */
+mat2d.copy = function(out, a) {
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[4] = a[4];
+    out[5] = a[5];
+    return out;
+};
+
+/**
+ * Set a mat2d to the identity matrix
+ *
+ * @param {mat2d} out the receiving matrix
+ * @returns {mat2d} out
+ */
+mat2d.identity = function(out) {
+    out[0] = 1;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 1;
+    out[4] = 0;
+    out[5] = 0;
+    return out;
+};
+
+/**
+ * Inverts a mat2d
+ *
+ * @param {mat2d} out the receiving matrix
+ * @param {mat2d} a the source matrix
+ * @returns {mat2d} out
+ */
+mat2d.invert = function(out, a) {
+    var aa = a[0], ab = a[1], ac = a[2], ad = a[3],
+        atx = a[4], aty = a[5];
+
+    var det = aa * ad - ab * ac;
+    if(!det){
+        return null;
+    }
+    det = 1.0 / det;
+
+    out[0] = ad * det;
+    out[1] = -ab * det;
+    out[2] = -ac * det;
+    out[3] = aa * det;
+    out[4] = (ac * aty - ad * atx) * det;
+    out[5] = (ab * atx - aa * aty) * det;
+    return out;
+};
+
+/**
+ * Calculates the determinant of a mat2d
+ *
+ * @param {mat2d} a the source matrix
+ * @returns {Number} determinant of a
+ */
+mat2d.determinant = function (a) {
+    return a[0] * a[3] - a[1] * a[2];
+};
+
+/**
+ * Multiplies two mat2d's
+ *
+ * @param {mat2d} out the receiving matrix
+ * @param {mat2d} a the first operand
+ * @param {mat2d} b the second operand
+ * @returns {mat2d} out
+ */
+mat2d.multiply = function (out, a, b) {
+    var aa = a[0], ab = a[1], ac = a[2], ad = a[3],
+        atx = a[4], aty = a[5],
+        ba = b[0], bb = b[1], bc = b[2], bd = b[3],
+        btx = b[4], bty = b[5];
+
+    out[0] = aa*ba + ab*bc;
+    out[1] = aa*bb + ab*bd;
+    out[2] = ac*ba + ad*bc;
+    out[3] = ac*bb + ad*bd;
+    out[4] = ba*atx + bc*aty + btx;
+    out[5] = bb*atx + bd*aty + bty;
+    return out;
+};
+
+/**
+ * Alias for {@link mat2d.multiply}
+ * @function
+ */
+mat2d.mul = mat2d.multiply;
+
+
+/**
+ * Rotates a mat2d by the given angle
+ *
+ * @param {mat2d} out the receiving matrix
+ * @param {mat2d} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat2d} out
+ */
+mat2d.rotate = function (out, a, rad) {
+    var aa = a[0],
+        ab = a[1],
+        ac = a[2],
+        ad = a[3],
+        atx = a[4],
+        aty = a[5],
+        st = Math.sin(rad),
+        ct = Math.cos(rad);
+
+    out[0] = aa*ct + ab*st;
+    out[1] = -aa*st + ab*ct;
+    out[2] = ac*ct + ad*st;
+    out[3] = -ac*st + ct*ad;
+    out[4] = ct*atx + st*aty;
+    out[5] = ct*aty - st*atx;
+    return out;
+};
+
+/**
+ * Scales the mat2d by the dimensions in the given vec2
+ *
+ * @param {mat2d} out the receiving matrix
+ * @param {mat2d} a the matrix to translate
+ * @param {vec2} v the vec2 to scale the matrix by
+ * @returns {mat2d} out
+ **/
+mat2d.scale = function(out, a, v) {
+    var vx = v[0], vy = v[1];
+    out[0] = a[0] * vx;
+    out[1] = a[1] * vy;
+    out[2] = a[2] * vx;
+    out[3] = a[3] * vy;
+    out[4] = a[4] * vx;
+    out[5] = a[5] * vy;
+    return out;
+};
+
+/**
+ * Translates the mat2d by the dimensions in the given vec2
+ *
+ * @param {mat2d} out the receiving matrix
+ * @param {mat2d} a the matrix to translate
+ * @param {vec2} v the vec2 to translate the matrix by
+ * @returns {mat2d} out
+ **/
+mat2d.translate = function(out, a, v) {
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[4] = a[4] + v[0];
+    out[5] = a[5] + v[1];
+    return out;
+};
+
+/**
+ * Returns a string representation of a mat2d
+ *
+ * @param {mat2d} a matrix to represent as a string
+ * @returns {String} string representation of the matrix
+ */
+mat2d.str = function (a) {
+    return 'mat2d(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' +
+                    a[3] + ', ' + a[4] + ', ' + a[5] + ')';
+};
+
+if(typeof(exports) !== 'undefined') {
+    exports.mat2d = mat2d;
+}
+;
+/* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3565,12 +4083,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  */
 
 var mat3 = {};
-
-var mat3Identity = new Float32Array([
-    1, 0, 0,
-    0, 1, 0,
-    0, 0, 1
-]);
 
 /**
  * Creates a new identity mat3
@@ -3588,6 +4100,26 @@ mat3.create = function() {
     out[6] = 0;
     out[7] = 0;
     out[8] = 1;
+    return out;
+};
+
+/**
+ * Copies the upper-left 3x3 values into the given mat3.
+ *
+ * @param {mat3} out the receiving 3x3 matrix
+ * @param {mat4} a   the source 4x4 matrix
+ * @returns {mat3} out
+ */
+mat3.fromMat4 = function(out, a) {
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[4];
+    out[4] = a[5];
+    out[5] = a[6];
+    out[6] = a[8];
+    out[7] = a[9];
+    out[8] = a[10];
     return out;
 };
 
@@ -3678,7 +4210,7 @@ mat3.transpose = function(out, a) {
         out[7] = a[5];
         out[8] = a[8];
     }
-    
+
     return out;
 };
 
@@ -3701,8 +4233,8 @@ mat3.invert = function(out, a) {
         // Calculate the determinant
         det = a00 * b01 + a01 * b11 + a02 * b21;
 
-    if (!det) { 
-        return null; 
+    if (!det) {
+        return null;
     }
     det = 1.0 / det;
 
@@ -3794,14 +4326,208 @@ mat3.multiply = function (out, a, b) {
 mat3.mul = mat3.multiply;
 
 /**
+ * Translate a mat3 by the given vector
+ *
+ * @param {mat3} out the receiving matrix
+ * @param {mat3} a the matrix to translate
+ * @param {vec2} v vector to translate by
+ * @returns {mat3} out
+ */
+mat3.translate = function(out, a, v) {
+    var a00 = a[0], a01 = a[1], a02 = a[2],
+        a10 = a[3], a11 = a[4], a12 = a[5],
+        a20 = a[6], a21 = a[7], a22 = a[8],
+        x = v[0], y = v[1];
+
+    out[0] = a00;
+    out[1] = a01;
+    out[2] = a02;
+
+    out[3] = a10;
+    out[4] = a11;
+    out[5] = a12;
+
+    out[6] = x * a00 + y * a10 + a20;
+    out[7] = x * a01 + y * a11 + a21;
+    out[8] = x * a02 + y * a12 + a22;
+    return out;
+};
+
+/**
+ * Rotates a mat3 by the given angle
+ *
+ * @param {mat3} out the receiving matrix
+ * @param {mat3} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat3} out
+ */
+mat3.rotate = function (out, a, rad) {
+    var a00 = a[0], a01 = a[1], a02 = a[2],
+        a10 = a[3], a11 = a[4], a12 = a[5],
+        a20 = a[6], a21 = a[7], a22 = a[8],
+
+        s = Math.sin(rad),
+        c = Math.cos(rad);
+
+    out[0] = c * a00 + s * a10;
+    out[1] = c * a01 + s * a11;
+    out[2] = c * a02 + s * a12;
+
+    out[3] = c * a10 - s * a00;
+    out[4] = c * a11 - s * a01;
+    out[5] = c * a12 - s * a02;
+
+    out[6] = a20;
+    out[7] = a21;
+    out[8] = a22;
+    return out;
+};
+
+/**
+ * Scales the mat3 by the dimensions in the given vec2
+ *
+ * @param {mat3} out the receiving matrix
+ * @param {mat3} a the matrix to rotate
+ * @param {vec2} v the vec2 to scale the matrix by
+ * @returns {mat3} out
+ **/
+mat3.scale = function(out, a, v) {
+    var x = v[0], y = v[1];
+
+    out[0] = x * a[0];
+    out[1] = x * a[1];
+    out[2] = x * a[2];
+
+    out[3] = y * a[3];
+    out[4] = y * a[4];
+    out[5] = y * a[5];
+
+    out[6] = a[6];
+    out[7] = a[7];
+    out[8] = a[8];
+    return out;
+};
+
+/**
+ * Copies the values from a mat2d into a mat3
+ *
+ * @param {mat3} out the receiving matrix
+ * @param {mat2d} a the matrix to copy
+ * @returns {mat3} out
+ **/
+mat3.fromMat2d = function(out, a) {
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = 0;
+
+    out[3] = a[2];
+    out[4] = a[3];
+    out[5] = 0;
+
+    out[6] = a[4];
+    out[7] = a[5];
+    out[8] = 1;
+    return out;
+};
+
+/**
+* Calculates a 3x3 matrix from the given quaternion
+*
+* @param {mat3} out mat3 receiving operation result
+* @param {quat} q Quaternion to create matrix from
+*
+* @returns {mat3} out
+*/
+mat3.fromQuat = function (out, q) {
+    var x = q[0], y = q[1], z = q[2], w = q[3],
+        x2 = x + x,
+        y2 = y + y,
+        z2 = z + z,
+
+        xx = x * x2,
+        xy = x * y2,
+        xz = x * z2,
+        yy = y * y2,
+        yz = y * z2,
+        zz = z * z2,
+        wx = w * x2,
+        wy = w * y2,
+        wz = w * z2;
+
+    out[0] = 1 - (yy + zz);
+    out[3] = xy + wz;
+    out[6] = xz - wy;
+
+    out[1] = xy - wz;
+    out[4] = 1 - (xx + zz);
+    out[7] = yz + wx;
+
+    out[2] = xz + wy;
+    out[5] = yz - wx;
+    out[8] = 1 - (xx + yy);
+
+    return out;
+};
+
+/**
+* Calculates a 3x3 normal matrix (transpose inverse) from the 4x4 matrix
+*
+* @param {mat3} out mat3 receiving operation result
+* @param {mat4} a Mat4 to derive the normal matrix from
+*
+* @returns {mat3} out
+*/
+mat3.normalFromMat4 = function (out, a) {
+    var a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
+        a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
+        a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
+        a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15],
+
+        b00 = a00 * a11 - a01 * a10,
+        b01 = a00 * a12 - a02 * a10,
+        b02 = a00 * a13 - a03 * a10,
+        b03 = a01 * a12 - a02 * a11,
+        b04 = a01 * a13 - a03 * a11,
+        b05 = a02 * a13 - a03 * a12,
+        b06 = a20 * a31 - a21 * a30,
+        b07 = a20 * a32 - a22 * a30,
+        b08 = a20 * a33 - a23 * a30,
+        b09 = a21 * a32 - a22 * a31,
+        b10 = a21 * a33 - a23 * a31,
+        b11 = a22 * a33 - a23 * a32,
+
+        // Calculate the determinant
+        det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+
+    if (!det) {
+        return null;
+    }
+    det = 1.0 / det;
+
+    out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
+    out[1] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
+    out[2] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
+
+    out[3] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+    out[4] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+    out[5] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+
+    out[6] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
+    out[7] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
+    out[8] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
+
+    return out;
+};
+
+/**
  * Returns a string representation of a mat3
  *
  * @param {mat3} mat matrix to represent as a string
  * @returns {String} string representation of the matrix
  */
 mat3.str = function (a) {
-    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + 
-                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' + 
+    return 'mat3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' +
+                    a[3] + ', ' + a[4] + ', ' + a[5] + ', ' +
                     a[6] + ', ' + a[7] + ', ' + a[8] + ')';
 };
 
@@ -3817,12 +4543,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -3837,13 +4563,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  */
 
 var mat4 = {};
-
-var mat4Identity = new Float32Array([
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1
-]);
 
 /**
  * Creates a new identity mat4
@@ -3995,7 +4714,7 @@ mat4.transpose = function(out, a) {
         out[14] = a[11];
         out[15] = a[15];
     }
-    
+
     return out;
 };
 
@@ -4028,8 +4747,8 @@ mat4.invert = function(out, a) {
         // Calculate the determinant
         det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
-    if (!det) { 
-        return null; 
+    if (!det) {
+        return null;
     }
     det = 1.0 / det;
 
@@ -4129,7 +4848,7 @@ mat4.multiply = function (out, a, b) {
         a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
 
     // Cache only the current line of the second matrix
-    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];  
+    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
     out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
     out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
     out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
@@ -4249,7 +4968,7 @@ mat4.rotate = function (out, a, rad, axis) {
         b20, b21, b22;
 
     if (Math.abs(len) < GLMAT_EPSILON) { return null; }
-    
+
     len = 1 / len;
     x *= len;
     y *= len;
@@ -4468,7 +5187,54 @@ mat4.fromRotationTranslation = function (out, q, v) {
     out[13] = v[1];
     out[14] = v[2];
     out[15] = 1;
-    
+
+    return out;
+};
+
+/**
+* Calculates a 4x4 matrix from the given quaternion
+*
+* @param {mat4} out mat4 receiving operation result
+* @param {quat} q Quaternion to create matrix from
+*
+* @returns {mat4} out
+*/
+mat4.fromQuat = function (out, q) {
+    var x = q[0], y = q[1], z = q[2], w = q[3],
+        x2 = x + x,
+        y2 = y + y,
+        z2 = z + z,
+
+        xx = x * x2,
+        xy = x * y2,
+        xz = x * z2,
+        yy = y * y2,
+        yz = y * z2,
+        zz = z * z2,
+        wx = w * x2,
+        wy = w * y2,
+        wz = w * z2;
+
+    out[0] = 1 - (yy + zz);
+    out[1] = xy + wz;
+    out[2] = xz - wy;
+    out[3] = 0;
+
+    out[4] = xy - wz;
+    out[5] = 1 - (xx + zz);
+    out[6] = yz + wx;
+    out[7] = 0;
+
+    out[8] = xz + wy;
+    out[9] = yz - wx;
+    out[10] = 1 - (xx + yy);
+    out[11] = 0;
+
+    out[12] = 0;
+    out[13] = 0;
+    out[14] = 0;
+    out[15] = 1;
+
     return out;
 };
 
@@ -4670,7 +5436,7 @@ mat4.lookAt = function (out, eye, center, up) {
 mat4.str = function (a) {
     return 'mat4(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
                     a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
-                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
+                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' +
                     a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + ')';
 };
 
@@ -4686,12 +5452,12 @@ are permitted provided that the following conditions are met:
   * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
   * Redistributions in binary form must reproduce the above copyright notice,
-    this list of conditions and the following disclaimer in the documentation 
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -4707,8 +5473,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 var quat = {};
 
-var quatIdentity = new Float32Array([0, 0, 0, 1]);
-
 /**
  * Creates a new identity quat
  *
@@ -4722,6 +5486,78 @@ quat.create = function() {
     out[3] = 1;
     return out;
 };
+
+/**
+ * Sets a quaternion to represent the shortest rotation from one
+ * vector to another.
+ *
+ * Both vectors are assumed to be unit length.
+ *
+ * @param {quat} out the receiving quaternion.
+ * @param {vec3} a the initial vector
+ * @param {vec3} b the destination vector
+ * @returns {quat} out
+ */
+quat.rotationTo = (function() {
+    var tmpvec3 = vec3.create();
+    var xUnitVec3 = vec3.fromValues(1,0,0);
+    var yUnitVec3 = vec3.fromValues(0,1,0);
+
+    return function(out, a, b) {
+        var dot = vec3.dot(a, b);
+        if (dot < -0.999999) {
+            vec3.cross(tmpvec3, xUnitVec3, a);
+            if (vec3.length(tmpvec3) < 0.000001)
+                vec3.cross(tmpvec3, yUnitVec3, a);
+            vec3.normalize(tmpvec3, tmpvec3);
+            quat.setAxisAngle(out, tmpvec3, Math.PI);
+            return out;
+        } else if (dot > 0.999999) {
+            out[0] = 0;
+            out[1] = 0;
+            out[2] = 0;
+            out[3] = 1;
+            return out;
+        } else {
+            vec3.cross(tmpvec3, a, b);
+            out[0] = tmpvec3[0];
+            out[1] = tmpvec3[1];
+            out[2] = tmpvec3[2];
+            out[3] = 1 + dot;
+            return quat.normalize(out, out);
+        }
+    };
+})();
+
+/**
+ * Sets the specified quaternion with values corresponding to the given
+ * axes. Each axis is a vec3 and is expected to be unit length and
+ * perpendicular to all other specified axes.
+ *
+ * @param {vec3} view  the vector representing the viewing direction
+ * @param {vec3} right the vector representing the local "right" direction
+ * @param {vec3} up    the vector representing the local "up" direction
+ * @returns {quat} out
+ */
+quat.setAxes = (function() {
+    var matr = mat3.create();
+
+    return function(out, view, right, up) {
+        matr[0] = right[0];
+        matr[3] = right[1];
+        matr[6] = right[2];
+
+        matr[1] = up[0];
+        matr[4] = up[1];
+        matr[7] = up[2];
+
+        matr[2] = view[0];
+        matr[5] = view[1];
+        matr[8] = view[2];
+
+        return quat.normalize(out, quat.fromMat3(out, matr));
+    };
+})();
 
 /**
  * Creates a new quat initialized with values from an existing quaternion
@@ -4848,7 +5684,7 @@ quat.mul = quat.multiply;
 quat.scale = vec4.scale;
 
 /**
- * Rotates a quaternion by the given angle around the X axis
+ * Rotates a quaternion by the given angle about the X axis
  *
  * @param {quat} out quat receiving operation result
  * @param {quat} a quat to rotate
@@ -4856,7 +5692,7 @@ quat.scale = vec4.scale;
  * @returns {quat} out
  */
 quat.rotateX = function (out, a, rad) {
-    rad *= 0.5; 
+    rad *= 0.5;
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bx = Math.sin(rad), bw = Math.cos(rad);
@@ -4869,7 +5705,7 @@ quat.rotateX = function (out, a, rad) {
 };
 
 /**
- * Rotates a quaternion by the given angle around the Y axis
+ * Rotates a quaternion by the given angle about the Y axis
  *
  * @param {quat} out quat receiving operation result
  * @param {quat} a quat to rotate
@@ -4877,7 +5713,7 @@ quat.rotateX = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateY = function (out, a, rad) {
-    rad *= 0.5; 
+    rad *= 0.5;
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         by = Math.sin(rad), bw = Math.cos(rad);
@@ -4890,7 +5726,7 @@ quat.rotateY = function (out, a, rad) {
 };
 
 /**
- * Rotates a quaternion by the given angle around the Z axis
+ * Rotates a quaternion by the given angle about the Z axis
  *
  * @param {quat} out quat receiving operation result
  * @param {quat} a quat to rotate
@@ -4898,7 +5734,7 @@ quat.rotateY = function (out, a, rad) {
  * @returns {quat} out
  */
 quat.rotateZ = function (out, a, rad) {
-    rad *= 0.5; 
+    rad *= 0.5;
 
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bz = Math.sin(rad), bw = Math.cos(rad);
@@ -4961,43 +5797,42 @@ quat.lerp = vec4.lerp;
  * @returns {quat} out
  */
 quat.slerp = function (out, a, b, t) {
+    // benchmarks:
+    //    http://jsperf.com/quaternion-slerp-implementations
+
     var ax = a[0], ay = a[1], az = a[2], aw = a[3],
         bx = b[0], by = b[1], bz = b[2], bw = b[3];
 
-    var cosHalfTheta = ax * bx + ay * by + az * bz + aw * bw,
-        halfTheta,
-        sinHalfTheta,
-        ratioA,
-        ratioB;
+    var        omega, cosom, sinom, scale0, scale1;
 
-    if (Math.abs(cosHalfTheta) >= 1.0) {
-        if (out !== a) {
-            out[0] = ax;
-            out[1] = ay;
-            out[2] = az;
-            out[3] = aw;
-        }
-        return out;
+    // calc cosine
+    cosom = ax * bx + ay * by + az * bz + aw * bw;
+    // adjust signs (if necessary)
+    if ( cosom < 0.0 ) {
+        cosom = -cosom;
+        bx = - bx;
+        by = - by;
+        bz = - bz;
+        bw = - bw;
     }
-
-    halfTheta = Math.acos(cosHalfTheta);
-    sinHalfTheta = Math.sqrt(1.0 - cosHalfTheta * cosHalfTheta);
-
-    if (Math.abs(sinHalfTheta) < 0.001) {
-        out[0] = (ax * 0.5 + bx * 0.5);
-        out[1] = (ay * 0.5 + by * 0.5);
-        out[2] = (az * 0.5 + bz * 0.5);
-        out[3] = (aw * 0.5 + bw * 0.5);
-        return out;
+    // calculate coefficients
+    if ( (1.0 - cosom) > 0.000001 ) {
+        // standard case (slerp)
+        omega  = Math.acos(cosom);
+        sinom  = Math.sin(omega);
+        scale0 = Math.sin((1.0 - t) * omega) / sinom;
+        scale1 = Math.sin(t * omega) / sinom;
+    } else {
+        // "from" and "to" quaternions are very close
+        //  ... so we can do a linear interpolation
+        scale0 = 1.0 - t;
+        scale1 = t;
     }
-
-    ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta;
-    ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
-
-    out[0] = (ax * ratioA + bx * ratioB);
-    out[1] = (ay * ratioA + by * ratioB);
-    out[2] = (az * ratioA + bz * ratioB);
-    out[3] = (aw * ratioA + bw * ratioB);
+    // calculate final values
+    out[0] = scale0 * ax + scale1 * bx;
+    out[1] = scale0 * ay + scale1 * by;
+    out[2] = scale0 * az + scale1 * bz;
+    out[3] = scale0 * aw + scale1 * bw;
 
     return out;
 };
@@ -5013,7 +5848,7 @@ quat.invert = function(out, a) {
     var a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3],
         dot = a0*a0 + a1*a1 + a2*a2 + a3*a3,
         invDot = dot ? 1.0/dot : 0;
-    
+
     // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
 
     out[0] = -a0*invDot;
@@ -5080,6 +5915,60 @@ quat.sqrLen = quat.squaredLength;
 quat.normalize = vec4.normalize;
 
 /**
+ * Creates a quaternion from the given 3x3 rotation matrix.
+ *
+ * NOTE: The resultant quaternion is not normalized, so you should be sure
+ * to renormalize the quaternion yourself where necessary.
+ *
+ * @param {quat} out the receiving quaternion
+ * @param {mat3} m rotation matrix
+ * @returns {quat} out
+ * @function
+ */
+quat.fromMat3 = (function() {
+    // benchmarks:
+    //    http://jsperf.com/typed-array-access-speed
+    //    http://jsperf.com/conversion-of-3x3-matrix-to-quaternion
+
+    var s_iNext = (typeof(Int8Array) !== 'undefined' ? new Int8Array([1,2,0]) : [1,2,0]);
+
+    return function(out, m) {
+        // Algorithm in Ken Shoemake's article in 1987 SIGGRAPH course notes
+        // article "Quaternion Calculus and Fast Animation".
+        var fTrace = m[0] + m[4] + m[8];
+        var fRoot;
+
+        if ( fTrace > 0.0 ) {
+            // |w| > 1/2, may as well choose w > 1/2
+            fRoot = Math.sqrt(fTrace + 1.0);  // 2w
+            out[3] = 0.5 * fRoot;
+            fRoot = 0.5/fRoot;  // 1/(4w)
+            out[0] = (m[7]-m[5])*fRoot;
+            out[1] = (m[2]-m[6])*fRoot;
+            out[2] = (m[3]-m[1])*fRoot;
+        } else {
+            // |w| <= 1/2
+            var i = 0;
+            if ( m[4] > m[0] )
+              i = 1;
+            if ( m[8] > m[i*3+i] )
+              i = 2;
+            var j = s_iNext[i];
+            var k = s_iNext[j];
+
+            fRoot = Math.sqrt(m[i*3+i]-m[j*3+j]-m[k*3+k] + 1.0);
+            out[i] = 0.5 * fRoot;
+            fRoot = 0.5 / fRoot;
+            out[3] = (m[k*3+j] - m[j*3+k]) * fRoot;
+            out[j] = (m[j*3+i] + m[i*3+j]) * fRoot;
+            out[k] = (m[k*3+i] + m[i*3+k]) * fRoot;
+        }
+
+        return out;
+    };
+})();
+
+/**
  * Returns a string representation of a quatenion
  *
  * @param {quat} vec vector to represent as a string
@@ -5096,18 +5985,8 @@ if(typeof(exports) !== 'undefined') {
 
 
 
-
-
-
-
-
-
-
-
-
   })(shim.exports);
-})();
-// Domain Public by Eric Wendelin http://eriwen.com/ (2008)
+})(XML3D.math);// Domain Public by Eric Wendelin http://eriwen.com/ (2008)
 //                  Luke Smith http://lucassmith.name/ (2008)
 //                  Loic Dachary <loic@dachary.org> (2008)
 //                  Johan Euphrosine <proppy@aminche.com> (2008)
@@ -5555,7 +6434,95 @@ if(typeof(exports) !== 'undefined') {
         }
     };
     XML3D.debug.printStackTrace = printStackTrace;
-}());(function (window) {
+}());(function (ns) {
+
+    /**
+     * @author mrdoob / http://mrdoob.com/
+     */
+
+    var EventDispatcher = function () {
+    }
+
+    EventDispatcher.prototype = {
+
+        constructor: EventDispatcher,
+
+        addEventListener: function (type, listener) {
+
+            if (this._listeners === undefined) this._listeners = {};
+
+            var listeners = this._listeners;
+
+            if (listeners[ type ] === undefined) {
+
+                listeners[ type ] = [];
+
+            }
+
+            if (listeners[ type ].indexOf(listener) === -1) {
+
+                listeners[ type ].push(listener);
+
+            }
+
+        },
+
+        hasEventListener: function (type, listener) {
+
+            if (this._listeners === undefined) return false;
+
+            var listeners = this._listeners;
+
+            if (listeners[ type ] !== undefined && listeners[ type ].indexOf(listener) !== -1) {
+
+                return true;
+
+            }
+
+            return false;
+
+        },
+
+        removeEventListener: function (type, listener) {
+
+            if (this._listeners === undefined) return;
+
+            var listeners = this._listeners;
+            var index = listeners[ type ].indexOf(listener);
+
+            if (index !== -1) {
+
+                listeners[ type ].splice(index, 1);
+
+            }
+
+        },
+
+        dispatchEvent: function (event) {
+
+            if (this._listeners === undefined) return;
+
+            var listeners = this._listeners;
+            var listenerArray = listeners[ event.type ];
+
+            if (listenerArray !== undefined) {
+
+                event.target = this;
+
+                for (var i = 0, l = listenerArray.length; i < l; i++) {
+
+                    listenerArray[ i ].call(this, event);
+
+                }
+
+            }
+
+        }
+
+    };
+    ns.EventDispatcher = EventDispatcher;
+
+}(XML3D.util));(function (window) {
 
   var StateMachine = {
 
@@ -5892,7 +6859,203 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
   // Add contributions from each corner to get the final noise value. 
   // The result is scaled to stay just inside [-1,1] 
   return 32.0*(n0 + n1 + n2 + n3); 
-};// XML3DVec3
+};(function (math) {
+
+    /**
+     * @class An axis aligned bounding box in the style of glMatrix
+     * @name bbox
+     */
+    var bbox = {};
+
+    /**
+     * Creates a new, empty bounding box
+     *
+     * @returns {bbox} a new empty bounding box
+     */
+    bbox.create = function () {
+        var out = new Float32Array(6);
+        out[0] = Number.MAX_VALUE;
+        out[1] = Number.MAX_VALUE;
+        out[2] = Number.MAX_VALUE;
+        out[3] = -Number.MAX_VALUE;
+        out[4] = -Number.MAX_VALUE;
+        out[5] = -Number.MAX_VALUE;
+        return out;
+    };
+
+    bbox.clone = function (a) {
+        var out = new Float32Array(6);
+        out[0] = a[0];
+        out[1] = a[1];
+        out[2] = a[2];
+        out[3] = a[3];
+        out[4] = a[4];
+        out[5] = a[5];
+        return out;
+    };
+
+    bbox.copy = function (out, a) {
+        out[0] = a[0];
+        out[1] = a[1];
+        out[2] = a[2];
+        out[3] = a[3];
+        out[4] = a[4];
+        out[5] = a[5];
+        return out;
+    };
+
+    bbox.copyMin = function (target, source) {
+        target[0] = source[0];
+        target[1] = source[1];
+        target[2] = source[2];
+        return target;
+    };
+
+    bbox.copyMax = function (target, source) {
+        target[0] = source[3];
+        target[1] = source[4];
+        target[2] = source[5];
+        return target;
+    };
+
+    bbox.extendWithBox = function (target, other) {
+        for (var i = 0; i < 3; i++) {
+            target[i] = Math.min(other[i], target[i]);
+            target[i + 3] = Math.max(other[i + 3], target[i + 3]);
+        }
+        return target;
+    };
+
+    bbox.empty = function (b) {
+        b[0] = Number.MAX_VALUE;
+        b[1] = Number.MAX_VALUE;
+        b[2] = Number.MAX_VALUE;
+        b[3] = -Number.MAX_VALUE;
+        b[4] = -Number.MAX_VALUE;
+        b[5] = -Number.MAX_VALUE;
+        return b;
+    };
+
+    bbox.isEmpty = function (b) {
+        return (b[0] > b[3] || b[1] > b[4] || b[2] > b[5]);
+    };
+
+    bbox.center = function (target, b) {
+        target[0] = (b[0] + b[3]) * 0.5;
+        target[1] = (b[1] + b[4]) * 0.5;
+        target[2] = (b[2] + b[5]) * 0.5;
+        return target;
+    }
+
+    bbox.size = function (target, b) {
+        target[0] = b[3] - b[0];
+        target[1] = b[4] - b[1];
+        target[2] = b[5] - b[2];
+        return target;
+    };
+
+    bbox.halfSize = function (target, b) {
+        target[0] = (b[3] - b[0]) * 0.5;
+        target[1] = (b[4] - b[1]) * 0.5;
+        target[2] = (b[5] - b[2]) * 0.5;
+        return target;
+    };
+
+    bbox.transform = function (out, mat, box) {
+        if (box[0] > box[3] || box[1] > box[4] || box[2] > box[5]) {
+            bbox.copy(out, box); // an empty box remains empty
+            return;
+        }
+        box = bbox.clone(box);
+
+        if (mat[3] == 0 && mat[7] == 0 && mat[11] == 0 && mat[15] == 1) {
+
+            for (var i = 0; i < 3; i++) {
+                out[i] = out[i + 3] = mat[12 + i];
+
+                for (var j = 0; j < 3; j++) {
+                    var a, b;
+
+                    a = mat[j * 4 + i] * box[j];
+                    b = mat[j * 4 + i] * box[j + 3];
+
+                    if (a < b) {
+                        out[i] += a;
+                        out[i + 3] += b;
+                    }
+                    else {
+                        out[i] += b;
+                        out[i + 3] += a;
+                    }
+                }
+            }
+            return out;
+        }
+        throw new Error("Matrix is not affine");
+    };
+
+    bbox.transform2 = (function () {
+        var absMat = XML3D.math.mat4.create();
+        var center = XML3D.math.vec3.create();
+        var extend = XML3D.math.vec3.create();
+
+        return function (out, mat, box) {
+
+            bbox.center(center, box);
+            bbox.halfSize(extend, box);
+
+            XML3D.math.mat4.copy(absMat, mat);
+            absMat.set([0, 0, 0, 1], 12);
+            for (var i = 0; i < 16; i++) {
+                absMat[i] = Math.abs(absMat[i]);
+            }
+
+            XML3D.math.vec3.transformMat4(extend, extend, absMat);
+            XML3D.math.vec3.transformMat4(center, center, mat);
+
+            out[0] = center[0] - extend[0];
+            out[1] = center[1] - extend[1];
+            out[2] = center[2] - extend[2];
+            out[3] = center[0] + extend[0];
+            out[4] = center[1] + extend[1];
+            out[5] = center[2] + extend[2];
+
+            return out;
+        }
+    }());
+
+    bbox.longestSide = function (b) {
+        var x = Math.abs(b[3] - b[0]);
+        var y = Math.abs(b[4] - b[1]);
+        var z = Math.abs(b[5] - b[2]);
+        return Math.max(x, Math.max(y, z));
+    };
+
+    bbox.asXML3DBox = function (bb) {
+        var result = new window.XML3DBox();
+        result.min._data[0] = bb[0];
+        result.min._data[1] = bb[1];
+        result.min._data[2] = bb[2];
+        result.max._data[0] = bb[3];
+        result.max._data[1] = bb[4];
+        result.max._data[2] = bb[5];
+        return result;
+    };
+
+    bbox.str = function (a) {
+        return 'bbox(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
+            a[4] + ', ' + a[5] + ')';
+    };
+
+
+    math.bbox = bbox;
+    math.EMPTY_BOX = bbox.create();
+
+
+}(XML3D.math)
+    )
+;
+// XML3DVec3
 
 (function($) {
     // Is native?
@@ -5945,7 +7108,7 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
 
     /**
      * The set method copies the values from other.
-     * @param {Object} other another XML3DVec3, Float32Array or a number. In the last case the other args are considered, too.
+     * @param {Object|number} other another XML3DVec3, Float32Array or a number. In the last case the other args are considered, too.
      * @param {number=} y
      * @param {number=} z
      */
@@ -7144,307 +8307,318 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
 
 
 }(XML3D._native));
-(function() {
-
-
 //-----------------------------------------------------------------------------
 // Adapter and Adapter factory
 //-----------------------------------------------------------------------------
-XML3D.base = {
-    toString : function() {
-        return "base";
-    }
-};
+(function(XML3D) {
 
-/**
- * A normal adapter that doesn't need to be connected to a DOM node
- * @constructor
- * @param {XML3D.base.AdapterFactory} factory - the factory this adapter was created from
- */
-XML3D.base.Adapter = function(factory) {
-    this.factory = factory;
-};
+    XML3D.base = {
+        toString: function() {
+            return "base";
+        }
+    };
 
-/**
- * Connect an adapterHandle to a certain key.
- * This will enable the ConnectedAdapterNotifcations for notifyChanged.
- * @param {string} key - the key that will also be provided in connectAdapterChanged callback
- * @param {XML3D.base.AdapterHandle} adapterHandle handle of adapter to be added
- */
-XML3D.base.Adapter.prototype.connectAdapterHandle = function(key, adapterHandle){
-    if(!this.connectedAdapterHandles){
+    /**
+     * A normal adapter that doesn't need to be connected to a DOM node
+     * @constructor
+     * @param {XML3D.base.AdapterFactory} factory - the factory this adapter was created from
+     */
+    XML3D.base.Adapter = function(factory) {
+        this.factory = factory;
+    };
+
+    /**
+     * Connect an adapterHandle to a certain key.
+     * This will enable the ConnectedAdapterNotifcations for notifyChanged.
+     * @param {string} key - the key that will also be provided in connectAdapterChanged callback
+     * @param {XML3D.base.AdapterHandle} adapterHandle handle of adapter to be added
+     */
+    XML3D.base.Adapter.prototype.connectAdapterHandle = function(key, adapterHandle) {
+        if (!this.connectedAdapterHandles) {
+            this.connectedAdapterHandles = {};
+            this._bindedAdapterHandleCallback = adapterHandleCallback.bind(this);
+        }
+
+        this.disconnectAdapterHandle(key);
+
+        if (adapterHandle) {
+            this.connectedAdapterHandles[key] = adapterHandle;
+            this.connectedAdapterHandles[key].addListener(this._bindedAdapterHandleCallback);
+        }
+        else
+            delete this.connectedAdapterHandles[key];
+
+    };
+
+    /**
+     * Disconnects the adapter handle from the given key.
+     * @param {string} key - the key that was provided when this adapter handle was connected
+     */
+    XML3D.base.Adapter.prototype.disconnectAdapterHandle = function(key) {
+        if (this.connectedAdapterHandles && this.connectedAdapterHandles[key]) {
+            this.connectedAdapterHandles[key].removeListener(this._bindedAdapterHandleCallback);
+            delete this.connectedAdapterHandles[key];
+        }
+    };
+
+    /**
+     * Disconnects all adapter handles.
+     */
+    XML3D.base.Adapter.prototype.clearAdapterHandles = function() {
+        for (var i in this.connectedAdapterHandles) {
+            this.connectedAdapterHandles[i].removeListener(this._bindedAdapterHandleCallback);
+        }
+
         this.connectedAdapterHandles = {};
-        this._bindedAdapterHandleCallback = adapterHandleCallback.bind(this);
+    };
+
+    /**
+     * Get the connected AdapterHandle of a certain key.
+     * This will only return AdapterHandles previously added via connectAdapterHandle
+     * @param {string} key
+     * @return {?XML3D.base.AdapterHandle} the adapter of that key, or null if not available
+     */
+    XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key) {
+        return this.connectedAdapterHandles && this.connectedAdapterHandles[key];
+    };
+
+    /**
+     * Get the connected adapter of a certain key.
+     * This will only return adapters of AdapterHandles previously added via connectAdapter
+     * @param {string} key
+     * @return {?XML3D.base.Adapter} the adapter of that key, or null if not available
+     */
+    XML3D.base.Adapter.prototype.getConnectedAdapter = function(key) {
+        var handle = this.getConnectedAdapterHandle(key);
+        return handle && handle.getAdapter();
+    };
+
+    /**
+     * This function is called, when the adapater is detached from the node.
+     * At this point, the adapater should disconnect from any other adapter and prepare to be properly garbage collected
+     */
+    XML3D.base.Adapter.prototype.onDispose = function() {
     }
 
-    this.disconnectAdapterHandle(key);
 
-    if(adapterHandle) {
-        this.connectedAdapterHandles[key] = adapterHandle;
-        this.connectedAdapterHandles[key].addListener(this._bindedAdapterHandleCallback);
-    }
-    else
-        delete this.connectedAdapterHandles[key];
-
-};
-
-/**
- * Disconnects the adapter handle from the given key.
- * @param {string} key - the key that was provided when this adapter handle was connected
- */
-XML3D.base.Adapter.prototype.disconnectAdapterHandle = function(key){
-    if (this.connectedAdapterHandles && this.connectedAdapterHandles[key]) {
-        this.connectedAdapterHandles[key].removeListener(this._bindedAdapterHandleCallback);
-        delete this.connectedAdapterHandles[key];
-    }
-};
-
-/**
- * Disconnects all adapter handles.
- */
-XML3D.base.Adapter.prototype.clearAdapterHandles = function(){
-    for(var i in this.connectedAdapterHandles){
-        this.connectedAdapterHandles[i].removeListener(this._bindedAdapterHandleCallback);
-    }
-
-    this.connectedAdapterHandles = {};
-};
-
-/**
-* Get the connected AdapterHandle of a certain key.
-* This will only return AdapterHandles previously added via connectAdapterHandle
-* @param {string} key
-* @return {XML3D.base.AdapterHandle=} the adapter of that key, or null if not available
-*/
-XML3D.base.Adapter.prototype.getConnectedAdapterHandle = function(key){
-    return this.connectedAdapterHandles && this.connectedAdapterHandles[key];
-};
-
-/**
- * Get the connected adapter of a certain key.
- * This will only return adapters of AdapterHandles previously added via connectAdapter
- * @param {string} key
- * @return {XML3D.base.Adapter=} the adapter of that key, or null if not available
- */
-XML3D.base.Adapter.prototype.getConnectedAdapter = function(key){
-    var handle = this.getConnectedAdapterHandle(key);
-    return handle && handle.getAdapter();
-};
-
-/**
- * This function is called, when the adapater is detached from the node.
- * At this point, the adapater should disconnect from any other adapter and prepare to be properly garbage collected
- */
-XML3D.base.Adapter.prototype.onDispose = function(){
-    this.clearAdapterHandles();
-}
+    /**
+     * Internal function that converts an AdapterHandleNotification to a ConnectedAdapterNotification
+     * @private
+     * @param {XML3D.events.AdapterHandleNotification} evt
+     */
+    function adapterHandleCallback(evt) {
+        for (var key in this.connectedAdapterHandles) {
+            if (this.connectedAdapterHandles[key] == evt.adapterHandle) {
+                var subEvent = new XML3D.events.ConnectedAdapterNotification(evt, key)
+                this.notifyChanged(subEvent);
+            }
+        }
+    };
 
 
-/**
- * Internal function that converts an AdapterHandleNotification to a ConnectedAdapterNotification
- * @private
- * @param {XML3D.events.AdapterHandleNotification} evt
- */
-function adapterHandleCallback(evt){
-    for(var key in this.connectedAdapterHandles){
-        if(this.connectedAdapterHandles[key] == evt.adapterHandle){
-            var subEvent = new XML3D.events.ConnectedAdapterNotification(evt, key)
-            this.notifyChanged(subEvent);
+    /**
+     * An Adapter connected to a DOMNode (possibly of an external document)
+     * @constructor
+     * @param {XML3D.base.AdapterFactory} factory the AdapterFactory this adapter was created from
+     * @param {Object} node - DOM node of this Adapter
+     */
+    XML3D.base.NodeAdapter = function(factory, node) {
+        XML3D.base.Adapter.call(this, factory)
+        this.node = node;
+    };
+    XML3D.createClass(XML3D.base.NodeAdapter, XML3D.base.Adapter);
+
+    /**
+     * called by the factory after adding the adapter to the node
+     */
+    XML3D.base.NodeAdapter.prototype.init = function() {
+    };
+
+    /**
+     * Notifiction due to a change in DOM, related adapters and so on.
+     * @param {XML3D.events.Notification} e
+     */
+    XML3D.base.NodeAdapter.prototype.notifyChanged = function(e) {
+
+    };
+
+    /**
+     * @param {string|XML3D.URI} uri Uri to referred adapterHandle
+     * @returns an AdapterHandle to the referred Adapter of the same aspect and canvasId
+     */
+    XML3D.base.NodeAdapter.prototype.getAdapterHandle = function(uri) {
+        return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
+            this.factory.aspect, this.factory.canvasId);
+    };
+    /**
+     * notifies all adapter that refer to this adapter through AdapterHandles.
+     * @param {number?} type The type of change
+     */
+    XML3D.base.NodeAdapter.prototype.notifyOppositeAdapters = function(type) {
+        type = type || XML3D.events.ADAPTER_HANDLE_CHANGED;
+        return XML3D.base.resourceManager.notifyNodeAdapterChange(this.node,
+            this.factory.aspect, this.factory.canvasId, type);
+    };
+
+    /**
+     * Depth-first traversal over element hierarchy
+     * @param {function(NodeAdapter)} callback
+     */
+    XML3D.base.NodeAdapter.prototype.traverse = function(callback) {
+        callback(this);
+        var child = this.node.firstElementChild;
+        while (child) {
+            var adapter = this.factory.getAdapter(child);
+            adapter && adapter.traverse(callback);
+            child = child.nextElementSibling;
         }
     }
-};
 
 
+    /**
+     * @interface
+     */
+    XML3D.base.IFactory = function() {
+    };
 
-/**
- * An Adapter connected to a DOMNode (possibly of an external document)
- * @constructor
- * @param {XML3D.base.AdapterFactory} factory the AdapterFactory this adapter was created from
- * @param {Object} node - DOM node of this Adapter
- */
-XML3D.base.NodeAdapter = function(factory, node) {
-    XML3D.base.Adapter.call(this, factory)
-    this.node = node;
-};
-XML3D.createClass(XML3D.base.NodeAdapter, XML3D.base.Adapter);
-
-/**
- * called by the factory after adding the adapter to the node
- */
-XML3D.base.NodeAdapter.prototype.init = function() {
-};
-
-/**
- * Notifiction due to a change in DOM, related adapters and so on.
- * @param {XML3D.events.Notification} e
- */
-XML3D.base.NodeAdapter.prototype.notifyChanged = function(e) {
-
-};
-
-/**
- * @param {string,XML3D.URI} uri Uri to referred adapterHandle
- * @returns an AdapterHandle to the referred Adapter of the same aspect and canvasId
- */
-XML3D.base.NodeAdapter.prototype.getAdapterHandle = function(uri){
-    return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
-        this.factory.aspect, this.factory.canvasId);
-};
-/**
- * notifies all adapter that refer to this adapter through AdapterHandles.
- * @param {number,string} hint with type of change
- */
-XML3D.base.NodeAdapter.prototype.notifyOppositeAdapters = function(type){
-    type = type || XML3D.events.ADAPTER_HANDLE_CHANGED;
-    return XML3D.base.resourceManager.notifyNodeAdapterChange(this.node,
-        this.factory.aspect, this.factory.canvasId, type);
-};
+    /** @type {string} */
+    XML3D.base.IFactory.prototype.aspect;
 
 
-/**
- * @interface
- */
-XML3D.base.IFactory = function() {};
+    /**
+     * An adapter factory is responsible for creating adapter from a certain data source.
+     * Note that any AdapterFactory is registered with XML3D.base.resourceManager
+     * @constructor
+     * @implements {XML3D.base.IFactory}
+     * @param {Object} aspect The aspect this factory serves (e.g. XML3D.data or XML3D.webgl)
+     * @param {string|Array.<string>} mimetypes The mimetype this factory is compatible to
+     * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
+     */
+    XML3D.base.AdapterFactory = function(aspect, mimetypes, canvasId) {
+        this.aspect = aspect;
+        this.canvasId = canvasId || 0;
+        this.mimetypes = typeof mimetypes == "string" ? [ mimetypes] : mimetypes;
 
-/** @type {string} */
-XML3D.base.IFactory.prototype.aspect;
-XML3D.base.IFactory.prototype.canvasId;
+        XML3D.base.registerFactory(this);
+    };
 
-
-/**
- * An adapter factory is responsible for creating adapter from a certain data source.
- * Note that any AdapterFactory is registered with XML3D.base.resourceManager
- * @constructor
- * @implements {XML3D.base.IFactory}
- * @param {Object} aspect The aspect this factory serves (e.g. XML3D.data or XML3D.webgl)
- * @param {string} mimetype The mimetype this factory is compatible to
- * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
- */
-XML3D.base.AdapterFactory = function(aspect, mimetypes, canvasId) {
-    this.aspect = aspect;
-    this.canvasId = canvasId || 0;
-    this.mimetypes = typeof mimetypes == "string" ? [ mimetypes] : mimetypes;
-
-    XML3D.base.registerFactory(this);
-};
-
-/**
- * Implemented by subclass
- * Create adapter from an object (node in case of an xml, and object in case of json)
- * @param {object} obj
- * @returns {XML3D.base.Adapter=} created adapter or null if no adapter can be created
- */
-XML3D.base.AdapterFactory.prototype.createAdapter = function(obj) {
-    return null;
-};
-
-/**
- * Checks if the adapter factory supports specified mimetype. Can be overridden by subclass.
- * @param {String} mimetype
- * @return {Boolean} true if the adapter factory supports specified mimetype
- */
-XML3D.base.AdapterFactory.prototype.supportsMimetype = function(mimetype) {
-    return this.mimetypes.indexOf(mimetype) != -1;
-};
-
-/**
- * A NodeAdaperFactory is a AdapterFactory, that works specifically for DOM nodes / elements.
- * @constructor
- * @implements {XML3D.base.AdapterFactory}
- * @param {Object} aspect The aspect this factory serves (e.g. XML3D.data or XML3D.webgl)
- * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
- */
-XML3D.base.NodeAdapterFactory = function(aspect, canvasId) {
-    XML3D.base.AdapterFactory.call(this, aspect, ["text/xml","application/xml"], canvasId);
-};
-XML3D.createClass(XML3D.base.NodeAdapterFactory, XML3D.base.AdapterFactory);
-
-/**
- * This function first checks, if an adapter has been already created for the corresponding node
- * If yes, this adapter is returned, otherwise, a new adapter is created and returned.
- * @param {Object} node
- * @returns {XML3D.base.Adapter} The adapter of the node
- */
-XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
-    if (!node || node._configured === undefined)
+    /**
+     * Implemented by subclass
+     * Create adapter from an object (node in case of an xml, and object in case of json)
+     * @param {object} obj
+     * @returns {?XML3D.base.Adapter} created adapter or null if no adapter can be created
+     */
+    XML3D.base.AdapterFactory.prototype.createAdapter = function(obj) {
         return null;
-    var elemHandler = node._configured;
-    var key = this.aspect + "_" + this.canvasId;
-    var adapter = elemHandler.adapters[key];
-    if (adapter !== undefined)
+    };
+
+    /**
+     * Checks if the adapter factory supports specified mimetype. Can be overridden by subclass.
+     * @param {String} mimetype
+     * @return {Boolean} true if the adapter factory supports specified mimetype
+     */
+    XML3D.base.AdapterFactory.prototype.supportsMimetype = function(mimetype) {
+        return this.mimetypes.indexOf(mimetype) != -1;
+    };
+
+    /**
+     * A NodeAdaperFactory is a AdapterFactory, that works specifically for DOM nodes / elements.
+     * @constructor
+     * @implements {XML3D.base.AdapterFactory}
+     * @param {Object} aspect The aspect this factory serves (e.g. XML3D.data or XML3D.webgl)
+     * @param {number} canvasId The id of the corresponding canvas handler. 0, if not dependent on any CanvasHandler
+     */
+    XML3D.base.NodeAdapterFactory = function(aspect, canvasId) {
+        XML3D.base.AdapterFactory.call(this, aspect, ["text/xml", "application/xml"], canvasId);
+    };
+    XML3D.createClass(XML3D.base.NodeAdapterFactory, XML3D.base.AdapterFactory);
+
+    /**
+     * This function first checks, if an adapter has been already created for the corresponding node
+     * If yes, this adapter is returned, otherwise, a new adapter is created and returned.
+     * @param {Object} node
+     * @returns {XML3D.base.Adapter} The adapter of the node
+     */
+    XML3D.base.NodeAdapterFactory.prototype.getAdapter = function(node) {
+        if (!node || node._configured === undefined)
+            return null;
+        var elemHandler = node._configured;
+        var key = this.aspect + "_" + this.canvasId;
+        var adapter = elemHandler.adapters[key];
+        if (adapter !== undefined)
+            return adapter;
+
+        // No adapter found, try to create one
+        adapter = this.createAdapter(node);
+        if (adapter) {
+            elemHandler.adapters[key] = adapter;
+            adapter.init();
+        }
         return adapter;
+    };
 
-    // No adapter found, try to create one
-    adapter = this.createAdapter(node);
-    if (adapter) {
-        elemHandler.adapters[key] = adapter;
-        adapter.init();
-    }
-    return adapter;
-};
-
-/**
-* This function sends single or multiple adapter functions by calling functions
-* specified in funcs parameter for each adapter associated with the node.
-*
-* funcs parameter is used as a dictionary where each key is used as name of a
-* adapter function to call, and corresponding value is a list of arguments
-* (i.e. must be an array). For example sendAdapterEvent(node, {method : [1,2,3]})
-* will call function 'method' with arguments 1,2,3 for each adapter of the node.
-*
-* @param {Object} node
-* @param {Object} funcs
-* @return {Array} array of all returned values
-*/
-XML3D.base.callAdapterFunc = function(node, funcs) {
-    var result = [];
-    if (!node || node._configured === undefined)
+    /**
+     * This function sends single or multiple adapter functions by calling functions
+     * specified in funcs parameter for each adapter associated with the node.
+     *
+     * funcs parameter is used as a dictionary where each key is used as name of a
+     * adapter function to call, and corresponding value is a list of arguments
+     * (i.e. must be an array). For example sendAdapterEvent(node, {method : [1,2,3]})
+     * will call function 'method' with arguments 1,2,3 for each adapter of the node.
+     *
+     * @param {Object} node
+     * @param {Object} funcs
+     * @return {Array} array of all returned values
+     */
+    XML3D.base.callAdapterFunc = function(node, funcs) {
+        var result = [];
+        if (!node || node._configured === undefined)
             return result;
-    var adapters = node._configured.adapters;
-    for (var adapter in adapters) {
-        for (var func in funcs) {
-            var adapterObject = adapters[adapter];
-            var eventHandler = adapterObject[func];
-            if (eventHandler) {
-                result.push(eventHandler.apply(adapterObject, funcs[func]));
+        var adapters = node._configured.adapters;
+        for (var adapter in adapters) {
+            for (var func in funcs) {
+                var adapterObject = adapters[adapter];
+                var eventHandler = adapterObject[func];
+                if (eventHandler) {
+                    result.push(eventHandler.apply(adapterObject, funcs[func]));
+                }
             }
         }
-    }
-    return result;
-};
+        return result;
+    };
 
-/**
- * This function sends single or multiple adapter events by calling functions
- * specified in events parameter for each adapter associated with the node.
- *
- * events parameter is used as a dictionary where each key is used as name of a
- * adapter function to call, and corresponding value is a list of arguments
- * (i.e. must be an array). For example sendAdapterEvent(node, {method : [1,2,3]})
- * will call function 'method' with arguments 1,2,3 for each adapter of the node.
- *
- * @param {Object} node
- * @param {Object} events
- * @return {Boolean} false if node is not configured.
- */
-XML3D.base.sendAdapterEvent = function(node, events) {
-    if (!node || node._configured === undefined)
-        return false;
-    var adapters = node._configured.adapters;
-    for (var adapter in adapters) {
-        for (var event in events) {
-            var eventHandler = adapters[adapter][event];
-            if (eventHandler) {
-                eventHandler.apply(adapters[adapter], events[event]);
+    /**
+     * This function sends single or multiple adapter events by calling functions
+     * specified in events parameter for each adapter associated with the node.
+     *
+     * events parameter is used as a dictionary where each key is used as name of a
+     * adapter function to call, and corresponding value is a list of arguments
+     * (i.e. must be an array). For example sendAdapterEvent(node, {method : [1,2,3]})
+     * will call function 'method' with arguments 1,2,3 for each adapter of the node.
+     *
+     * @param {Object} node
+     * @param {Object} events
+     * @return {Boolean} false if node is not configured.
+     */
+    XML3D.base.sendAdapterEvent = function(node, events) {
+        if (!node || node._configured === undefined)
+            return false;
+        var adapters = node._configured.adapters;
+        for (var adapter in adapters) {
+            for (var event in events) {
+                var eventHandler = adapters[adapter][event];
+                if (eventHandler) {
+                    eventHandler.apply(adapters[adapter], events[event]);
+                }
             }
         }
-    }
-    return true;
-};
+        return true;
+    };
 
+}(window.XML3D));
+(function(XML3D) {
 
-
-}());
-(function() {
+    "use strict";
 
     /**
      * An adapter handle is a connection piece for an adapter that is referred through a uri (e.g. id reference)
@@ -7458,6 +8632,10 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         this.status = 0; // STATUS.LOADING
     };
 
+    /**
+     * Enumaeration of states for the adapter handle
+     * @enum {number}
+     */
     AdapterHandle.STATUS = {
         LOADING: 0,
         NOT_FOUND: 1,
@@ -7472,7 +8650,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     };
 
     /**
-     * @returns {XML3D.base.Adapter=} the adapter connected to the handle. Can be null
+     * @returns {?XML3D.base.Adapter} the adapter connected to the handle. Can be null
      */
     AdapterHandle.prototype.getAdapter = function() {
         return this.adapter;
@@ -7481,7 +8659,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     /**
      * Note: this function should only be called by XML3D.base.resourceManager
      * @param {XML3D.base.Adapter} adapter The adapter connected to the AdapterHandler
-     * @param {number,XML3D.base.AdapterHandle.STATUS}
+     * @param {AdapterHandle.STATUS} status
      */
     AdapterHandle.prototype.setAdapter = function(adapter, status) {
         this.adapter = adapter;
@@ -7493,7 +8671,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * This function is called to notify all listeners of this AdapterHandle about some change.
      * @param {number} type A type number with the type of change (usually XML3D.events.ADAPTER_HANDLE_CHANGED)
      */
-    AdapterHandle.prototype.notifyListeners = function(type){
+    AdapterHandle.prototype.notifyListeners = function(type) {
         var event = new XML3D.events.AdapterHandleNotification(this, type);
         var i = this.listeners.length;
         while (i--) {
@@ -7525,7 +8703,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     // Export
     XML3D.base.AdapterHandle = AdapterHandle;
 
-}());(function() {
+}(window.XML3D));(function() {
     "use strict";
 
     var c_cachedDocuments = {};
@@ -7534,13 +8712,16 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     var c_canvasIdCounters = {};
     var c_formatHandlers = [];
 
+    var c_binaryContentTypes = ["application/octet-stream", "text/plain; charset=x-user-defined"];
+    var c_binaryExtensions = [".bin", ".bson"];
+
     /**
      * Register a factory with the resource manager
      * @param {XML3D.base.AdapterFactory} factory - the factory to be registered
      */
     XML3D.base.registerFactory = function(factory) {
         var canvasId = factory.canvasId;
-        if(!c_factories[canvasId])
+        if (!c_factories[canvasId])
             c_factories[canvasId] = [];
         c_factories[canvasId].push(factory);
     };
@@ -7563,10 +8744,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     /**
      * @constructor
      */
-    var ResourceManager = function() {};
-
-    ResourceManager.prototype.getCanvasIdCounters = function () {
-        return c_canvasIdCounters;
+    var ResourceManager = function() {
     };
 
     function getCounterObject(canvasId) {
@@ -7576,7 +8754,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     function getOrCreateCounterObject(canvasId) {
         var counterObject = c_canvasIdCounters[canvasId];
         if (!counterObject) {
-            counterObject = {counter: 0, listeners : new Array()};
+            counterObject = {counter: 0, listeners: new Array()};
             c_canvasIdCounters[canvasId] = counterObject;
         }
         return counterObject;
@@ -7634,27 +8812,25 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         }
     };
 
-    var binaryContentTypes = ["application/octet-stream", "text/plain; charset=x-user-defined"];
-    var binaryExtensions = [".bin", ".bson"];
 
-    function endsWith(str, suffix) {
+    function stringEndsWithSuffix(str, suffix) {
         return str.indexOf(suffix, str.length - suffix.length) !== -1;
     }
 
-    ResourceManager.prototype.addBinaryContentType = function (type) {
-        if (binaryContentTypes.indexOf(type) == -1)
-            binaryContentTypes.push(type);
+    ResourceManager.prototype.addBinaryContentType = function(type) {
+        if (c_binaryContentTypes.indexOf(type) == -1)
+            c_binaryContentTypes.push(type);
     };
 
-    ResourceManager.prototype.removeBinaryContentType = function (type) {
-        var idx = binaryContentTypes.indexOf(type);
+    ResourceManager.prototype.removeBinaryContentType = function(type) {
+        var idx = c_binaryContentTypes.indexOf(type);
         if (idx != -1)
-            binaryContentTypes.splice(idx, 1);
+            c_binaryContentTypes.splice(idx, 1);
     };
 
     function isBinaryContentType(contentType) {
-        for (var i in binaryContentTypes) {
-            if (contentType == binaryContentTypes[i]) {
+        for (var i in c_binaryContentTypes) {
+            if (contentType == c_binaryContentTypes[i]) {
                 return true;
             }
         }
@@ -7662,19 +8838,19 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     }
 
     ResourceManager.prototype.addBinaryExtension = function(extension) {
-        if (binaryExtensions.indexOf(extension) == -1)
-            binaryExtensions.push(extension);
+        if (c_binaryExtensions.indexOf(extension) == -1)
+            c_binaryExtensions.push(extension);
     };
 
     ResourceManager.prototype.removeBinaryExtension = function(extension) {
-        var idx = binaryExtensions.indexOf(extension);
+        var idx = c_binaryExtensions.indexOf(extension);
         if (idx != -1)
-            binaryExtensions.splice(idx, 1);
+            c_binaryExtensions.splice(idx, 1);
     };
 
     function isBinaryExtension(url) {
-        for (var i in binaryExtensions) {
-            if (endsWith(url, binaryExtensions[i]))
+        for (var i in c_binaryExtensions) {
+            if (stringEndsWithSuffix(url, c_binaryExtensions[i]))
                 return true;
         }
         return false;
@@ -7705,7 +8881,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
                 // check compatibility between content and request mode
                 if (!xmlHttp._contentChecked &&
                     // 2 - HEADERS_RECEIVED, 3 - LOADING, 4 - DONE
-                    ((xmlHttp.readyState == 2 || xmlHttp.readyState == 3 ||xmlHttp.readyState == 4) &&
+                    ((xmlHttp.readyState == 2 || xmlHttp.readyState == 3 || xmlHttp.readyState == 4) &&
                         xmlHttp.status == 200)) {
                     xmlHttp._contentChecked = true; // we check only once
                     // check if we need to change request mode
@@ -7742,13 +8918,16 @@ XML3D.base.sendAdapterEvent = function(node, events) {
                 }
                 // Request mode and content type are compatible here (both binary or both text)
                 if (xmlHttp.readyState == 4) {
-                    if(xmlHttp.status == 200){
+                    if (xmlHttp.status == 200) {
                         XML3D.debug.logDebug("Loaded: " + xmlHttp._url);
                         XML3D.xmlHttpCallback && XML3D.xmlHttpCallback(xmlHttp);
                         processResponse(xmlHttp);
                     }
-                    else
-                        showError(xmlHttp);
+                    else {
+                        XML3D.debug.logError("Could not load external document '" + xmlHttp._url +
+                            "': " + xmlHttp.status + " - " + xmlHttp.statusText);
+                        invalidateDocumentHandles(xmlHttp._url);
+                    }
                 }
             };
             xmlHttp.send(null);
@@ -7758,73 +8937,68 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     /**
      * Process response of ajax request from loadDocument()
      * @private
-     * @param {XMLHttpRequest} req
+     * @param {XMLHttpRequest} httpRequest
      */
-    function processResponse(req) {
-        var mimetype = req.getResponseHeader("content-type");
-        setDocumentData(req, req._url, mimetype);
-        updateDocumentHandles(req._url);
-    };
-
-    /**
-     * Show errors of ajax request from loadDocument()
-     * @param {XMLHttpRequest} req
-     */
-    function showError(req) {
-        XML3D.debug.logError("Could not load external document '" + req._url +
-            "': " + req.status + " - " + req.statusText);
-        invalidateDocumentHandles(req._url);
+    function processResponse(httpRequest) {
+        var mimetype = httpRequest.getResponseHeader("content-type");
+        setDocumentData(httpRequest, httpRequest._url, mimetype);
+        updateDocumentHandles(httpRequest._url);
     };
 
     /**
      * Initialize data of a received document
      * @private
-     * @param {XMLHttpRequest} req The XMLHttpRequest of the loaded document
+     * @param {XMLHttpRequest} httpRequest The XMLHttpRequest of the loaded document
      * @param {string} url URL of the loaded document
      * @param {string} mimetype The mimetype of the loaded document
      */
-    function setDocumentData(req, url, mimetype) {
+    function setDocumentData(httpRequest, url, mimetype) {
         var docCache = c_cachedDocuments[url];
         docCache.mimetype = mimetype;
 
+        var cleanedMimetype = mimetype;
+
+        if (mimetype.indexOf(';') > 0)
+            cleanedMimetype = mimetype.substr(0, mimetype.indexOf(';'));
+
         var response = null;
-        if (req.responseType == "arraybuffer") {
-            response = req.response;
-        } else if (mimetype == "application/json") {
-            response = JSON.parse(req.responseText);
-        } else if (mimetype == "application/xml" || mimetype == "text/xml") {
-            response = req.responseXML;
+        if (httpRequest.responseType == "arraybuffer") {
+            response = httpRequest.response;
+        } else if (cleanedMimetype == "application/json") {
+            response = JSON.parse(httpRequest.responseText);
+        } else if (cleanedMimetype == "application/xml" || cleanedMimetype == "text/xml") {
+            response = httpRequest.responseXML;
             if (!response) {
-                XML3D.debug.logError("Invalid external XML document '" + req._url +
+                XML3D.debug.logError("Invalid external XML document '" + httpRequest._url +
                     "': XML Syntax error");
                 return;
             }
-        } else if (mimetype == "application/octet-stream" || mimetype == "text/plain; charset=x-user-defined") {
-            XML3D.debug.logError("Possibly wrong loading of resource "+url+". Mimetype is "+mimetype+" but response is not an ArrayBuffer");
-            response = req.response;
+        } else if (cleanedMimetype == "application/octet-stream" || mimetype == "text/plain; charset=x-user-defined") {
+            XML3D.debug.logError("Possibly wrong loading of resource " + url + ". Mimetype is " + mimetype + " but response is not an ArrayBuffer");
+            response = httpRequest.response;
         } else {
-            XML3D.debug.logError("Unidentified response type (response = '"+req.response+"', responseType = '"+req.responseType+"')");
-            response = req.response;
+            XML3D.debug.logError("Unidentified response type (response = '" + httpRequest.response + "', responseType = '" + httpRequest.responseType + "')");
+            response = httpRequest.response;
         }
 
-        var formatHandler = XML3D.base.findFormat(response, req.responseType, mimetype);
+        var formatHandler = XML3D.base.findFormat(response, httpRequest.responseType, cleanedMimetype);
         if (!formatHandler) {
-            XML3D.debug.logError("No format handler for resource (response = '"+response+"', responseType = '"+req.responseType+"')");
+            XML3D.debug.logError("No format handler for resource (response = '" + response + "', responseType = '" + httpRequest.responseType + "')");
             return;
         }
         docCache.format = formatHandler;
-        docCache.response = formatHandler.getFormatData(response, req.responseType, mimetype);
+        docCache.response = formatHandler.getFormatData(response, httpRequest.responseType, cleanedMimetype);
     }
 
     /**
      * Update all existing handles of a received document
      * @param {string} url The URL of the document
      */
-    function updateDocumentHandles(url){
+    function updateDocumentHandles(url) {
         var docCache = c_cachedDocuments[url];
         var fragments = docCache.fragments;
         docCache.fragments = [];
-        for ( var i = 0; i < fragments.length; ++i) {
+        for (var i = 0; i < fragments.length; ++i) {
             updateExternalHandles(url, fragments[i]);
         }
     }
@@ -7833,11 +9007,11 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * Invalidate all handles of a document, that could not be loaded.
      * @param {string} url The URL of the document
      */
-    function invalidateDocumentHandles(url){
+    function invalidateDocumentHandles(url) {
         var docCache = c_cachedDocuments[url];
         var fragments = docCache.fragments;
         docCache.fragments = [];
-        for ( var i = 0; i < fragments.length; ++i) {
+        for (var i = 0; i < fragments.length; ++i) {
             var fullUrl = url + (fragments[i] ? "#" + fragments[i] : "");
             invalidateHandles(fullUrl);
         }
@@ -7867,7 +9041,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         if (data) {
             updateMissingHandles(fullUrl, format, data);
         }
-        else{
+        else {
             invalidateHandles(fullUrl);
         }
     }
@@ -7876,15 +9050,15 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     /**
      * Update all AdapterHandles without adapters of a certain url
      * @param {string} url The complete url + fragment
-     * @param {FormatHandler} format Format handler
+     * @param {FormatHandler} formatHandler Format handler
      * @param {Object} data Data of the document corresponding to the url. Possibily a DOM element
      */
-    function updateMissingHandles(url, format, data){
-        for ( var adapterType in c_cachedAdapterHandles[url]) {
-            for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
+    function updateMissingHandles(url, formatHandler, data) {
+        for (var adapterType in c_cachedAdapterHandles[url]) {
+            for (var canvasId in c_cachedAdapterHandles[url][adapterType]) {
                 var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
                 if (!handle.hasAdapter()) {
-                    updateHandle(handle, adapterType, canvasId, format, data);
+                    updateHandle(handle, adapterType, canvasId, formatHandler, data);
                     loadComplete(canvasId, url);
                 }
             }
@@ -7895,9 +9069,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * Invalidate all AdapterHandles without adapters of a certain url
      * @param {string} url The complete url + fragment
      */
-    function invalidateHandles(url){
-        for ( var adapterType in c_cachedAdapterHandles[url]) {
-            for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
+    function invalidateHandles(url) {
+        for (var adapterType in c_cachedAdapterHandles[url]) {
+            for (var canvasId in c_cachedAdapterHandles[url][adapterType]) {
                 var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
                 handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
                 loadComplete(canvasId, url);
@@ -7915,9 +9089,14 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * @param {FormatHandler} format Format handler of the corresponding document
      * @param {Object} data Data for this handle. Possibily a DOM element
      */
-    function updateHandle(handle, adapterType, canvasId, format, data){
+    function updateHandle(handle, adapterType, canvasId, format, data) {
 
         var factory = format.getFactory(adapterType, canvasId);
+
+        if(!factory) {
+            XML3D.debug.logError("Format does not support adapterType " + adapterType);
+            return;
+        }
 
         var adapter = factory.getAdapter ? factory.getAdapter(data) : factory.createAdapter(data);
         if (adapter) {
@@ -7932,9 +9111,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * This is called e.g. when a node is remove from the document, or an id changes
      * @param {string} url The URL of all AdapterHandles to be cleared.
      */
-    function clearHandles(url){
-        for ( var adapterType in c_cachedAdapterHandles[url]) {
-            for ( var canvasId in c_cachedAdapterHandles[url][adapterType]) {
+    function clearHandles(url) {
+        for (var adapterType in c_cachedAdapterHandles[url]) {
+            for (var canvasId in c_cachedAdapterHandles[url][adapterType]) {
                 var handle = c_cachedAdapterHandles[url][adapterType][canvasId];
                 if (handle.hasAdapter()) {
                     handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
@@ -7948,27 +9127,27 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * This function will trigger the loading of documents, if required.
      * An AdapterHandle will be always be returned, expect when an invalid (empty) uri is passed.
      *
-     * @param {Document} doc - the document from which to look up the reference
+     * @param {Document} baseDocument - the document from which to look up the reference
      * @param {XML3D.URI} uri - The URI used to find the referred AdapterHandle. Can be relative
      * @param {Object} adapterType The type of adapter required (e.g. XML3D.data or XML3D.webgl)
      * @param {number} canvasId Id of canvashandle this adapter depends on, 0 if not depending on any canvashandler
-     * @returns {XML3D.base.AdapterHandle=} The requested AdapterHandler. Note: might not contain any adapter.
+     * @returns {?XML3D.base.AdapterHandle} The requested AdapterHandler. Note: might be null
      */
-    ResourceManager.prototype.getAdapterHandle = function(doc, uri, adapterType, canvasId) {
-        if(!uri)
+    ResourceManager.prototype.getAdapterHandle = function(baseDocument, uri, adapterType, canvasId) {
+        if (!uri)
             return null;
 
-        if(typeof uri == "string") uri = new XML3D.URI(uri);
+        if (typeof uri == "string") uri = new XML3D.URI(uri);
 
         canvasId = canvasId || 0;
-        if(document != doc || !uri.isLocal()){
-            uri = uri.getAbsoluteURI(doc.documentURI);
+        if (baseDocument != document || !uri.isLocal()) {
+            uri = uri.getAbsoluteURI(baseDocument.documentURI);
         }
 
         if (!c_cachedAdapterHandles[uri])
             c_cachedAdapterHandles[uri] = {};
 
-        if(!c_cachedAdapterHandles[uri][adapterType]){
+        if (!c_cachedAdapterHandles[uri][adapterType]) {
             c_cachedAdapterHandles[uri][adapterType] = {};
         }
 
@@ -7979,9 +9158,9 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         var handle = new XML3D.base.AdapterHandle(uri);
         c_cachedAdapterHandles[uri][adapterType][canvasId] = handle;
 
-        if(uri.isLocal()){
+        if (uri.isLocal()) {
             var node = XML3D.URIResolver.resolveLocal(uri);
-            if(node)
+            if (node)
                 updateHandle(handle, adapterType, canvasId, XML3D.base.xml3dFormatHandler, node);
             else
                 handle.setAdapter(null, XML3D.base.AdapterHandle.STATUS.NOT_FOUND);
@@ -7998,7 +9177,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
                 if (!docData) {
                     loadDocument(docURI);
                     c_cachedDocuments[docURI] = docData = {
-                        fragments : []
+                        fragments: []
                     };
                 }
                 docData.fragments.push(uri.fragment);
@@ -8006,12 +9185,18 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         }
         return handle;
     };
+
     /**
      * Get any adapter, internal or external.
+     *
+     * @param node
+     * @param adapterType
+     * @param canvasId
+     * @return {XML3D.base.Adapter?}
      */
-    ResourceManager.prototype.getAdapter = function(node, adapterType, canvasId){
+    ResourceManager.prototype.getAdapter = function(node, adapterType, canvasId) {
         var factory = XML3D.base.xml3dFormatHandler.getFactory(adapterType, canvasId);
-        if(factory){
+        if (factory) {
             return factory.getAdapter(node);
         }
         return null;
@@ -8024,17 +9209,17 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * @param {string} previousId Previous id of element
      * @param {string} newId New id of element
      */
-    ResourceManager.prototype.notifyNodeIdChange = function(node, previousId, newId){
+    ResourceManager.prototype.notifyNodeIdChange = function(node, previousId, newId) {
         var parent = node;
-        while(parent.parentNode) parent = parent.parentNode;
-        if(parent != window.document)
+        while (parent.parentNode) parent = parent.parentNode;
+        if (parent != window.document)
             return;
 
         // clear cached adapters of previous id"
-        if(previousId){
+        if (previousId) {
             clearHandles("#" + previousId);
         }
-        if(newId){
+        if (newId) {
             updateMissingHandles("#" + newId, XML3D.base.xml3dFormatHandler, node);
         }
     }
@@ -8042,16 +9227,16 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     /**
      * This function is called to notify an AdapterHandler about a change (can be triggered through adapters)
      * Note that this function only works with nodes inside window.document
-     * @param {Element} node Node of AdapterHandler. Must be from window.document
+     * @param {Element} element Element of AdapterHandler. Must be from window.document
      * @param {Object} adapterType Type/Aspect of AdapterHandler (e.g. XML3D.data or XML3D.webgl)
      * @param {number} canvasId CanvasHandler id of AdapterHandler, 0 if not depending on CanvasHandler
      * @param {number} type Type of Notification. Usually XML3D.events.ADAPTER_HANDLE_CHANGED
      */
-    ResourceManager.prototype.notifyNodeAdapterChange = function(node, adapterType, canvasId, type){
+    ResourceManager.prototype.notifyNodeAdapterChange = function(element, adapterType, canvasId, type) {
         canvasId = canvasId || 0;
-        var uri = "#" + node.id;
-        if( c_cachedAdapterHandles[uri] && c_cachedAdapterHandles[uri][adapterType] &&
-            c_cachedAdapterHandles[uri][adapterType][canvasId] ){
+        var uri = "#" + element.id;
+        if (c_cachedAdapterHandles[uri] && c_cachedAdapterHandles[uri][adapterType] &&
+            c_cachedAdapterHandles[uri][adapterType][canvasId]) {
             c_cachedAdapterHandles[uri][adapterType][canvasId].notifyListeners(type);
         }
     }
@@ -8061,6 +9246,8 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * Load data via XMLHttpRequest
      * @private
      * @param {string} url URL of the document
+     * @param {function(object)} loadListener Gets the response of the XHR
+     * @param {function(XMLHttpRequest)} errorListener Get the XHR object for further analyzis
      */
     ResourceManager.prototype.loadData = function(url, loadListener, errorListener) {
         var xmlHttp = null;
@@ -8082,7 +9269,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
                 // check compatibility between content and request mode
                 if (!xmlHttp._contentChecked &&
                     // 2 - HEADERS_RECEIVED, 3 - LOADING, 4 - DONE
-                    ((xmlHttp.readyState == 2 || xmlHttp.readyState == 3 ||xmlHttp.readyState == 4) &&
+                    ((xmlHttp.readyState == 2 || xmlHttp.readyState == 3 || xmlHttp.readyState == 4) &&
                         xmlHttp.status == 200)) {
                     xmlHttp._contentChecked = true; // we check only once
                     // check if we need to change request mode
@@ -8119,7 +9306,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
                 }
                 // Request mode and content type are compatible here (both binary or both text)
                 if (xmlHttp.readyState == 4) {
-                    if(xmlHttp.status == 200) {
+                    if (xmlHttp.status == 200) {
                         XML3D.debug.logDebug("Loaded: " + xmlHttp._url);
 
                         var mimetype = xmlHttp.getResponseHeader("content-type");
@@ -8132,7 +9319,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
                         } else if (mimetype == "application/xml" || mimetype == "text/xml") {
                             response = xmlHttp.responseXML;
                         } else if (mimetype == "application/octet-stream" || mimetype == "text/plain; charset=x-user-defined") {
-                            XML3D.debug.logError("Possibly wrong loading of resource "+url+". Mimetype is "+mimetype+" but response is not an ArrayBuffer");
+                            XML3D.debug.logError("Possibly wrong loading of resource " + url + ". Mimetype is " + mimetype + " but response is not an ArrayBuffer");
                             response = xmlHttp.responseText; // FIXME is this correct ?
                         }
                         if (loadListener)
@@ -8154,11 +9341,11 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * This function is called to load an Image.
      *
      * @param {string} uri Image URI
-     * @param {function} loadListener Function called when image was successfully loaded.
+     * @param {function(Event, HTMLImageElement)} loadListener Function called when image was successfully loaded.
      *                                It will be called with event as the first and image as the second parameter.
-     * @param {function} errorListener Function called when image could not be loaded.
+     * @param {function(Event, HTMLImageElement)} errorListener Function called when image could not be loaded.
      *                                 It will be called with event as the first and image as the second parameter.
-     * @return {Image}
+     * @return {HTMLImageElement}
      */
     ResourceManager.prototype.getImage = function(uri, loadListener, errorListener) {
         // we use canvasId 0 to represent images loaded in a document
@@ -8187,7 +9374,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
      * @param {boolean} autoplay
      * @param {Object} listeners  Dictionary of all listeners to register with video element.
      *                            Listeners will be called with event as the first and video as the second parameter.
-     * @return {Image}
+     * @return {HTMLVideoElement}
      */
     ResourceManager.prototype.getVideo = function(uri, autoplay, listeners) {
         // we use canvasId 0 to represent videos loaded in a document
@@ -8246,7 +9433,7 @@ XML3D.base.sendAdapterEvent = function(node, events) {
 
     FormatHandler.prototype.getFactory = function(aspect, canvasId) {
         canvasId = canvasId || 0;
-        var key = aspect+"_"+canvasId;
+        var key = aspect + "_" + canvasId;
         var factory = this.factoryCache[key];
         if (!factory) {
             var factoryClass = this.getFactoryClassByAspect(aspect);
@@ -8302,12 +9489,10 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         return null;
     }
 
-    // Export
-    XML3D.base.FormatHandler = FormatHandler;
-
     /**
      * XMLFormatHandler supports all XML and HTML-based documents.
      * @constructor
+     * @extends FormatHandler
      */
     var XMLFormatHandler = function() {
         FormatHandler.call(this);
@@ -8323,14 +9508,15 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     }
 
     XMLFormatHandler.prototype.getFragmentData = function(documentData, fragment) {
-        return documentData.querySelectorAll("*[id="+fragment+"]")[0];
+        return documentData.querySelectorAll("*[id=" + fragment + "]")[0];
     }
 
 
-
-    // Export
-    XML3D.base.XMLFormatHandler = XMLFormatHandler;
-
+    /**
+     *
+     * @constructor
+     * @extends FormatHandler
+     */
     var XML3DFormatHandler = function() {
         XMLFormatHandler.call(this);
     }
@@ -8345,18 +9531,17 @@ XML3D.base.sendAdapterEvent = function(node, events) {
     XML3DFormatHandler.prototype.getFormatData = function(response, responseType) {
         // Configure all xml3d elements:
         var xml3dElements = response.querySelectorAll("xml3d");
-        for(var i = 0; i < xml3dElements.length; ++i) {
+        for (var i = 0; i < xml3dElements.length; ++i) {
             XML3D.config.element(xml3dElements[i]);
         }
 
         return response;
     }
 
-    // Export
-    XML3D.base.XML3DFormatHandler = XML3DFormatHandler;
-    XML3D.base.xml3dFormatHandler = new XML3DFormatHandler();
-    XML3D.base.registerFormat(XML3D.base.xml3dFormatHandler);
-
+    /**
+     * @constructor
+     * @extends FormatHandler
+     */
     var JSONFormatHandler = function() {
         FormatHandler.call(this);
     }
@@ -8370,20 +9555,32 @@ XML3D.base.sendAdapterEvent = function(node, events) {
         return response;
     }
 
-    // Export
-    XML3D.base.JSONFormatHandler = JSONFormatHandler;
-
+    /**
+     * @constructor
+     * @extends FormatHandler
+     */
     var BinaryFormatHandler = function() {
         FormatHandler.call(this);
     }
     XML3D.createClass(BinaryFormatHandler, FormatHandler);
 
-    // Export
+    // Exports
+    XML3D.base.JSONFormatHandler = JSONFormatHandler;
     XML3D.base.BinaryFormatHandler = BinaryFormatHandler;
+    XML3D.base.XMLFormatHandler = XMLFormatHandler;
+    XML3D.base.XML3DFormatHandler = XML3DFormatHandler;
+    XML3D.base.xml3dFormatHandler = new XML3DFormatHandler();
+    XML3D.base.FormatHandler = FormatHandler;
+
+    XML3D.base.registerFormat(XML3D.base.xml3dFormatHandler);
 
 }());
 (function() {
 
+    /**
+     * Types of change events
+     * @enum {number}
+     */
   var events = {
           NODE_INSERTED: 0,
           VALUE_MODIFIED:  1,
@@ -8391,7 +9588,8 @@ XML3D.base.sendAdapterEvent = function(node, events) {
           DANGLING_REFERENCE: 3,
           VALID_REFERENCE: 4,
           THIS_REMOVED: 5,
-          ADAPTER_HANDLE_CHANGED: 6
+          ADAPTER_HANDLE_CHANGED: 6,
+          ADAPTER_VALUE_CHANGED: 7
   };
 
   //-----------------------------------------------------------------------------
@@ -8417,15 +9615,20 @@ XML3D.base.sendAdapterEvent = function(node, events) {
 
   //-----------------------------------------------------------------------------
 
-  events.AdapterHandleNotification = function(handle, type) {
-    this.adapterHandle = handle;
-    this.type = type;
-  };
-  XML3D.createClass(events.AdapterHandleNotification, events.Notification);
-  events.AdapterHandleNotification.prototype.toString = function() {
-      return "AdapterHandleNotification (type:" + this.type + ")";
-  };
-  //-----------------------------------------------------------------------------
+    /**
+     * @param {AdapterHandle} handle
+     * @param {int} type
+     * @constructor
+     */
+    events.AdapterHandleNotification = function (handle, type) {
+        this.adapterHandle = handle;
+        this.type = type;
+    };
+    XML3D.createClass(events.AdapterHandleNotification, events.Notification);
+    events.AdapterHandleNotification.prototype.toString = function () {
+        return "AdapterHandleNotification (type:" + this.type + ")";
+    };
+    //-----------------------------------------------------------------------------
 
   events.ConnectedAdapterNotification = function(adapterHandleNotification, key) {
     this.adapter = adapterHandleNotification.adapterHandle.getAdapter();
@@ -8442,7 +9645,8 @@ XML3D.base.sendAdapterEvent = function(node, events) {
   XML3D.events = XML3D.events || {};
   XML3D.extend(XML3D.events, events);
 
-}());XML3D.config = XML3D.config || {};
+}());
+XML3D.config = XML3D.config || {};
 
 XML3D.config.isXML3DElement = function(e) {
     return (e.nodeType === Node.ELEMENT_NODE && (e.namespaceURI == XML3D.xml3dNS));
@@ -8521,11 +9725,20 @@ XML3D.config.configure = function(element, selfmonitoring) {
     var nativeCreateElementNS = document.createElementNS;
     doc.createElementNS = function(ns, name) {
         var r = nativeCreateElementNS.call(this, ns, name);
-        if (ns == XML3D.xml3dNS) {
+        if (ns == XML3D.xml3dNS || XML3D.classInfo[name.toLowerCase()]) {
             XML3D.config.element(r, true);
         }
         return r;
     };
+    var nativeCreateElement = document.createElement;
+    doc.createElement = function(name) {
+        var r = nativeCreateElement.call(this, name);
+        if (XML3D.classInfo[name.toLowerCase()] ) {
+            XML3D.config.element(r, true);
+        }
+        return r;
+    };
+
     XML3D.extend(window.document, doc);
 
 }(XML3D._native));
@@ -8613,6 +9826,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             if(removedChild._configured) {
                 n.type = events.THIS_REMOVED;
                 removeRecursive(removedChild,n);
+                notifyNodeIdChangeRecursive(removedChild);
             }
         }
         // TODO: Quick fix, solve issue of self monitoring elements better
@@ -8636,10 +9850,20 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             removeRecursive(n,evt);
             n = n.nextElementSibling;
         }
+    }
+
+    function notifyNodeIdChangeRecursive(element){
         // We call this here in addition to nodeRemovedFromDocument, since the later is not supported by Firefox
         // TODO: Remove this function call once DOMNodeRemoveFromDocument is supported by all major browsers
         XML3D.base.resourceManager.notifyNodeIdChange(element, element.id, null);
+
+        var n = element.firstElementChild;
+        while(n) {
+            notifyNodeIdChangeRecursive(n);
+            n = n.nextElementSibling;
+        }
     }
+
 
     function nodeInserted(e) {
         var parent = e.relatedNode,
@@ -8770,6 +9994,8 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
             var adapter = this.adapters[h];
             if(adapter.onDispose)
                 adapter.onDispose();
+            if(adapter.clearAdapterHandles)
+                adapter.clearAdapterHandles();
         }
         this.adapters = {};
         for(var h in this.handlers) {
@@ -9386,14 +10612,6 @@ new (function() {
         return new window.XML3DMatrix();
     };
 
-    methods.dataGetOutputNames = function() {
-        var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
-        if(dataAdapter){
-            return dataAdapter.getOutputNames();
-        }
-        return null;
-    };
-
     methods.videoPlay = function() {
         XML3D.base.sendAdapterEvent(this, {play: []});
     };
@@ -9402,9 +10620,19 @@ new (function() {
         XML3D.base.sendAdapterEvent(this, {pause: []});
     };
 
-    methods.protoGetOutputNames = methods.dataGetOutputNames;
+    methods.XML3DNestedDataContainerTypeGetOutputNames =
+    methods.XML3DShaderProviderTypeGetOutputNames =
+    methods.meshGetOutputNames = function() {
+        var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
+        if(dataAdapter){
+            return dataAdapter.getOutputNames();
+        }
+        return null;
+    };
 
-    methods.dataGetResult = function(filter) {
+    methods.XML3DNestedDataContainerTypeGetResult =
+    methods.XML3DShaderProviderTypeGetResult =
+    methods.meshGetResult = function(filter) {
 
         var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
         if(dataAdapter){
@@ -9415,7 +10643,9 @@ new (function() {
         return null;
     };
 
-    methods.dataGetOutputChannelInfo = function(name){
+    methods.XML3DNestedDataContainerTypeGetOutputChannelInfo =
+    methods.XML3DShaderProviderTypeGetOutputChannelInfo =
+    methods.meshGetOutputChannelInfo = function(name){
         var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
         if(dataAdapter){
             var result = dataAdapter.getOutputChannelInfo(name);
@@ -9425,25 +10655,27 @@ new (function() {
         }
         return null;
     }
-    methods.protoGetOutputChannelInfo = methods.dataGetOutputChannelInfo;
 
-    methods.dataGetComputeInfo = function(){
+    methods.XML3DNestedDataContainerTypeGetComputeInfo =
+    methods.XML3DShaderProviderTypeGetComputeInfo =
+    methods.meshGetComputeInfo = function(){
         XML3D.debug.logError(this.nodeName + "::getComputeInfo is not implemeted yet.");
         return null;
     }
-    methods.protoGetComputeInfo = methods.dataGetComputeInfo;
 
-    methods.dataGetProtoInfo = function(){
+    methods.XML3DNestedDataContainerTypeGetProtoInfo =
+    methods.XML3DShaderProviderTypeGetProtoInfo =
+    methods.meshGetProtoInfo = function(){
         XML3D.debug.logError(this.nodeName + "::getProtoInfo is not implemeted yet.");
         return null;
     }
-    methods.protoGetProtoInfo = methods.dataGetProtoInfo;
 
-    methods.dataIsOutputConnected = function(){
+    methods.XML3DNestedDataContainerTypeIsOutputConnected =
+    methods.XML3DShaderProviderTypeIsOutputConnected =
+    methods.meshIsOutputConnected = function(){
         XML3D.debug.logError(this.nodeName + "::isOutputConnected is not implemeted yet.");
         return false;
     }
-    methods.protoIsOutputConnected = methods.dataIsOutputConnected;
 
 
     function createValues(result, names) {
@@ -9489,6 +10721,26 @@ new (function() {
         return true;
     };
 
+    XML3D.scriptValueLabel = "[value set by script]";
+
+
+    methods.XML3DDataSourceTypeSetScriptValue = function(data){
+        var configData = this._configured;
+
+        if(!configData)
+            return;
+
+        if(this.textContent != XML3D.scriptValueLabel)
+            this.textContent = XML3D.scriptValueLabel;
+        configData.scriptValue = data;
+
+        var dataAdapter = XML3D.base.resourceManager.getAdapter(this, XML3D.data);
+        if(dataAdapter)
+            dataAdapter.setScriptValue(data);
+
+
+    };
+
     // Export to xml3d namespace
     XML3D.extend(XML3D.methods, methods);
 });
@@ -9503,6 +10755,8 @@ XML3D.MeshTypes["lines"] = 2;
 XML3D.MeshTypes[2] = "lines";
 XML3D.MeshTypes["linestrips"] = 3;
 XML3D.MeshTypes[3] = "linestrips";
+XML3D.MeshTypes["points"] = 4;
+XML3D.MeshTypes[4] = "points";
 // TextureTypes
 XML3D.TextureTypes = {};
 XML3D.TextureTypes["2d"] = 0;
@@ -9601,14 +10855,12 @@ XML3D.classInfo['data'] = {
     // TODO: Handle style for data
     compute : {a: XML3D.StringAttributeHandler},
     filter : {a: XML3D.StringAttributeHandler},
-    getOutputNames : {m: XML3D.methods.dataGetOutputNames},
-    getOutputChannelInfo : {m: XML3D.methods.dataGetOutputChannelInfo},
-    getComputeInfo : {m: XML3D.methods.dataGetComputeInfo},
-    getProtoInfo : {m: XML3D.methods.dataGetProtoInfo},
-    isOutputConnected : {m: XML3D.methods.dataIsOutputConnected},
-    getResult : {m: XML3D.methods.dataGetResult},
-    addOutputFieldListener : {m: XML3D.methods.dataAddOutputFieldListener},
-    getOutputNames : {m: XML3D.methods.dataGetOutputNames},
+    getOutputNames : {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputNames},
+    getOutputChannelInfo : {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputChannelInfo},
+    getComputeInfo : {m: XML3D.methods.XML3DNestedDataContainerTypeGetComputeInfo},
+    getProtoInfo : {m: XML3D.methods.XML3DNestedDataContainerTypeGetProtoInfo},
+    isOutputConnected : {m: XML3D.methods.XML3DNestedDataContainerTypeIsOutputConnected},
+    getResult : {m: XML3D.methods.XML3DNestedDataContainerTypeGetResult},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
     _term: undefined
@@ -9669,6 +10921,12 @@ XML3D.classInfo['mesh'] = {
     compute : {a: XML3D.StringAttributeHandler},
     getWorldMatrix : {m: XML3D.methods.XML3DGraphTypeGetWorldMatrix},
     getBoundingBox : {m: XML3D.methods.meshGetBoundingBox},
+    getOutputNames : {m: XML3D.methods.meshGetOutputNames},
+    getOutputChannelInfo : {m: XML3D.methods.meshGetOutputChannelInfo},
+    getComputeInfo : {m: XML3D.methods.meshGetComputeInfo},
+    getProtoInfo : {m: XML3D.methods.meshGetProtoInfo},
+    isOutputConnected : {m: XML3D.methods.meshIsOutputConnected},
+    getResult : {m: XML3D.methods.meshGetResult},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
     _term: undefined
@@ -9695,6 +10953,12 @@ XML3D.classInfo['shader'] = {
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for shader
     compute : {a: XML3D.StringAttributeHandler},
+    getOutputNames : {m: XML3D.methods.XML3DShaderProviderTypeGetOutputNames},
+    getOutputChannelInfo : {m: XML3D.methods.XML3DShaderProviderTypeGetOutputChannelInfo},
+    getComputeInfo : {m: XML3D.methods.XML3DShaderProviderTypeGetComputeInfo},
+    getProtoInfo : {m: XML3D.methods.XML3DShaderProviderTypeGetProtoInfo},
+    isOutputConnected : {m: XML3D.methods.XML3DShaderProviderTypeIsOutputConnected},
+    getResult : {m: XML3D.methods.XML3DShaderProviderTypeGetResult},
     script : {a: XML3D.ReferenceHandler},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
@@ -9732,6 +10996,12 @@ XML3D.classInfo['lightshader'] = {
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for lightshader
     compute : {a: XML3D.StringAttributeHandler},
+    getOutputNames : {m: XML3D.methods.XML3DShaderProviderTypeGetOutputNames},
+    getOutputChannelInfo : {m: XML3D.methods.XML3DShaderProviderTypeGetOutputChannelInfo},
+    getComputeInfo : {m: XML3D.methods.XML3DShaderProviderTypeGetComputeInfo},
+    getProtoInfo : {m: XML3D.methods.XML3DShaderProviderTypeGetProtoInfo},
+    isOutputConnected : {m: XML3D.methods.XML3DShaderProviderTypeIsOutputConnected},
+    getResult : {m: XML3D.methods.XML3DShaderProviderTypeGetResult},
     script : {a: XML3D.ReferenceHandler},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
@@ -9758,11 +11028,12 @@ XML3D.classInfo['proto'] = {
     // TODO: Handle style for proto
     compute : {a: XML3D.StringAttributeHandler},
     filter : {a: XML3D.StringAttributeHandler},
-    getOutputNames : {m: XML3D.methods.protoGetOutputNames},
-    getOutputChannelInfo : {m: XML3D.methods.protoGetOutputChannelInfo},
-    getComputeInfo : {m: XML3D.methods.protoGetComputeInfo},
-    getProtoInfo : {m: XML3D.methods.protoGetProtoInfo},
-    isOutputConnected : {m: XML3D.methods.protoIsOutputConnected},
+    getOutputNames : {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputNames},
+    getOutputChannelInfo : {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputChannelInfo},
+    getComputeInfo : {m: XML3D.methods.XML3DNestedDataContainerTypeGetComputeInfo},
+    getProtoInfo : {m: XML3D.methods.XML3DNestedDataContainerTypeGetProtoInfo},
+    isOutputConnected : {m: XML3D.methods.XML3DNestedDataContainerTypeIsOutputConnected},
+    getResult : {m: XML3D.methods.XML3DNestedDataContainerTypeGetResult},
     src : {a: XML3D.ReferenceHandler},
     proto : {a: XML3D.ReferenceHandler},
     _term: undefined
@@ -9778,6 +11049,7 @@ XML3D.classInfo['float'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.FloatArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9791,6 +11063,7 @@ XML3D.classInfo['float2'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float2ArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9804,6 +11077,7 @@ XML3D.classInfo['float3'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float3ArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9817,6 +11091,7 @@ XML3D.classInfo['float4'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float4ArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9830,6 +11105,7 @@ XML3D.classInfo['float4x4'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.Float4x4ArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9843,6 +11119,7 @@ XML3D.classInfo['int'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.IntArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9856,6 +11133,7 @@ XML3D.classInfo['int4'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.IntArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9869,6 +11147,7 @@ XML3D.classInfo['bool'] = {
     param : {a: XML3D.BoolAttributeHandler, params: false},
     key : {a: XML3D.FloatAttributeHandler, params: 0.0},
     value : {a: XML3D.BoolArrayValueHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9889,6 +11168,7 @@ XML3D.classInfo['texture'] = {
     wrapT : {a: XML3D.EnumAttributeHandler, params: {e: XML3D.WrapTypes, d: 0}},
     wrapU : {a: XML3D.EnumAttributeHandler, params: {e: XML3D.WrapTypes, d: 0}},
     borderColor : {a: XML3D.StringAttributeHandler},
+    setScriptValue : {m: XML3D.methods.XML3DDataSourceTypeSetScriptValue},
     _term: undefined
 };
 /**
@@ -9909,9 +11189,9 @@ XML3D.classInfo['video'] = {
     className : {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for video
     src : {a: XML3D.StringAttributeHandler},
+    autoplay : {a: XML3D.BoolAttributeHandler, params: false},
     play : {m: XML3D.methods.videoPlay},
     pause : {m: XML3D.methods.videoPause},
-    autoplay : {a: XML3D.BoolAttributeHandler, params: false},
     _term: undefined
 };
 /**
@@ -9935,7 +11215,6 @@ XML3D.classInfo['view'] = {
     position : {a: XML3D.XML3DVec3AttributeHandler, params: [0, 0, 0]},
     orientation : {a: XML3D.XML3DRotationAttributeHandler, params: [0, 0, 1, 0]},
     fieldOfView : {a: XML3D.FloatAttributeHandler, params: 0.785398},
-    perspective : {a: XML3D.ReferenceHandler},
     getWorldMatrix : {m: XML3D.methods.XML3DGraphTypeGetWorldMatrix},
     setDirection : {m: XML3D.methods.viewSetDirection},
     setUpVector : {m: XML3D.methods.viewSetUpVector},
@@ -9943,206 +11222,292 @@ XML3D.classInfo['view'] = {
     getDirection : {m: XML3D.methods.viewGetDirection},
     getUpVector : {m: XML3D.methods.viewGetUpVector},
     getViewMatrix : {m: XML3D.methods.viewGetViewMatrix},
+    perspective : {a: XML3D.ReferenceHandler},
     _term: undefined
 };
 /* END GENERATED */
 window=this;
 var Xflow = {};
 
-Xflow.EPSILON = 0.000001;
+(function(){
+    Xflow.EPSILON = 0.000001;
 
-/**
- * Type of DataEntry
- * @enum
- */
-Xflow.DATA_TYPE = {
-    UNKNOWN: 0,
-    FLOAT: 1,
-    FLOAT2 : 2,
-    FLOAT3 : 3,
-    FLOAT4 : 4,
-    FLOAT4X4 : 10,
-    INT : 20,
-    INT4 : 21,
-    BOOL: 30,
-    TEXTURE: 40,
-    BYTE : 50,
-    UBYTE : 60
-}
+    /**
+     * Type of DataEntry
+     * @enum
+     */
+    Xflow.DATA_TYPE = {
+        UNKNOWN: 0,
+        FLOAT: 1,
+        FLOAT2 : 2,
+        FLOAT3 : 3,
+        FLOAT4 : 4,
+        FLOAT4X4 : 10,
+        INT : 20,
+        INT4 : 21,
+        BOOL: 30,
+        TEXTURE: 40,
+        BYTE : 50,
+        UBYTE : 60
+    }
 
-Xflow.DATA_TYPE_MAP = {
-    'float' : Xflow.DATA_TYPE.FLOAT,
-    'float2' : Xflow.DATA_TYPE.FLOAT2,
-    'float3' : Xflow.DATA_TYPE.FLOAT3,
-    'float4' : Xflow.DATA_TYPE.FLOAT4,
-    'float4x4' : Xflow.DATA_TYPE.FLOAT4X4,
-    'int' : Xflow.DATA_TYPE.INT,
-    'int4' : Xflow.DATA_TYPE.INT4,
-    'bool' : Xflow.DATA_TYPE.BOOL,
-    'texture' : Xflow.DATA_TYPE.TEXTURE,
-    'byte' : Xflow.DATA_TYPE.BYTE,
-    'ubyte' : Xflow.DATA_TYPE.UBYTE
-}
-
-
-
-Xflow.DATA_TYPE_TUPLE_SIZE = {};
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT2] = 2;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT3] = 3;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4] = 4;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4X4] = 16;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BOOL] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
-Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
+    Xflow.DATA_TYPE_MAP = {
+        'float' : Xflow.DATA_TYPE.FLOAT,
+        'float2' : Xflow.DATA_TYPE.FLOAT2,
+        'float3' : Xflow.DATA_TYPE.FLOAT3,
+        'float4' : Xflow.DATA_TYPE.FLOAT4,
+        'float4x4' : Xflow.DATA_TYPE.FLOAT4X4,
+        'int' : Xflow.DATA_TYPE.INT,
+        'int4' : Xflow.DATA_TYPE.INT4,
+        'bool' : Xflow.DATA_TYPE.BOOL,
+        'texture' : Xflow.DATA_TYPE.TEXTURE,
+        'byte' : Xflow.DATA_TYPE.BYTE,
+        'ubyte' : Xflow.DATA_TYPE.UBYTE
+    }
 
 
 
-Xflow.TYPED_ARRAY_MAP = {};
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT] = Float32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT2] = Float32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT3] = Float32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT4] = Float32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT4X4] = Float32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.INT] = Int32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.INT4] = Int32Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.BOOL] = Int8Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.BYTE] = Int8Array;
-Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.UBYTE] = Uint8Array;
+    Xflow.DATA_TYPE_TUPLE_SIZE = {};
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT] = 1;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT2] = 2;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT3] = 3;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4] = 4;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4X4] = 16;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BOOL] = 1;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
 
 
-Xflow.getTypeName = function(type){
-    for(var i in Xflow.DATA_TYPE_MAP){
-        if(Xflow.DATA_TYPE_MAP[i] == type){
-            return i;
+
+    Xflow.TYPED_ARRAY_MAP = {};
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT] = Float32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT2] = Float32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT3] = Float32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT4] = Float32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.FLOAT4X4] = Float32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.INT] = Int32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.INT4] = Int32Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.BOOL] = Int8Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.BYTE] = Int8Array;
+    Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.UBYTE] = Uint8Array;
+
+
+    Xflow.getTypeName = function(type){
+        for(var i in Xflow.DATA_TYPE_MAP){
+            if(Xflow.DATA_TYPE_MAP[i] == type){
+                return i;
+            }
         }
     }
-}
 
-/**
- * @enum {number}
- */
-Xflow.TEX_FILTER_TYPE = {
-    NEAREST: 0x2600,
-    LINEAR: 0x2601,
-    MIPMAP_NEAREST: 0x2700,
-    MIPMAP_LINEAR: 0x2701
+    /**
+     * @enum {number}
+     */
+    Xflow.TEX_FILTER_TYPE = {
+        NEAREST: 0x2600,
+        LINEAR: 0x2601,
+        MIPMAP_NEAREST: 0x2700,
+        MIPMAP_LINEAR: 0x2701
 
-};
-/**
- * @enum {number}
- */
-Xflow.TEX_WRAP_TYPE = {
-    CLAMP: 0x812F,
-    REPEAT: 0x2901
-};
-/**
- * @enum {number}
- */
-Xflow.TEX_TYPE = {
-    TEXTURE_2D: 0x0DE1
-};
+    };
+    /**
+     * @enum {number}
+     */
+    Xflow.TEX_WRAP_TYPE = {
+        CLAMP: 0x812F,
+        REPEAT: 0x2901
+    };
+    /**
+     * @enum {number}
+     */
+    Xflow.TEX_TYPE = {
+        TEXTURE_2D: 0x0DE1
+    };
 
-
-/**
- * Filter Type of DataNode
- * KEEP - Keep only the provided names
- * REMOVE - Remove provided names (ignores name mapping)
- * RENAME - Only apply name mapping
- * @enum
- */
-Xflow.DATA_FILTER_TYPE = {
-    RENAME: 0,
-    KEEP: 1,
-    REMOVE: 2
-}
-
-
-/**
- * @enum {number}
- */
-Xflow.DATA_ENTRY_STATE = {
-    CHANGED_NEW: 1,
-    CHANGED_VALUE: 2,
-    CHANGE_SIZE: 3,
-    CHANGE_REMOVED: 4
-};
-
-Xflow.RESULT_TYPE = {
-    COMPUTE: 0
-}
-
-
-/**
- * Type of Modification, used internally only
- * @private
- * @enum
- */
-Xflow.RESULT_STATE = {
-    NONE: 0,
-    CHANGED_DATA: 1,
-    CHANGED_STRUCTURE: 2
-};
-
-
-/**
- * Type of Sequence access - used by operators
- * @private
- * @enum
- */
-Xflow.SEQUENCE = {
-    NO_ACCESS: 0,
-    PREV_BUFFER: 1,
-    NEXT_BUFFER: 2,
-    LINEAR_WEIGHT: 3
-}
-
-/**
- * Type of Information Extraction - used by operators
- * @private
- * @enum
- */
-Xflow.EXTRACT = {
-    NO_EXTRAC: 0,
-    TEX_WIDTH: 1,
-    TEX_HEIGHT: 2
-};
-
-Xflow.ORIGIN = {
-    CHILD: 1,
-    COMPUTE: 2,
-    PROTO: 3
-};
-
-
-/* Tools */
-
-/**
- *
- * @param {Object} ctor Constructor
- * @param {Object} parent Parent class
- * @param {Object=} methods Methods to add to the class
- * @returns {Object}
- */
-Xflow.createClass = function(ctor, parent, methods) {
-    methods = methods || {};
-    if (parent) {
-        /** @constructor */
-        var F = function() {
-        };
-        F.prototype = parent.prototype;
-        ctor.prototype = new F();
-        ctor.prototype.constructor = ctor;
-        ctor.superclass = parent.prototype;
+    Xflow.SHADER_CONSTANT_KEY = {
+        WORLD_TRANSFORM: 1,
+        VIEW_TRANSFORM: 2,
+        SCREEN_TRANSFORM: 3,
+        WORLD_TRANSFORM_NORMAL: 4,
+        VIEW_TRANSFORM_NORMAL: 5,
+        SCREEN_TRANSFORM_NORMAL: 6,
+        OBJECT_ID: 7
     }
-    for ( var m in methods) {
-        ctor.prototype[m] = methods[m];
+
+    Xflow.VS_ATTRIB_TYPE = {
+        FLOAT: 1,
+        FLOAT2: 2,
+        FLOAT3: 3,
+        FLOAT3_VIEW_POINT: 101,
+        FLOAT3_WORLD_POINT: 102,
+        FLOAT3_VIEW_NORMAL: 103,
+        FLOAT3_WORLD_NORMAL: 104,
+        FLOAT4 : 4,
+        FLOAT4X4 : 10,
+        INT: 20,
+        INT4: 21,
+        BOOL: 30,
+        TEXTURE: 40
     }
-    return ctor;
-};(function(){
+
+
+    /**
+     * Filter Type of DataNode
+     * KEEP - Keep only the provided names
+     * REMOVE - Remove provided names (ignores name mapping)
+     * RENAME - Only apply name mapping
+     * @enum
+     */
+    Xflow.DATA_FILTER_TYPE = {
+        RENAME: 0,
+        KEEP: 1,
+        REMOVE: 2
+    }
+
+
+    /**
+     * @enum {number}
+     */
+    Xflow.DATA_ENTRY_STATE = {
+        CHANGED_NEW: 1,
+        LOAD_START: 2,
+        LOAD_END: 3,
+        CHANGED_VALUE: 4,
+        CHANGED_SIZE: 5,
+        CHANGED_REMOVED: 6
+    };
+
+    Xflow.RESULT_TYPE = {
+        COMPUTE: 0,
+        VS: 1
+    }
+
+
+    /**
+     * Type of Modification, used internally only
+     * @private
+     * @enum
+     */
+    Xflow.RESULT_STATE = {
+        NONE: 0,
+        CHANGED_DATA_VALUE: 1,
+        CHANGED_DATA_SIZE: 2,
+        CHANGED_STRUCTURE: 3,
+        LOAD_START: 4,
+        LOAD_END: 5,
+        IMAGE_LOAD_START: 6,
+        IMAGE_LOAD_END: 7
+    };
+
+
+    /**
+     * Type of Sequence access - used by operators
+     * @private
+     * @enum
+     */
+    Xflow.SEQUENCE = {
+        NO_ACCESS: 0,
+        PREV_BUFFER: 1,
+        NEXT_BUFFER: 2,
+        LINEAR_WEIGHT: 3
+    }
+
+    /**
+     * Type of Information Extraction - used by operators
+     * @private
+     * @enum
+     */
+    Xflow.EXTRACT = {
+        NO_EXTRAC: 0,
+        TEX_WIDTH: 1,
+        TEX_HEIGHT: 2
+    };
+
+    Xflow.ORIGIN = {
+        CHILD: 1,
+        COMPUTE: 2,
+        PROTO: 3
+    };
+
+    /**
+     * Types of platforms to perform computation on
+     * @type {Object}
+     */
+    Xflow.PLATFORM = {
+        JAVASCRIPT: 0,
+        GLSL: 1
+    }
+
+    Xflow.PROCESS_STATE = {
+        MODIFIED: 0,
+        LOADING: 1,
+        NEEDS_VALIDATION: 2,
+        INVALID: 3,
+        UNPROCESSED: 4,
+        PROCESSED: 5
+    }
+
+
+
+    /* Tools */
+
+    /**
+     *
+     * @param {Object} ctor Constructor
+     * @param {Object} parent Parent class
+     * @param {Object=} methods Methods to add to the class
+     * @returns {Object}
+     */
+    Xflow.createClass = function(ctor, parent, methods) {
+        methods = methods || {};
+        if (parent) {
+            /** @constructor */
+            var F = function() {
+            };
+            F.prototype = parent.prototype;
+            ctor.prototype = new F();
+            ctor.prototype.constructor = ctor;
+            ctor.superclass = parent.prototype;
+        }
+        for ( var m in methods) {
+            ctor.prototype[m] = methods[m];
+        }
+        return ctor;
+    };
+
+
+    var c_listedCallbacks = [];
+    var c_listedCallbacksData = [];
+    Xflow._listCallback = function(object, data){
+        var index;
+        if(( index = c_listedCallbacks.indexOf(object)) == -1){
+            index = c_listedCallbacks.length;
+            c_listedCallbacks.push(object);
+        }
+        var prevData = c_listedCallbacksData[index];
+        if(!prevData || prevData < data){
+            c_listedCallbacksData[index] = data;
+        }
+    }
+
+    Xflow._callListedCallback = function(){
+        if(c_listedCallbacks.length){
+            for(var i = 0; i < c_listedCallbacks.length; ++i)
+                c_listedCallbacks[i]._onListedCallback(c_listedCallbacksData[i]);
+            c_listedCallbacks = [];
+            c_listedCallbacksData = [];
+        }
+    }
+}());
+
+
+
+
+
+(function(){
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -10235,7 +11600,7 @@ DataEntry.prototype.removeListener = function(callback){
     Array.erase(this._listeners, callback);
 };
 
-DataEntry.prototype.notifyChanged = function(){
+DataEntry.prototype._notifyChanged = function(){
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
 }
 
@@ -10260,9 +11625,14 @@ var BufferEntry = Xflow.BufferEntry;
 
 /** @param {Object} v */
 BufferEntry.prototype.setValue = function(v){
+    this._setValue(v);
+    Xflow._callListedCallback();
+}
+
+BufferEntry.prototype._setValue = function(v){
     var newSize = (this._value ? this._value.length : 0) != (v ? v.length : 0);
     this._value = v;
-    notifyListeners(this, newSize ? Xflow.DATA_ENTRY_STATE.CHANGE_SIZE : Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
+    notifyListeners(this, newSize ? Xflow.DATA_ENTRY_STATE.CHANGED_SIZE : Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
 }
 
 /** @return {Object} */
@@ -10347,6 +11717,7 @@ Xflow.TextureEntry = function(image){
     Xflow.DataEntry.call(this, Xflow.DATA_TYPE.TEXTURE);
     this._samplerConfig = new SamplerConfig();
     this._formatType = null; // null | 'ImageData' | 'number' | 'float32' | 'float64'
+    this._loading = false;
     this._updateImage(image);
 
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_NEW);
@@ -10404,7 +11775,7 @@ TextureEntry.prototype._updateImage = function(image) {
  * @param samplerConfig
  * @return {Image|Canvas}
  */
-TextureEntry.prototype.createImage = function(width, height, formatType, samplerConfig) {
+TextureEntry.prototype._createImage = function(width, height, formatType, samplerConfig) {
     if (!this._image || this.getWidth() != width || this.getHeight() != height || this._formatType != formatType) {
         if (!width || !height)
             throw new Error("Width or height is not specified");
@@ -10420,18 +11791,34 @@ TextureEntry.prototype.createImage = function(width, height, formatType, sampler
             samplerConfig.setDefaults();
         }
         this._samplerConfig.set(samplerConfig);
-        this.setImage(img);
+        this._setImage(img);
     } else {
-        this.notifyChanged();
+        this._notifyChanged();
     }
     return this._image;
 };
 
 /** @param {Object} v */
 TextureEntry.prototype.setImage = function(v) {
-    this._updateImage(v);
-    notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
+    this._setImage(v);
+    Xflow._callListedCallback();
 };
+
+TextureEntry.prototype._setImage = function(v) {
+    this._updateImage(v);
+    var loading = this.isLoading();
+    if(loading){
+        this._loading = true;
+        notifyListeners(this, Xflow.DATA_ENTRY_STATE.LOAD_START);
+    }
+    else if(this._loading){
+        this._loading = false;
+        notifyListeners(this, Xflow.DATA_ENTRY_STATE.LOAD_END);
+    }
+    else
+        notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
+}
+
 
 TextureEntry.prototype.getFormatType = function() {
     return this._formatType;
@@ -10600,7 +11987,7 @@ ImageDataTextureEntry.prototype._updateImageData = function(imageData) {
  * @param samplerConfig
  * @return {Image|Canvas}
  */
-ImageDataTextureEntry.prototype.createImage = function(width, height, formatType, samplerConfig) {
+ImageDataTextureEntry.prototype._createImage = function(width, height, formatType, samplerConfig) {
     if (!this._image || this.getWidth() != width || this.getHeight() != height || this._formatType != formatType) {
         if (!width || !height)
             throw new Error("Width or height is not specified");
@@ -10634,13 +12021,14 @@ ImageDataTextureEntry.prototype.createImage = function(width, height, formatType
         }
         this._imageData = imageData;
     }
-    this.notifyChanged();
+    this._notifyChanged();
 };
 
 /** @param {Object} v */
 ImageDataTextureEntry.prototype.setImageData = function(v) {
     this._updateImageData(v);
     notifyListeners(this, Xflow.DATA_ENTRY_STATE.CHANGED_VALUE);
+    Xflow._callListedCallback();
 };
 
 ImageDataTextureEntry.prototype.getWidth = function() {
@@ -10713,10 +12101,11 @@ function notifyListeners(dataEntry, notification){
         DataChangeNotifier._listeners[i](dataEntry, notification);
     }
     for(var i = 0; i < dataEntry._listeners.length; ++i){
-        dataEntry._listeners[i].notify(dataEntry, notification);
+        dataEntry._listeners[i](dataEntry, notification);
     }
-};
-})();
+}
+
+}());
 (function(){
 
 
@@ -10784,15 +12173,22 @@ Xflow.InputNode = function(graph){
     this._name = "";
     this._key = 0;
     this._data = null;
-    this._param = false;
+    this._paramName = null;
+    this._paramGlobal = false;
+    this._dataListener = this.onDataChange.bind(this);
 };
 Xflow.createClass(Xflow.InputNode, Xflow.GraphNode);
 var InputNode = Xflow.InputNode;
 
-InputNode.prototype.notify = function(newValue, notification) {
-    var downstreamNotification = notification == Xflow.DATA_ENTRY_STATE.CHANGED_VALUE ? Xflow.RESULT_STATE.CHANGED_DATA :
-                                                Xflow.RESULT_STATE.CHANGED_STRUCTURE;
-    notifyParentsOnChanged(this,downstreamNotification);
+InputNode.prototype.onDataChange = function(newValue, notification) {
+    var downNote;
+    switch(notification){
+        case Xflow.DATA_ENTRY_STATE.CHANGED_VALUE: downNote = Xflow.RESULT_STATE.CHANGED_DATA_VALUE; break;
+        case Xflow.DATA_ENTRY_STATE.LOAD_START: downNote = Xflow.RESULT_STATE.IMAGE_LOAD_START; break;
+        case Xflow.DATA_ENTRY_STATE.LOAD_END: downNote = Xflow.RESULT_STATE.IMAGE_LOAD_START; break;
+        default: downNote = Xflow.RESULT_STATE.CHANGED_DATA_SIZE; break;
+    }
+    notifyParentsOnChanged(this,downNote);
 };
 
 Object.defineProperty(InputNode.prototype, "name", {
@@ -10800,6 +12196,7 @@ Object.defineProperty(InputNode.prototype, "name", {
     set: function(v){
         this._name = v;
         notifyParentsOnChanged(this, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {string} */
     get: function(){ return this._name; }
@@ -10809,29 +12206,47 @@ Object.defineProperty(InputNode.prototype, "key", {
     set: function(v){
         this._key = v;
         notifyParentsOnChanged(this, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {number} */
     get: function(){ return this._key; }
 });
-Object.defineProperty(InputNode.prototype, "param", {
+Object.defineProperty(InputNode.prototype, "paramName", {
+    /** @param {string} v */
+    set: function(v){
+        this._paramName = v;
+        notifyParentsOnChanged(this, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
+    },
+    /** @return {string} */
+    get: function(){ return this._paramName; }
+});
+Object.defineProperty(InputNode.prototype, "paramGlobal", {
     /** @param {boolean} v */
     set: function(v){
-        this._param = v;
+        this._paramGlobal = v;
         notifyParentsOnChanged(this, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {boolean} */
-    get: function(){ return this._param; }
+    get: function(){ return this._paramGlobal; }
 });
 Object.defineProperty(InputNode.prototype, "data", {
     /** @param {Object} v */
     set: function(v){
+        var prevDataLoading = false;
         if(this._data) {
-            this._data.removeListener(this);
+            prevDataLoading = this._data._loading;
+            this._data.removeListener(this._dataListener);
         }
         this._data = v;
         if(this._data)
-            this._data.addListener(this);
-        notifyParentsOnChanged(this, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+            this._data.addListener(this._dataListener);
+        if(prevDataLoading != this._data._loading){
+            notifyParentsOnChanged(this, this._data._loading ? Xflow.RESULT_STATE.IMAGE_LOAD_START :
+                Xflow.RESULT_STATE.IMAGE_LOAD_END);
+        }
+        Xflow._callListedCallback();
     },
     /** @return {Object} */
     get: function(){ return this._data; }
@@ -10854,11 +12269,14 @@ Xflow.createBufferInputNode = function(type, name, size){
     return inputNode;
 };
 
-
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.DataNode
 //----------------------------------------------------------------------------------------------------------------------
 
+var c_xflowNodeId = 0;
+function getXflowNodeId(){
+    return ++c_xflowNodeId;
+}
 
 /**
  * @constructor
@@ -10867,9 +12285,11 @@ Xflow.createBufferInputNode = function(type, name, size){
 Xflow.DataNode = function(graph, protoNode){
     Xflow.GraphNode.call(this, graph);
 
-    this.loading = false;
+    this._loading = false;
+    this._subTreeLoading = false;
+    this._imageLoading = false;
 
-
+    this.id = getXflowNodeId();
     this._isProtoNode = protoNode;
     this._children = [];
     this._sourceNode = null;
@@ -10883,7 +12303,7 @@ Xflow.DataNode = function(graph, protoNode){
     this._computeOutputMapping = new Xflow.OrderMapping(this);
 
     this._channelNode = new Xflow.ChannelNode(this);
-    this._requests = [];
+    this._listeners = [];
 
 };
 Xflow.createClass(Xflow.DataNode, Xflow.GraphNode);
@@ -10924,15 +12344,15 @@ Xflow.NameMapping = function(owner){
 Xflow.createClass(Xflow.NameMapping, Xflow.Mapping);
 
 
-
-
 Object.defineProperty(DataNode.prototype, "sourceNode", {
     /** @param {?Xflow.DataNode} v */
     set: function(v){
         if(this._sourceNode) removeParent(this, this._sourceNode);
         this._sourceNode = v;
         if(this._sourceNode) addParent(this, this._sourceNode);
-        this.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        if(!updateNodeLoading(this))
+            this.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {?Xflow.DataNode} */
     get: function(){ return this._sourceNode; }
@@ -10943,17 +12363,29 @@ Object.defineProperty(DataNode.prototype, "protoNode", {
         if(this._protoNode) removeParent(this, this._protoNode);
         this._protoNode = v;
         if(this._protoNode) addParent(this, this._protoNode);
-        this.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        if(!updateNodeLoading(this))
+            this.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {?Xflow.DataNode} */
     get: function(){ return this._protoNode; }
 });
+
+DataNode.prototype.setLoading = function(loading){
+    if(this._loading != loading){
+        this._loading = loading;
+        updateSubtreeLoading(this);
+        Xflow._callListedCallback();
+    }
+}
+
 
 Object.defineProperty(DataNode.prototype, "filterType", {
     /** @param {Xflow.DATA_FILTER_TYPE} v */
     set: function(v){
         this._filterType = v;
         this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {Xflow.DATA_FILTER_TYPE} */
     get: function(){ return this._filterType; }
@@ -10972,6 +12404,7 @@ Object.defineProperty(DataNode.prototype, "computeOperator", {
     set: function(v){
         this._computeOperator = v;
         this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        Xflow._callListedCallback();
     },
     /** @return {string} */
     get: function(){ return this._computeOperator; }
@@ -11000,16 +12433,20 @@ DataNode.prototype.isProtoNode = function(){
  */
 DataNode.prototype.appendChild = function(child){
     this._children.push(child);
-    addParent(this, child)
-    this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    addParent(this, child);
+    if(!updateNodeLoading(this))
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 /**
  * @param {Xflow.GraphNode} child
  */
 DataNode.prototype.removeChild = function(child){
     Array.erase(this._children, child);
-    removeParent(this, child)
-    this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    removeParent(this, child);
+    if(!updateNodeLoading(this))
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 /**
  * @param {Xflow.GraphNode} child
@@ -11021,8 +12458,10 @@ DataNode.prototype.insertBefore = function(child, beforeNode){
         this._children.push(child);
     else
         this._children.splice(idx, 0, child);
-    addParent(this, child)
-    this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    addParent(this, child);
+    if(!updateNodeLoading(this))
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 /**
  * remove all children of the DataNode
@@ -11032,7 +12471,9 @@ DataNode.prototype.clearChildren = function(){
         removeParent(this, this._children[i]);
     }
     this._children = [];
-    this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    if(!updateNodeLoading(this))
+        this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 
 /**
@@ -11090,6 +12531,7 @@ DataNode.prototype.setFilter = function(filterString){
     this._filterMapping = newMapping;
     this._filterType = newType;
     this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 
 var computeParser = /^(([^=]+)\=)?([^(]+)\(([^()]*)\)$/;
@@ -11122,6 +12564,7 @@ DataNode.prototype.setCompute = function(computeString){
     this._computeOutputMapping = outputMapping;
     this._computeOperator = newOperator;
     this.notify( Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 }
 /**
  * Notifies DataNode about a change. Notification will be forwarded to parents, if necessary
@@ -11129,52 +12572,102 @@ DataNode.prototype.setCompute = function(computeString){
  * @param {GraphNode} senderNode
  */
 DataNode.prototype.notify = function(changeType, senderNode){
-    if(changeType == Xflow.RESULT_STATE.CHANGED_STRUCTURE)
+    if(changeType == Xflow.RESULT_STATE.CHANGED_STRUCTURE ||
+       changeType == Xflow.RESULT_STATE.LOAD_START ||
+       changeType == Xflow.RESULT_STATE.LOAD_END )
     {
         this._channelNode.setStructureOutOfSync();
 
-        notifyParentsOnChanged(this, changeType);
-
-        for(var i in this._requests)
-            this._requests[i].notify(changeType);
+        if(changeType == Xflow.RESULT_STATE.CHANGED_STRUCTURE)
+            notifyParentsOnChanged(this, changeType);
+        else
+            updateSubtreeLoading(this);
     }
-    else if(changeType == Xflow.RESULT_STATE.CHANGED_DATA){
-        this._channelNode.notifyDataChange(senderNode);
+    else if(changeType == Xflow.RESULT_STATE.CHANGED_DATA_VALUE ||
+        changeType == Xflow.RESULT_STATE.CHANGED_DATA_SIZE ||
+        changeType == Xflow.RESULT_STATE.IMAGE_LOAD_START ||
+        changeType == Xflow.RESULT_STATE.IMAGE_LOAD_END)
+    {
+        if(changeType == Xflow.RESULT_STATE.IMAGE_LOAD_START ||
+           changeType == Xflow.RESULT_STATE.IMAGE_LOAD_END )
+            updateImageLoading(this);
+        this._channelNode.notifyDataChange(senderNode, changeType);
     }
+    for(var i = 0; i < this._listeners.length; ++i)
+        this._listeners[i](changeType);
 };
 
-DataNode.prototype.getOutputNames = function(){
-    var forwardNode = getForwardNode(this);
-    if(forwardNode){
-        return forwardNode.getOutputNames();
-    }
+DataNode.prototype.addListener = function(listener){
+    this._listeners.push(listener)
+}
+DataNode.prototype.removeListener = function(listener){
+    Array.erase(this._listeners, listener);
+}
 
-    return this._channelNode.getOutputNames();
+DataNode.prototype.getOutputNames = function(){
+    return getForwardNode(this)._channelNode.getOutputNames();
 }
 
 DataNode.prototype.getOutputChannelInfo = function(name){
-    return (getForwardNode(this) || this)._channelNode.getOutputChannelInfo(name);
+    return getForwardNode(this)._channelNode.getOutputChannelInfo(name);
+}
+DataNode.prototype.getParamNames = function(){
+    return getForwardNode(this)._channelNode.getParamNames();
 }
 
-DataNode.prototype._getComputeResult = function(filter){
-    var forwardNode = getForwardNode(this);
-    if(forwardNode){
-        return forwardNode._getComputeResult(filter);
-    }
-
-    return this._channelNode.getComputeResult(filter);
+DataNode.prototype._getResult = function(type, filter){
+    return getForwardNode(this)._channelNode.getResult(type, filter);
 }
 
+DataNode.prototype._getForwardNode = function(){
+    return getForwardNode(this);
+}
 
 function getForwardNode(dataNode){
-    if(!dataNode._filterMapping.isEmpty()  || dataNode._computeOperator)
-        return null;
+    if(!dataNode._filterMapping.isEmpty()  || dataNode._computeOperator || dataNode._protoNode)
+        return dataNode;
     if(dataNode._sourceNode && dataNode._children.length == 0)
-        return dataNode._sourceNode;
+        return getForwardNode(dataNode._sourceNode);
     if(dataNode._children.length == 1 && dataNode._children[0] instanceof DataNode)
-        return dataNode._children[0];
-    return null;
+        return getForwardNode(dataNode._children[0]);
+    return dataNode;
 }
+
+function updateNodeLoading(node){
+    updateImageLoading(node);
+    return updateSubtreeLoading(node);
+}
+
+function updateImageLoading(node){
+    var imageLoading = false;
+    for(var i = 0; !imageLoading && i < node._children.length; ++i){
+        var child = node._children[i];
+        imageLoading = child instanceof Xflow.DataNode ? child._imageLoading :
+                child._data && child._data.isLoading && child._data.isLoading();
+    }
+    if(imageLoading != node._imageLoading){
+        node._imageLoading = imageLoading;
+        for(var i = 0; node._parents.length; ++i)
+            node._parents[i].notify(imageLoading ? Xflow.RESULT_STATE.IMAGE_LOAD_START :
+            Xflow.RESULT_STATE.IMAGE_LOAD_END);
+    }
+}
+function updateSubtreeLoading(node){
+    var subtreeLoading = node._loading;
+    for(var i = 0; !subtreeLoading && i < node._children.length; ++i){
+        var child = node._children[i];
+        subtreeLoading = child instanceof Xflow.DataNode ? child._subTreeLoading : false;
+    }
+    if(subtreeLoading != node._subTreeLoading){
+        node._subTreeLoading = subtreeLoading;
+        for(var i = 0; i < node._parents.length; ++i)
+            node._parents[i].notify(subtreeLoading ? Xflow.RESULT_STATE.LOAD_START :
+                Xflow.RESULT_STATE.LOAD_END);
+        return true;
+    }
+    return false;
+}
+
 
 //----------------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -11495,10 +12988,454 @@ NameMapping.prototype.applyScriptOutputOnMap= function(destMap, sourceMap){
 function mappingNotifyOwner(mapping){
     if(mapping._owner)
         mapping._owner.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 
 })();
 (function(){
+
+/**
+ * @constructor
+ * @param {Xflow.DataNode} dataNode
+ * @param {Array.<string>} filter
+ */
+var Request = function(dataNode, filter, callback){
+    this._dataNode = dataNode;
+    this._filter = filter ? filter.slice().sort() : null;
+    this._listener = callback;
+    this._result = null;
+    this._dataNodeListener = this._onDataNodeChange.bind(this);
+    this._dataNode.addListener(this._dataNodeListener);
+};
+Xflow.Request = Request;
+
+Object.defineProperty(Request.prototype, "dataNode", {
+    set: function(v){
+       throw new Error("dataNode is readonly");
+    },
+    get: function(){ return this._dataNode; }
+});
+
+Object.defineProperty(Request.prototype, "filter", {
+    set: function(v){
+        throw new Error("filter is read-only");
+    },
+    get: function(){ return this._filter; }
+});
+
+/**
+ * Call this function, whenever the request is not required anymore.
+ */
+Request.prototype.clear = function(){
+    this._listener = null;
+    if(this._result) this._result.removeListener(this.callback);
+    this._dataNode.removeListener(this._dataNodeListener);
+};
+
+Request.prototype._onListedCallback = function(data){
+    this._listener && this._listener(this, data)
+};
+
+function swapResultRequest(request, newResult){
+    if(request._result) request._result._removeRequest(request);
+    request._result = newResult
+    if(newResult) newResult._addRequest(request);
+    return newResult;
+}
+
+/**
+ * @param {Xflow.Request} request
+ * @param {Xflow.RESULT_STATE} notification
+ */
+function notifyListeners(request, notification){
+    Xflow._listCallback(request, notification);
+};
+
+/**
+ * @param {Xflow.RESULT_STATE} notification
+ */
+Request.prototype._onDataNodeChange = function(notification){
+    notifyListeners(this, notification);
+}
+
+/**
+ * @constructor
+ * @extends {Xflow.Request}
+ * @param {Xflow.DataNode} dataNode
+ * @param {Array.<string>} filter
+ * @param {function} callback
+ */
+var ComputeRequest = function(dataNode, filter, callback){
+    Xflow.Request.call(this, dataNode, filter, callback);
+};
+Xflow.createClass(ComputeRequest, Xflow.Request);
+Xflow.ComputeRequest = ComputeRequest;
+
+ComputeRequest.prototype.getResult = function(){
+    return swapResultRequest(this, this._dataNode._getResult(Xflow.RESULT_TYPE.COMPUTE, this._filter));
+}
+
+ComputeRequest.prototype._onResultChanged = function(notification){
+    this._onDataNodeChange(notification);
+}
+
+
+var c_vsConnectNodeCount = {},
+    c_vsConnectNodeCache = {};
+
+/**
+ * @constructor
+ * @extends {Xflow.Request}
+ * @param {Xflow.DataNode} dataNode
+ * @param {Xflow.VSConfig} vsConfig
+ */
+var VertexShaderRequest = function(dataNode, vsConfig, callback){
+    var filter = vsConfig.getFilter();
+    Xflow.Request.call(this, dataNode, filter, callback);
+    this._vsConfig = vsConfig;
+    this._vsConnectNode = getVsConnectNode(dataNode, vsConfig);
+};
+Xflow.createClass(VertexShaderRequest, Xflow.Request);
+Xflow.VertexShaderRequest = VertexShaderRequest;
+
+VertexShaderRequest.prototype.getResult = function(){
+    return swapResultRequest(this, this._vsConnectNode._getResult(Xflow.RESULT_TYPE.VS, this._filter));
+}
+
+VertexShaderRequest.prototype._onDataNodeChange = function(notification){
+    if(notification == Xflow.RESULT_STATE.CHANGED_STRUCTURE){
+        var newVSConnectedNode = getVsConnectNode(this._dataNode, this._vsConfig);
+        if(newVSConnectedNode != this._vsConnectNode){
+            clearVsConnectNode(this._vsConnectNode, this._dataNode, this._vsConfig);
+            this._vsConnectNode = newVSConnectedNode;
+        }
+    }
+    Request.prototype._onDataNodeChange.call(this, notification);
+}
+
+VertexShaderRequest.prototype._onResultChanged = function(result, notification){
+    this._onDataNodeChange(notification);
+}
+
+function getVsConnectNode(dataNode, vsConfig){
+    var forwardNode = dataNode._getForwardNode();
+
+    var key = getDataNodeShaderKey(dataNode, vsConfig);
+    var connectNode;
+    if(!(connectNode = c_vsConnectNodeCache[key])){
+        var graph = dataNode._graph;
+        connectNode = graph.createDataNode(false);
+        connectNode.appendChild(dataNode);
+
+        var operator = vsConfig.getOperator();
+        connectNode.computeOperator = operator;
+        vsConfig.setInputMapping(connectNode._computeInputMapping);
+        vsConfig.setOutputMapping(connectNode._computeOutputMapping);
+
+        c_vsConnectNodeCache[key] = connectNode;
+        c_vsConnectNodeCount[connectNode.id] = 1;
+    }
+    else{
+        c_vsConnectNodeCount[connectNode.id]++;
+    }
+
+    return connectNode;
+}
+
+function clearVsConnectNode(connectNode, dataNode, vsConfig){
+    c_vsConnectNodeCount[connectNode.id]--;
+    if(!c_vsConnectNodeCount[connectNode.id]){
+        var key = getDataNodeShaderKey(dataNode, vsConfig);
+        c_vsConnectNodeCache[key] = null;
+        connectNode.clearChildren();
+    }
+}
+
+
+function getDataNodeShaderKey(dataNode, vsConfig){
+    return dataNode.id + "|" + vsConfig.getKey();
+}
+
+})();
+(function(){
+
+/**
+ * @constructor
+ * @param {Xflow.DataNode} dataNode
+ * @param {Array.<string>} filter
+ */
+Xflow.Result = function(){
+    this.loading = false;
+    this.valid = false;
+    this._listeners = [];
+    this._requests = [];
+};
+var Result = Xflow.Result;
+
+/**
+ * @param {function(Xflow.Result, Xflow.RESULT_STATE)} callback
+ */
+Result.prototype.addListener = function(callback){
+    this._listeners.push(callback);
+};
+
+/**
+ * @param {function(Xflow.Result, Xflow.RESULT_STATE)} callback
+ */
+Result.prototype.removeListener = function(callback){
+    Array.erase(this._listeners, callback);
+};
+
+/**
+ * @param {function(Xflow.Result, Xflow.RESULT_STATE)} callback
+ */
+Result.prototype._addRequest = function(request){
+    this._requests.push(request);
+};
+
+/**
+ * @param {function(Xflow.Result, Xflow.RESULT_STATE)} callback
+ */
+Result.prototype._removeRequest = function(request){
+    Array.erase(this._requests, request);
+};
+
+
+Result.prototype._notifyChanged = function(state){
+    this.valid = false;
+    for(var i = 0; i < this._requests.length; ++i){
+        this._requests[i]._onResultChanged(state);
+    }
+    Xflow._listCallback(this, state);
+}
+
+Result.prototype._onListedCallback = function(state){
+    for(var i = 0; i < this._listeners.length; ++i){
+        this._listeners[i](this, state);
+    }
+}
+
+
+
+/**
+ * @constructor
+ * @extends {Xflow.Result}
+ */
+Xflow.ComputeResult = function(){
+    Xflow.Result.call(this);
+    this._outputNames = [];
+    /** @type {Object.<string,DataEntry>} */
+    this._dataEntries = {};
+};
+Xflow.createClass(Xflow.ComputeResult, Xflow.Result);
+var ComputeResult = Xflow.ComputeResult;
+
+Object.defineProperty(ComputeResult.prototype, "outputNames", {
+    set: function(v){
+        throw new Error("outputNames is readonly");
+    },
+    get: function(){ return this._outputNames; }
+});
+
+ComputeResult.prototype.getOutputData = function(name){
+    return this._dataEntries[name];
+};
+
+/**
+ * @returns {Object.<string,DataEntry>}
+ */
+ComputeResult.prototype.getOutputMap = function() {
+    return this._dataEntries;
+};
+
+
+
+    /**
+ * @constructor
+ * @extends {Xflow.Result}
+ */
+Xflow.VertexShaderResult = function(){
+    Xflow.Result.call(this);
+    this._shaderInputNames = null;
+    this._program = null;
+    this._programData = null;
+    this._shaderInputNames = null;
+
+};
+Xflow.createClass(Xflow.VertexShaderResult, Xflow.Result);
+var VertexShaderResult = Xflow.VertexShaderResult;
+
+Object.defineProperty(VertexShaderResult.prototype, "shaderInputNames", {
+    set: function(v){
+        throw new Error("shaderInputNames is readonly");
+    },
+    get: function(){ return this._shaderInputNames; }
+});
+
+VertexShaderResult.prototype.getShaderInputData = function(name){
+    return this._programData.getDataEntry(this._program._inputIndices[name].index);
+};
+
+VertexShaderResult.prototype.isShaderInputUniform = function(name){
+    return this._program._inputIndices[name].uniform;
+}
+
+VertexShaderResult.prototype.getGLSLCode = function(){
+    return this._program._glslCode;
+}
+
+
+
+})();
+(function(){
+
+
+Xflow.shaderConstant = {}
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.OBJECT_ID] = "objectID";
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.SCREEN_TRANSFORM] = "screenTransform";
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.SCREEN_TRANSFORM_NORMAL] = "screenTransformNormal";
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM] = "viewTransform";
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM_NORMAL] = "viewTransformNormal";
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM] = "worldTransform";
+Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM_NORMAL] = "worldTransformNormal";
+
+Xflow.setShaderConstant = function(type, name){
+    Xflow.shaderConstant[type] = name;
+}
+
+
+Xflow.VSConfig = function(){
+    this._blockedNames = [];
+    this._attributes = [];
+};
+    
+    
+Xflow.VSConfig.prototype.addAttribute = function(type, inputName, outputName, optional){
+    this._attributes.push({
+        type: type,
+        inputName: inputName,
+        outputName: outputName,
+        optional: optional
+    });
+}
+
+Xflow.VSConfig.prototype.getAttributeCount = function(){
+    return this._attributes.length;
+}
+
+
+Xflow.VSConfig.prototype.getAttribute = function(i){
+    return this._attributes[i];
+}
+
+Xflow.VSConfig.prototype.addBlockedName = function(name){
+    this._blockedNames.push(name);
+}
+
+Xflow.VSConfig.prototype.getBlockedNames = function(){
+    return this._blockedNames;
+}
+
+Xflow.VSConfig.prototype.getFilter = function(){
+    var result = [];
+    for(var i = 0; i < this._attributes.length; ++i)
+        result.push(this._attributes[i].outputName);
+    return result;
+}
+Xflow.VSConfig.prototype.getKey = function(){
+    var key = this._blockedNames.join(";");
+
+    for(var i=0; i< this._attributes.length; ++i){
+        key += ";" + this._attributes.type + "," + this._attributes.inputName + "," + this._attributes.outputName
+            + "," + this._attributes.optional;
+    }
+    return key;
+}
+
+var c_vs_operator_cache = {};
+
+function getXflowTypeFromGLSLType(glslType){
+    switch(glslType){
+        case Xflow.VS_ATTRIB_TYPE.FLOAT3_VIEW_NORMAL:
+        case Xflow.VS_ATTRIB_TYPE.FLOAT3_VIEW_POINT:
+        case Xflow.VS_ATTRIB_TYPE.FLOAT3_WORLD_NORMAL:
+        case Xflow.VS_ATTRIB_TYPE.FLOAT3_WORLD_POINT: return Xflow.DATA_TYPE.FLOAT3;
+        default: return glslType;
+    }
+}
+
+Xflow.VSConfig.prototype.getOperator = function(){
+    var key = this.getKey();
+    if(c_vs_operator_cache[key])
+        return c_vs_operator_cache[key];
+
+    var outputs = [], params = [], glslCode = "\t// VS Connector\n";
+
+    var inputAdded = {};
+
+    for(var i = 0; i < this._attributes.length; ++i){
+        var attr = this._attributes[i];
+        var type = Xflow.getTypeName(getXflowTypeFromGLSLType(attr.type));
+        outputs.push( { type: type, name: attr.outputName} );
+        if(!inputAdded[attr.inputName]){
+            params.push({ type: type, source: attr.inputName, optional: attr.optional} );
+            inputAdded[attr.inputName] = true;
+        }
+        var line = "\t#O{" + attr.outputName + "} = ";
+        switch(attr.type){
+            case Xflow.VS_ATTRIB_TYPE.FLOAT3_VIEW_NORMAL:
+                line += "( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM_NORMAL] + "} "
+                    + "* vec4( #I{" + attr.inputName + "} , 0.0)).xyz;"; break;
+            case Xflow.VS_ATTRIB_TYPE.FLOAT3_VIEW_POINT:
+                line += "( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM] + "} "
+                    + "* vec4( #I{" + attr.inputName + "} , 1.0)).xyz;"; break;
+            case Xflow.VS_ATTRIB_TYPE.FLOAT3_WORLD_NORMAL:
+                line += "( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM_NORMAL] + "} "
+                    + "* vec4( #I{" + attr.inputName + "} , 0.0)).xyz;"; break;
+            case Xflow.VS_ATTRIB_TYPE.FLOAT3_WORLD_POINT:
+                line += "( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM] + "} "
+                    + "* vec4( #I{" + attr.inputName + "} , 1.0)).xyz;"; break;
+            default:
+                line += "#I{" + attr.inputName + "};";
+        }
+        glslCode += line + "\n";
+    }
+
+    glslCode += "\tgl_Position = #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.SCREEN_TRANSFORM]
+             + "} * vec4(#I{position}, 1.0);\n";
+
+    var operator = Xflow.initAnonymousOperator({
+        outputs: outputs,
+        params:  params,
+        evaluate_glsl: glslCode,
+        blockedNames: this._blockedNames
+    });
+
+    c_vs_operator_cache[key] = operator;
+
+    return operator;
+}
+
+Xflow.VSConfig.prototype.setInputMapping = function(orderMapping){
+    var inputAdded = {};
+    for(var i = 0; i < this._attributes.length; ++i){
+        var name = this._attributes[i].inputName;
+        if(!inputAdded[name]){
+            orderMapping.setName(i, name);
+            inputAdded[name] = true;
+        }
+
+    }
+}
+Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
+    for(var i = 0; i < this._attributes.length; ++i){
+        orderMapping.setName(i, this._attributes[i].outputName);
+    }
+}
+
+
+
+}());(function(){
 
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.DataSlot
@@ -11523,14 +13460,16 @@ function mappingNotifyOwner(mapping){
         if(idx != -1) this.parentChannels.splice(idx, 1);
     }
 
-    Xflow.DataSlot.prototype.setDataEntry = function(dataEntry){
+    Xflow.DataSlot.prototype.setDataEntry = function(dataEntry, changeType){
         this.dataEntry = dataEntry;
-        this.notifyOnChange();
+        var state = changeType !== Xflow.RESULT_STATE.CHANGED_DATA_VALUE ? Xflow.DATA_ENTRY_STATE.CHANGED_VALUE :
+            Xflow.DATA_ENTRY_STATE.CHANGED_SIZE;
+        this.notifyOnChange(state);
     }
 
-    Xflow.DataSlot.prototype.notifyOnChange = function(){
+    Xflow.DataSlot.prototype.notifyOnChange = function(state){
         for(var i = 0; i < this.parentChannels.length; ++i){
-            this.parentChannels[i].notifyOnChange();
+            this.parentChannels[i].notifyOnChange(state);
         }
     }
 
@@ -11597,12 +13536,12 @@ function mappingNotifyOwner(mapping){
     }
 
 
-    ChannelMap.prototype.addDataEntry = function(name, dataSlot, param, substitution)
+    ChannelMap.prototype.addDataEntry = function(name, dataSlot, paramName, substitution)
     {
         var entry = getEntry(this.map, name);
-        if(param && substitution){
-            if(substitution.map[name]){
-                mergeChannelsIntoMapEntry(this, entry, substitution.map[name], substitution);
+        if(paramName && substitution){
+            if(substitution.map[paramName]){
+                mergeChannelsIntoMapEntry(this, entry, substitution.map[paramName], substitution);
                 return;
             }else{
                 // TODO: at this point we use default values - we need to show an error, if a default values does not exists.
@@ -11848,9 +13787,9 @@ function mappingNotifyOwner(mapping){
         return false;
     }
 
-    Channel.prototype.notifyOnChange = function(){
+    Channel.prototype.notifyOnChange = function(state){
         for(var i = 0; i < this.listeners.length; i++){
-            this.listeners[i](this);
+            this.listeners[i].onXflowChannelChange(this, state);
         }
     }
 
@@ -11879,8 +13818,14 @@ function mappingNotifyOwner(mapping){
 // Xflow.Substitution
 //----------------------------------------------------------------------------------------------------------------------
 
-    Xflow.Substitution = function(channelMap, substitution){
+    Xflow.Substitution = function(channelMap, substitution, subtreeProtoNames){
         this.map = {};
+        if(substitution && subtreeProtoNames){
+            for(var i = 0; i < subtreeProtoNames.length; ++i){
+                var name = subtreeProtoNames[i];
+                this.map[name] = substitution.map[name];
+            }
+        }
         for(var name in channelMap.map){
             this.map[name] = channelMap.getChannel(name, substitution);
         }
@@ -11928,6 +13873,7 @@ function mappingNotifyOwner(mapping){
 
         this.operator = null;
         this.protoNames = [];
+        this.subtreeProtoNames = [];
         this.operatorProtoNames = [];
         this.emptySubstitutionNode = null;
         this.processNodes = {};
@@ -11986,10 +13932,10 @@ function mappingNotifyOwner(mapping){
         }
     }
 
-    ChannelNode.prototype.notifyDataChange = function(inputNode){
+    ChannelNode.prototype.notifyDataChange = function(inputNode, changeType){
         var key = inputNode._name + ";" + inputNode._key;
         if(this.inputSlots[key])
-            this.inputSlots[key].setDataEntry(inputNode._data);
+            this.inputSlots[key].setDataEntry(inputNode._data, changeType);
     }
 
 
@@ -12007,9 +13953,6 @@ function mappingNotifyOwner(mapping){
             for(var key in this.requestNodes){
                 this.requestNodes[key].setStructureOutOfSync();
             }
-            for(var key in this.processNodes){
-
-            }
 
         }
     }
@@ -12020,7 +13963,15 @@ function mappingNotifyOwner(mapping){
         return this.finalOutputChannels.getNames();
     }
 
-    ChannelNode.prototype.getComputeResult = function(filter){
+
+    ChannelNode.prototype.getParamNames = function(){
+        this.synchronize();
+        this.getSubstitutionNode(null); // create emptySubstitutionNode if not available
+        return this.protoNames;
+    }
+
+    ChannelNode.prototype.getResult = function(type, filter)
+    {
         this.synchronize();
         this.getSubstitutionNode(null); // create emptySubstitutionNode if not available
 
@@ -12028,8 +13979,9 @@ function mappingNotifyOwner(mapping){
         if(!this.requestNodes[key]){
             this.requestNodes[key] = new Xflow.RequestNode(this, filter);
         }
-        return this.requestNodes[key].getResult(Xflow.RESULT_TYPE.COMPUTE);
+        return this.requestNodes[key].getResult(type);
     }
+
 
     ChannelNode.prototype.getOutputChannelInfo = function(name){
         this.synchronize();
@@ -12070,17 +14022,15 @@ function mappingNotifyOwner(mapping){
     }
 
     function synchronizeChildren(channelNode, dataNode){
-        channelNode.loading = dataNode.loading;
+        channelNode.loading = dataNode._subTreeLoading;
         if(dataNode._sourceNode){
             dataNode._sourceNode._channelNode.synchronize();
-            channelNode.loading = channelNode.loading || dataNode._sourceNode._channelNode.loading;
         }
         else{
             var child;
             for(var i = 0; i < dataNode._children.length; ++i){
                 if((child = dataNode._children[i]._channelNode) && !dataNode._children[i].isProtoNode()){
                     child.synchronize();
-                    channelNode.loading = channelNode.loading || child.loading;
                 }
             }
         }
@@ -12096,13 +14046,17 @@ function mappingNotifyOwner(mapping){
                 if((child = owner._children[i]._channelNode)  && !owner._children[i].isProtoNode()){
                     channelNode.inputChannels.mergeProtoNames(child.finalOutputChannels);
                     Xflow.nameset.add(channelNode.protoNames, child.protoNames);
+                    Xflow.nameset.add(channelNode.subtreeProtoNames, child.subtreeProtoNames);
                 }
             }
             for(var i = 0; i < owner._children.length; ++i){
                 if((child = owner._children[i]) && !child._channelNode){
-                    if(child._param){
-                        channelNode.inputChannels.addProtoNames(child._name, child._name);
-                        Xflow.nameset.add(channelNode.protoNames, child._name);
+                    if(child._paramName){
+                        channelNode.inputChannels.addProtoNames(child._name, child._paramName);
+                        Xflow.nameset.add(channelNode.protoNames, child._paramName);
+                        if(child._paramGlobal){
+                            Xflow.nameset.add(channelNode.subtreeProtoNames, child._paramName);
+                        }
                     }
                     var key = child._name + ";" + child._key;
                     channelNode.inputSlots[key] = new Xflow.DataSlot(child._data, child._key);
@@ -12113,8 +14067,14 @@ function mappingNotifyOwner(mapping){
     }
 
     function setOperatorProtoNames(channelNode){
-        var operatorName = channelNode.owner._computeOperator;
-        channelNode.operator = operatorName && Xflow.getOperator(operatorName);
+        if(typeof channelNode.owner._computeOperator == "string"){
+            var operatorName = channelNode.owner._computeOperator;
+            channelNode.operator = operatorName && Xflow.getOperator(operatorName);
+        }
+        else{
+            channelNode.operator = channelNode.owner._computeOperator;
+        }
+
         if(channelNode.operator){
             var operator = channelNode.operator, inputMapping = channelNode.owner._computeInputMapping;
             for(var i = 0; i < operator.params.length; ++i){
@@ -12145,7 +14105,11 @@ function mappingNotifyOwner(mapping){
             null, null, dataNode._filterType, setChannelMapProtoName);
 
         if(dataNode._protoNode){
-            var protoOutput = dataNode._protoNode._channelNode.finalOutputChannels;
+            var protoChannelNode = dataNode._protoNode._channelNode;
+            Xflow.nameset.add(channelNode.protoNames, protoChannelNode.subtreeProtoNames);
+            Xflow.nameset.add(channelNode.subtreeProtoNames, protoChannelNode.subtreeProtoNames);
+
+            var protoOutput = protoChannelNode.finalOutputChannels;
             dataNode._filterMapping.applyFilterOnChannelMap(channelNode.finalOutputChannels, protoOutput,
                 channelNode.protoNames, null, dataNode._filterType, setChannelMapProtoProtoName);
         }
@@ -12232,7 +14196,7 @@ function mappingNotifyOwner(mapping){
                 if((child = owner._children[i]) && !child._channelNode){
                     var key = child._name + ";" + child._key;
                     channelNode.inputChannels.addDataEntry(child._name, channelNode.inputSlots[key],
-                        child._param, substitution);
+                        child._paramName, substitution);
                 }
             }
         }
@@ -12248,7 +14212,7 @@ function mappingNotifyOwner(mapping){
 
         var dataNode = channelNode.owner;
         if(dataNode._protoNode){
-            var subSubstitution = new Xflow.Substitution(channelNode.protoInputChannels, substitution);
+            var subSubstitution = new Xflow.Substitution(channelNode.protoInputChannels, substitution, channelNode.subtreeProtoNames);
             subNode.protoSubNode = dataNode._protoNode._channelNode.getSubstitutionNode(subSubstitution);
         }
     }
@@ -12320,56 +14284,63 @@ Xflow.ProcessNode = function(channelNode, operator, substitution){
     this.operator = operator;
     this.inputChannels = {};
     this.outputDataSlots = {};
-    this.processed = false;
-    this.valid = false;
-    this.loading = false;
+    this.status = Xflow.PROCESS_STATE.MODIFIED;
     this.useCount = 0;
 
     this.children = [];
     this.descendants = [];
-    this.channelListener = this.onChannelChange.bind(this);
+    this.executers = [];
     constructProcessNode(this, channelNode, operator, substitution);
 };
 var ProcessNode = Xflow.ProcessNode;
 
-ProcessNode.prototype.onChannelChange = function(channel){
-    this.processed = false;
+ProcessNode.prototype.onXflowChannelChange = function(channel, state){
+    if(state == Xflow.DATA_ENTRY_STATE.CHANGED_VALUE &&
+        this.status > Xflow.PROCESS_STATE.UNPROCESSED)
+        this.status = Xflow.PROCESS_STATE.UNPROCESSED;
+    else if(state == Xflow.DATA_ENTRY_STATE.CHANGED_SIZE)
+        this.status = Xflow.PROCESS_STATE.MODIFIED;
     for(var name in this.outputDataSlots){
-        this.outputDataSlots[name].notifyOnChange();
+        this.outputDataSlots[name].notifyOnChange(state);
     }
 }
 
 ProcessNode.prototype.clear = function(){
     for(var name in this.inputChannels){
-        this.inputChannels[name].removeListener(this.channelListener);
+        this.inputChannels[name].removeListener(this);
     }
 }
-/**
- *
- */
-ProcessNode.prototype.process = function(){
-    if(!this.processed){
-        this.loading = false;
-        this.valid = true;
-        for(var i = 0; i < this.children.length; ++i){
-            this.children[i].process();
-            if(this.children[i].loading){
-                this.loading = true;
-                return;
-            }
-        }
-        this.processed = true;
-        if(isInputLoading(this.operator, this.inputChannels)){
-            this.loading = true;
-            return;
-        }
-        if(!checkInput(this.operator, this.owner.owner._computeInputMapping, this.inputChannels)){
-            this.valid = false;
-            return;
-        }
-        this.applyOperator();
-    }
 
+ProcessNode.prototype.updateState = function(){
+    if(this.status == Xflow.PROCESS_STATE.MODIFIED){
+        this.status = Xflow.PROCESS_STATE.UNPROCESSED
+
+        if(this.owner.loading)
+            this.status = Xflow.PROCESS_STATE.LOADING;
+        else{
+            for(var i = 0; i < this.children.length; ++i){
+                this.status = Math.min(this.status, this.children[i].updateState());
+            }
+            if(this.status > Xflow.PROCESS_STATE.LOADING && isInputLoading(this.operator, this.inputChannels))
+                this.status = Xflow.PROCESS_STATE.LOADING;
+
+            if(this.status > Xflow.PROCESS_STATE.INVALID &&
+                !checkInput(this.operator, this.owner.owner._computeInputMapping, this.inputChannels))
+                this.status = Xflow.PROCESS_STATE.INVALID;
+        }
+    }
+    return this.status;
+}
+
+ProcessNode.prototype.process = function(){
+    // TODO: Fix this with respect to states
+    if(this.status == Xflow.PROCESS_STATE.UNPROCESSED){
+
+        var executer = getOrCreateExecuter(this, Xflow.PLATFORM.JAVASCRIPT);
+        executer.run();
+
+        this.status = Xflow.PROCESS_STATE.PROCESSED;
+    }
 }
 
 function constructProcessNode(processNode, channelNode, operator, substitution){
@@ -12386,7 +14357,7 @@ function synchronizeInputChannels(processNode, channelNode, dataNode, substituti
         var dataName = inputMapping.getScriptInputName(i, sourceName);
         if(dataName){
             var channel = channelNode.inputChannels.getChannel(dataName, substitution);
-            if(channel) channel.addListener(processNode.channelListener);
+            if(channel) channel.addListener(processNode);
             processNode.inputChannels[sourceName] = channel;
         }
     }
@@ -12421,10 +14392,13 @@ function checkInput(operator, inputMapping, inputChannels){
                 return false;
             }
             var dataEntry = channel.getDataEntry();
-            if(!entry.optional && (!dataEntry || dataEntry.isEmpty())){
-                XML3D.debug.logError("Xflow: operator " + operator.name + ": Input for " + entry.source +
-                    ' contains no data.');
-                return false;
+
+            if(!channel.creatorProcessNode){
+                if(!entry.optional && (!dataEntry || dataEntry.isEmpty())){
+                    XML3D.debug.logError("Xflow: operator " + operator.name + ": Input for " + entry.source +
+                        ' contains no data.');
+                    return false;
+                }
             }
             if(dataEntry && dataEntry.type != entry.type){
                 XML3D.debug.logError("Xflow: operator " + operator.name + ": Input for " + entry.source +
@@ -12466,6 +14440,15 @@ function synchronizeOutput(operator, outputs){
     }
 }
 
+function getOrCreateExecuter(node, platform){
+    if(!node.executers[platform]){
+        node.executers[platform] = new Xflow.Executer(node, platform);
+    }
+    return node.executers[platform];
+
+}
+
+
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.RequestNode
 //----------------------------------------------------------------------------------------------------------------------
@@ -12479,13 +14462,14 @@ Xflow.RequestNode = function(channelNode, filter){
     this.filter = filter;
     this.results = {};
 
+    this.status = Xflow.PROCESS_STATE.MODIFIED;
+
     this.channels = {};
     this.children = [];
 
-    this.channelListener = this.onChannelChange.bind(this);
+    this.executers = [];
 
     this.outOfSync = true;
-    this.processed = false;
 }
 var RequestNode = Xflow.RequestNode;
 
@@ -12497,37 +14481,69 @@ RequestNode.prototype.synchronize = function(){
     }
 }
 
-RequestNode.prototype.getResult = function(resultType){
+RequestNode.prototype.updateState = function(){
     this.synchronize();
-    this.loading = this.owner.loading;
-    if(!this.loading)
-        doRequestNodeProcessing(this);
+    if(this.status == Xflow.PROCESS_STATE.MODIFIED){
+        this.status = Xflow.PROCESS_STATE.UNPROCESSED
+
+        if(this.owner.loading)
+            this.status = Xflow.PROCESS_STATE.LOADING;
+        else{
+            for(var i = 0; i < this.children.length; ++i){
+                this.status = Math.min(this.status, this.children[i].updateState());
+            }
+        }
+    }
+    return this.status;
+}
+
+RequestNode.prototype.isReady = function(){
+    this.updateState();
+    return this.status >= Xflow.PROCESS_STATE.UNPROCESSED;
+}
+
+RequestNode.prototype.getResult = function(resultType){
+    this.updateState();
+
+
+    if(this.status == Xflow.PROCESS_STATE.UNPROCESSED){
+        if(resultType == Xflow.RESULT_TYPE.COMPUTE){
+            var executer = getOrCreateExecuter(this, Xflow.PLATFORM.JAVASCRIPT);
+            executer.run();
+        }
+        this.status = Xflow.PROCESS_STATE.PROCESSED;
+    }
     var result = null;
     if(resultType == Xflow.RESULT_TYPE.COMPUTE){
         result = getRequestComputeResult(this);
+    }else if(resultType == Xflow.RESULT_TYPE.VS){
+        result = getRequestVSResult(this);
     }
-    result.loading = this.loading;
+    result.loading = (this.status == Xflow.PROCESS_STATE.LOADING);
     return result;
 }
 
 RequestNode.prototype.setStructureOutOfSync = function(){
     this.outOfSync = true;
-    this.processed = false;
-    this.loading = false;
+    this.status = Xflow.PROCESS_STATE.MODIFIED;
     for(var type in this.results){
-        this.results[type].notifyChanged(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        this.results[type]._notifyChanged(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
     }
     for(var name in this.channels){
-        this.channels[name].removeListener(this.channelListener);
+        this.channels[name].removeListener(this);
     }
     this.channels = [];
     this.children = [];
+    this.executers = [];
 }
 
-RequestNode.prototype.onChannelChange = function(channel){
-    this.processed = false;
+RequestNode.prototype.onXflowChannelChange = function(channel, state){
+    this.status = Xflow.PROCESS_STATE.MODIFIED;
+    var notifyState = (state == Xflow.DATA_ENTRY_STATE.CHANGED_VALUE ? Xflow.RESULT_STATE.CHANGED_DATA_VALUE
+            : Xflow.RESULT_STATE.CHANGED_DATA_SIZE);
+
     for(var type in this.results){
-        this.results[type].notifyChanged(Xflow.RESULT_STATE.CHANGED_DATA);
+        this.results[type]._notifyChanged(notifyState);
     }
 }
 
@@ -12545,23 +14561,9 @@ function synchronizeRequestChannels(requestNode, channelNode){
         var channel = channelNode.finalOutputChannels.getChannel(name);
         if(channel){
             requestNode.channels[name] = channel;
-            channel.addListener(requestNode.channelListener);
+            channel.addListener(requestNode);
         }
 
-    }
-}
-
-function doRequestNodeProcessing(requestNode){
-    if(!requestNode.processed){
-        requestNode.loading = false;
-        requestNode.processed = true;
-        for(var i = 0; i < requestNode.children.length; ++i){
-            requestNode.children[i].process();
-            if(requestNode.children[i].loading){
-                requestNode.loading = true;
-                return;
-            }
-        }
     }
 }
 
@@ -12579,161 +14581,323 @@ function getRequestComputeResult(requestNode)
     return result;
 }
 
+function getRequestVSResult(requestNode)
+{
+    var executer = getOrCreateExecuter(requestNode, Xflow.PLATFORM.GLSL);
+    if(!requestNode.results[Xflow.RESULT_TYPE.VS])
+        requestNode.results[Xflow.RESULT_TYPE.VS] = new Xflow.VertexShaderResult();
+    var result = requestNode.results[Xflow.RESULT_TYPE.VS];
 
-})();
+    var program = executer.getVertexShader();
+    result._program = program;
+    result._programData = executer.programData;
+    result._shaderInputNames = Object.keys(program._inputIndices);
 
-(function(){
-
-
-/**
- * @constructor
- * @param {Xflow.DataNode} dataNode
- * @param {Array.<string>} filter
- */
-var Request = function(dataNode, filter, callback){
-    this._dataNode = dataNode;
-    this._filter = filter ? filter.slice().sort() : null;
-    this._listener = callback;
-    this.result = null;
-    this._dataNode._requests.push(this);
-};
-Xflow.Request = Request;
-
-Object.defineProperty(Request.prototype, "dataNode", {
-    set: function(v){
-       throw new Error("dataNode is readonly");
-    },
-    get: function(){ return this._dataNode; }
-});
-
-Object.defineProperty(Request.prototype, "filter", {
-    set: function(v){
-        throw new Error("filter is read-only");
-    },
-    get: function(){ return this._filter; }
-});
-
-/**
- * Call this function, whenever the request is not required anymore.
- */
-Request.prototype.clear = function(){
-    this._listener = null;
-    if(this.result) this.result.removeListener(this.callback);
-    Array.erase(this._dataNode._requests, this);
-};
-
-/**
- * @param {Xflow.Request} request
- * @param {Xflow.RESULT_STATE} notification
- */
-function notifyListeners(request, notification){
-    if(request._listener)
-        request._listener(request, notification)
-};
-
-/**
- * @param {Xflow.RESULT_STATE} notification
- */
-Request.prototype.notify = function(notification){
-    notifyListeners(this, notification);
-}
-
-/**
- * @constructor
- * @extends {Xflow.Request}
- * @param {Xflow.DataNode} dataNode
- * @param {Array.<string>} filter
- */
-var ComputeRequest = function(dataNode, filter, callback){
-    Xflow.Request.call(this, dataNode, filter, callback);
-    this.callback = this.onResultChanged.bind(this);
-};
-Xflow.createClass(ComputeRequest, Xflow.Request);
-Xflow.ComputeRequest = ComputeRequest;
-
-ComputeRequest.prototype.getResult = function(){
-    if(this.result) this.result.removeListener(this.callback);
-    this.result = this._dataNode._getComputeResult(this._filter);
-    if(this.result) this.result.addListener(this.callback);
-    return this.result;
-}
-
-ComputeRequest.prototype.onResultChanged = function(result, notification){
-    this.notify(notification);
-}
-
-})();
-(function(){
-
-/**
- * @constructor
- * @param {Xflow.DataNode} dataNode
- * @param {Array.<string>} filter
- */
-Xflow.Result = function(){
-    this.loading = false;
-    this.valid = false;
-    this._outputNames = [];
-    /** @type {Object.<string,DataEntry>} */
-    this._dataEntries = {};
-    this._listeners = [];
-};
-var Result = Xflow.Result;
-
-Object.defineProperty(Result.prototype, "outputNames", {
-    set: function(v){
-       throw new Error("outputNames is readonly");
-    },
-    get: function(){ return this._outputNames; }
-});
-
-Result.prototype.getOutputData = function(name){
-    return this._dataEntries[name];
-};
-
-/**
- * @returns {Object.<string,DataEntry>}
- */
-Result.prototype.getOutputMap = function() {
-    return this._dataEntries;
-};
-
-
-/**
- * @param {function(Xflow.Result, Xflow.RESULT_STATE)} callback
- */
-Result.prototype.addListener = function(callback){
-    this._listeners.push(callback);
-};
-
-/**
- * @param {function(Xflow.Result, Xflow.RESULT_STATE)} callback
- */
-Result.prototype.removeListener = function(callback){
-    Array.erase(this._listeners, callback);
-};
-
-Result.prototype.notifyChanged = function(state){
-    this.valid = false;
-    for(var i = 0; i < this._listeners.length; ++i){
-        this._listeners[i](this, state);
+    result._dataEntries = {}; result._outputNames = [];
+    for(var name in requestNode.channels){
+        var entry = requestNode.channels[name].getDataEntry();
+        result._dataEntries[name] = entry && !entry.isEmpty() ? entry : null;
+        result._outputNames.push(name);
     }
+    return result;
 }
 
 
-/**
- * @constructor
- * @extends {Xflow.Result}
- */
-Xflow.ComputeResult = function(channelNode){
-    Xflow.Result.call(this, channelNode);
-};
-Xflow.createClass(Xflow.ComputeResult, Xflow.Result);
-var ComputeResult = Xflow.ComputeResult;
-
 
 })();
+
 (function(){
+
+//----------------------------------------------------------------------------------------------------------------------
+// Xflow.Executer
+//----------------------------------------------------------------------------------------------------------------------
+
+    Xflow.Executer = function(ownerNode, platform){
+
+        this.platform = platform;
+        this.mergedNodes = [];
+        this.subNodes = [];
+        this.unprocessedDataNames = [];
+
+        this.operatorList =  new Xflow.OperatorList(platform);
+        this.programData =  new Xflow.ProgramData();
+
+        this.program = null;
+
+        constructExecuter(this, ownerNode);
+    }
+
+    Xflow.Executer.prototype.run = function(){
+        runSubNodes(this);
+        updateIterateState(this);
+
+        this.program = Xflow.createProgram(this.operatorList);
+
+        if(this.program){
+            this.operatorList.allocateOutput(this.programData);
+            this.program.run(this.programData);
+        }
+    }
+
+    Xflow.Executer.prototype.getVertexShader = function(){
+        runSubNodes(this);
+        updateIterateState(this);
+
+        this.program = Xflow.createProgram(this.operatorList);
+
+        return this.program;
+    }
+
+
+    function constructExecuter(executer, ownerNode){
+        var cData = {
+            blockedNodes: [],
+            doneNodes: [],
+            constructionOrder: [],
+            inputSlots: {},
+            finalOutput: null,
+            firstOperator: null
+        }
+        initRequestNode(cData, executer, ownerNode);
+
+        constructPreScan(cData, ownerNode, executer.platform);
+
+        setConstructionOrderAndSubNodes(cData, executer, ownerNode);
+
+        constructFromData(executer, cData);
+    }
+
+    function initRequestNode(cData, executer, ownerNode){
+        if(ownerNode instanceof Xflow.RequestNode){
+            cData.finalOutput = {};
+            var filter = ownerNode.filter || ownerNode.owner.finalOutputChannels.getNames();
+            for(var i = 0; i < filter.length; ++i){
+                var name = filter[i];
+                var channel = ownerNode.owner.finalOutputChannels.getChannel(name);
+                if(channel && channel.creatorProcessNode)
+                    cData.finalOutput[name] = channel.getDataEntry();
+            }
+            Xflow.nameset.add(executer.unprocessedDataNames, filter);
+        }
+    }
+
+    function constructPreScan(cData, node, platform){
+        if(cData.blockedNodes.indexOf(node) != -1)
+            return;
+
+        if(node.operator){
+            if(!canOperatorMerge(cData, node.operator, platform)){
+                blockSubtree(cData, node);
+                return;
+            }
+            else{
+                if(!cData.firstOperator) cData.firstOperator = node.operator;
+                var mapping = node.operator.mapping;
+                for(var i = 0; i < mapping.length; ++i){
+                    if(mapping[i].sequence){
+                        blockInput(cData, node, mapping[i].source);
+                        blockInput(cData, node, mapping[i].keySource);
+                    }
+                    else if(mapping[i].array){
+                        // TODO: Check for other things that cancel merging
+                        blockInput(cData, node, mapping[i].source);
+                    }
+                }
+            }
+        }
+        for(var i = 0; i < node.children.length; ++i){
+            constructPreScan(cData, node.children[i], platform);
+        }
+    }
+
+    function canOperatorMerge(cData, operator, platform){
+        // TODO: Detect merge support
+        return !cData.firstOperator ||
+            (platform == Xflow.PLATFORM.GLSL && cData.firstOperator.evaluate_glsl && operator.evaluate_glsl);
+    }
+
+    function blockSubtree(cData, node){
+        if(cData.blockedNodes.indexOf(node) != -1)
+            return;
+
+        cData.blockedNodes.push(node);
+        for(var i = 0; i < node.children.length; ++i){
+            blockSubtree(cData, node.children[i]);
+        }
+    }
+
+    function blockInput(cData, node, inputName){
+        var channel = node.inputChannels[inputName];
+        if(channel && channel.creatorProcessNode){
+            blockSubtree(cData, channel.creatorProcessNode);
+        }
+    }
+
+    function setConstructionOrderAndSubNodes(cData, executer, node){
+        if(cData.doneNodes.indexOf(node) != -1)
+            return;
+
+        cData.doneNodes.push(node);
+
+        if(cData.blockedNodes.indexOf(node) != -1){
+            executer.subNodes.push(node);
+        }
+        else{
+            for(var i = 0; i < node.children.length; ++i){
+                setConstructionOrderAndSubNodes(cData, executer, node.children[i]);
+            }
+
+            if(node.operator){
+                cData.constructionOrder.push(node);
+            }
+        }
+    }
+
+    function constructFromData(executer, cData){
+
+        for(var i = 0; i < cData.constructionOrder.length; ++i){
+            var node = cData.constructionOrder[i];
+            var currentIdx = i;
+
+            var entry = new Xflow.OperatorEntry(node.operator);
+
+            constructInputConnection(executer, entry, cData, node);
+
+            constructOutputConnection(executer, entry, cData, node);
+
+            executer.programData.operatorData.push({});
+            executer.operatorList.addEntry(entry);
+            executer.mergedNodes.push(node);
+
+        }
+
+        constructLostOutput(executer, cData);
+    }
+
+    function constructInputConnection(executer, entry, cData, node){
+        var mapping = node.operator.mapping;
+        for(var j = 0; j < mapping.length; ++j){
+            var channel = node.inputChannels[mapping[j].source];
+            var operatorIndex;
+            if(channel && channel.creatorProcessNode && (operatorIndex =
+                executer.mergedNodes.indexOf(channel.creatorProcessNode) ) != -1 )
+            {
+                // it's transfer input
+                var outputIndex = getOperatorOutputIndex(channel.creatorProcessNode, channel);
+                entry.setTransferInput(j, operatorIndex, outputIndex);
+                if(!executer.operatorList.entries[operatorIndex].isFinalOutput(outputIndex))
+                    executer.operatorList.entries[operatorIndex].setTransferOutput(outputIndex);
+                continue;
+            }
+
+            var mappedInputName = node.owner.owner._computeInputMapping.getScriptInputName(mapping[j].paramIdx,
+                mapping[j].source);
+
+            var connection = new Xflow.ProgramInputConnection();
+            connection.channel = channel;
+            connection.arrayAccess = mapping[j].array || false;
+            connection.sequenceAccessType = mapping[j].sequence || 0;
+            if(connection.sequenceAccessType)
+                connection.sequenceKeySourceChannel = node.inputChannels[mapping[j].keySource];
+
+            var connectionKey = connection.getKey();
+            var inputSlotIdx = cData.inputSlots[connectionKey];
+            if(channel && inputSlotIdx != undefined){
+                // Direct input already exists
+                entry.setDirectInput(j, inputSlotIdx, mappedInputName);
+            }
+            else{
+                // new direct input
+                inputSlotIdx = executer.programData.inputs.length;
+                cData.inputSlots[connectionKey] = inputSlotIdx;
+                executer.programData.inputs.push(connection);
+                entry.setDirectInput(j, inputSlotIdx, mappedInputName);
+            }
+        }
+    }
+
+    function constructOutputConnection(executer, entry, cData, node){
+        var outputs = node.operator.outputs;
+        for(var i = 0; i < outputs.length; ++i){
+            var slot = node.outputDataSlots[outputs[i].name];
+            var finalOutputName = getFinalOutputName(slot, cData);
+            if(finalOutputName){
+                var index =  executer.programData.outputs.length;
+                executer.programData.outputs.push(slot);
+                entry.setFinalOutput(i, index);
+                if(finalOutputName !== true){
+                    Xflow.nameset.remove(executer.unprocessedDataNames, finalOutputName);
+                }
+            }
+        }
+    }
+
+
+    function getOperatorOutputIndex(processNode, channel){
+        var outputs = processNode.operator.outputs;
+        for(var i = 0; i < outputs.length; ++i){
+            if(channel.getDataEntry() == processNode.outputDataSlots[outputs[i].name].dataEntry){
+                return i;
+            }
+        }
+        return null;
+    }
+
+    function getFinalOutputName(dataSlot, cData){
+        if(!cData.finalOutput)
+            return true;
+        for(var name in cData.finalOutput){
+            if(cData.finalOutput[name] == dataSlot.dataEntry){
+                return name;
+            }
+        }
+        return false;
+    }
+
+    function constructLostOutput(executor, cData){
+        for(var i = 0; i < cData.constructionOrder.length; ++i){
+            var node = cData.constructionOrder[i];
+            var entry = executor.operatorList.entries[i];
+
+            var outputs = node.operator.outputs;
+            for(var j = 0; j < outputs.length; ++j){
+                if(!entry.isFinalOutput(j) && ! entry.isTransferOutput(j)){
+                    var index = executor.programData.outputs.length;
+                    executor.programData.outputs.push(node.outputDataSlots[outputs[j].name]);
+                    entry.setLostOutput(j, index);
+                }
+            }
+        }
+    }
+
+
+    function updateIterateState(executer){
+        var inputs = executer.programData.inputs;
+        for(var i = 0; i < executer.programData.inputs.length; ++i){
+            var entry = executer.programData.getDataEntry(i);
+            var iterateCount = entry ? entry.getIterateCount ? entry.getIterateCount() : 1 : 0;
+            if(!inputs[i].arrayAccess && iterateCount != 1)
+                executer.operatorList.setInputIterate(i, true);
+            else
+                executer.operatorList.setInputIterate(i, false);
+            if(inputs[i].arrayAccess && platformRequiresArraySize(executer. platform)){
+                executer.operatorList.setInputSize(i, iterateCount);
+            }
+        }
+    }
+
+    function platformRequiresArraySize(platform){
+        return platform == Xflow.PLATFORM.GLSL;
+    }
+
+
+    function runSubNodes(executer){
+        for(var i = 0; i < executer.subNodes.length; ++i){
+            executer.subNodes[i].process();
+        }
+    }
+
+})();(function(){
 
 
 
@@ -12844,6 +15008,12 @@ Xflow.registerOperator = function(name, data){
     data.name = actualName;
 };
 
+Xflow.initAnonymousOperator = function(data){
+    initOperator(data);
+    data.name = "Anonymous Operator";
+    return data;
+}
+
 Xflow.getOperator = function(name){
     if (name && !operators[name])
     {
@@ -12874,9 +15044,10 @@ function initOperator(operator){
         var type = operator.params[paramIdx].type;
         if(mapping.sequence)
             mapping.keyParamIdx = indexMap[mapping.keySource];
-        if(operator.mapping[i].sequence == Xflow.SEQUENCE.LINEAR_WEIGHT)
+        if(mapping.sequence == Xflow.SEQUENCE.LINEAR_WEIGHT)
             type = Xflow.DATA_TYPE.FLOAT;
-        operator.mapping[i].internalType = type;
+        mapping.internalType = type;
+        mapping.name = mapping.name || mapping.source;
     }
 }
 
@@ -13020,7 +15191,7 @@ function allocateOutput(operator, inputData, output, operatorData){
                 var newHeight = texParams.imageFormat.height;
                 var newFormatType = texParams.imageFormat.type;
                 var newSamplerConfig = texParams.samplerConfig;
-                entry.createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
+                entry._createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
             } else if (d.sizeof) {
                 var srcEntry = null;
                 for (var j in operator.mapping) {
@@ -13034,7 +15205,7 @@ function allocateOutput(operator, inputData, output, operatorData){
                     var newHeight = Math.max(srcEntry.getHeight(), 1);
                     var newFormatType = d.formatType || srcEntry.getFormatType();
                     var newSamplerConfig = d.samplerConfig || srcEntry.getSamplerConfig();
-                    entry.createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
+                    entry._createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
                 }
                 else
                     throw new Error("Unknown texture input parameter '" + d.sizeof+"' in operator '"+operator.name+"'");
@@ -13058,7 +15229,7 @@ function allocateOutput(operator, inputData, output, operatorData){
                 }
             }
             else{
-                entry.notifyChanged();
+                entry._notifyChanged();
             }
         }
     }
@@ -13191,7 +15362,637 @@ Xflow.ProcessNode.prototype.applyOperator = function(){
 }
 
 })();
-Xflow.registerOperator("xflow.morph", {
+(function(){
+
+//----------------------------------------------------------------------------------------------------------------------
+// Xflow.OperatorList
+//----------------------------------------------------------------------------------------------------------------------
+
+    Xflow.OperatorEntry = function(operator){
+        this.index = 0;
+        this.operator = operator;
+        this.inputInfo = [];
+        this.outputInfo = [];
+    }
+    Xflow.OperatorEntry.prototype.isTransferInput = function(mappingIndex){
+        return this.inputInfo[mappingIndex].operatorIndex !== undefined;
+    }
+    Xflow.OperatorEntry.prototype.getTransferInputOperatorIndex = function(mappingIndex){
+        return this.inputInfo[mappingIndex].operatorIndex;
+    }
+    Xflow.OperatorEntry.prototype.getTransferInputOutputIndex = function(mappingIndex){
+        return this.inputInfo[mappingIndex].outputIndex;
+    }
+
+    Xflow.OperatorEntry.prototype.getTransferInputId = function(mappingIdx){
+        var info = this.inputInfo[mappingIdx];
+        return info.operatorIndex + "_" + info.outputIndex;
+    }
+    Xflow.OperatorEntry.prototype.getTransferOutputId = function(outputIndex){
+        return this.index + "_" + outputIndex;
+    }
+
+    Xflow.OperatorEntry.prototype.getInputMappingName = function(mappingIdx){
+        return this.inputInfo[mappingIdx].mappedName;
+    }
+    Xflow.OperatorEntry.prototype.getDirectInputIndex = function(mappingIdx){
+        return this.inputInfo[mappingIdx].inputIndex;
+    }
+
+    Xflow.OperatorEntry.prototype.getOutputIndex = function(operatorOutputIdx){
+        return this.outputInfo[operatorOutputIdx].finalOut || this.outputInfo[operatorOutputIdx].lost || 0;
+    }
+
+
+    Xflow.OperatorEntry.prototype.isFinalOutput = function(outputIndex){
+        return this.outputInfo[outputIndex] && this.outputInfo[outputIndex].finalOut !== undefined;
+    }
+    Xflow.OperatorEntry.prototype.isTransferOutput = function(outputIndex){
+        return this.outputInfo[outputIndex] && this.outputInfo[outputIndex].transfer;
+    }
+    Xflow.OperatorEntry.prototype.isLostOutput = function(outputIndex){
+        return this.outputInfo[outputIndex] && this.outputInfo[outputIndex].lost !== undefined;
+    }
+
+
+    Xflow.OperatorEntry.prototype.setTransferInput = function(mappingIndex, operatorIndex, outputIndex){
+        this.inputInfo[mappingIndex] = { operatorIndex: operatorIndex, outputIndex: outputIndex};
+    }
+
+    Xflow.OperatorEntry.prototype.setDirectInput = function(mappingIndex, inputIndex, mappedName){
+        this.inputInfo[mappingIndex] = { inputIndex: inputIndex, mappedName: mappedName };
+    }
+
+    Xflow.OperatorEntry.prototype.setFinalOutput = function(operatorOutputIndex, globalOutputIndex){
+        this.outputInfo[operatorOutputIndex] = { finalOut : globalOutputIndex };
+    }
+    Xflow.OperatorEntry.prototype.setTransferOutput = function(operatorOutputIndex){
+        this.outputInfo[operatorOutputIndex] = { transfer: true };
+    }
+    Xflow.OperatorEntry.prototype.setLostOutput = function(operatorOutputIndex, globalOutputIndex){
+        this.outputInfo[operatorOutputIndex] = { lost: globalOutputIndex};
+    }
+
+    Xflow.OperatorEntry.prototype.getKey = function(){
+        var key = this.operator.name + "*O";
+        for(var i = 0; i <this.outputInfo.length; ++i){
+            var info = this.outputInfo[i];
+            key += "*" + ( info.transfer ? "_" : info.finalOut || (info.lost + "?"));
+        }
+        key += + "*I";
+        for(var i = 0; i <this.inputInfo.length; ++i){
+            var info = this.inputInfo[i];
+            key += "*" + (info.inputIndex ? info.inputInfo : info.operatorIndex + ">" + info.outputIndex);
+        }
+        return key;
+    }
+
+    Xflow.OperatorList = function(platform){
+        this.platform = platform
+        this.entries = [];
+        this.inputInfo = {};
+    }
+
+    Xflow.OperatorList.prototype.addEntry = function(entry){
+        entry.index = this.entries.length;
+        this.entries.push(entry);
+    }
+
+    Xflow.OperatorList.prototype.getKey = function(){
+        var keys = [];
+        for(var i = 0; i < this.entries.length; ++i){
+            keys.push(this.entries[i].getKey());
+        }
+        var result = this.platform + ">" + keys.join("!") + "|";
+        for(var i in this.inputInfo){
+            result += i + ">" + (this.inputInfo[i].iterate || false) + "x" + (this.inputInfo[i].size || 0);
+        }
+        return result;
+    }
+
+    Xflow.OperatorList.prototype.setInputIterate = function(inputIndex, value){
+        if(!this.inputInfo[inputIndex]) this.inputInfo[inputIndex] = {};
+        this.inputInfo[inputIndex].iterate = value;
+    }
+    Xflow.OperatorList.prototype.setInputSize = function(inputIndex, size){
+        if(!this.inputInfo[inputIndex]) this.inputInfo[inputIndex] = {};
+        this.inputInfo[inputIndex].size = size;
+    }
+
+
+    Xflow.OperatorList.prototype.isInputIterate = function(inputIndex){
+        return this.inputInfo[inputIndex] && this.inputInfo[inputIndex].iterate;
+    }
+    Xflow.OperatorList.prototype.getInputSize = function(inputIndex){
+        return this.inputInfo[inputIndex] && this.inputInfo[inputIndex].size || 0;
+    }
+
+    Xflow.OperatorList.prototype.getIterateCount = function(programData){
+        var count = -1;
+        for(var i = 0; i < programData.inputs.length; ++i){
+            if(this.isInputIterate(i)){
+                var dataEntry = programData.getDataEntry(i);
+                if(dataEntry && dataEntry.getIterateCount){
+                    var size = dataEntry.getIterateCount();
+                    count = count < 0 ? size : Math.min(size, count);
+                }
+            }
+        }
+        return count < 0 ? 1 : count;
+    }
+
+    var c_sizes = {};
+
+    Xflow.OperatorList.prototype.allocateOutput = function(programData){
+        for(var i = 0; i < this.entries.length; ++i){
+            var entry = this.entries[i];
+            var operator = entry.operator;
+            var operatorData = programData.operatorData[i]
+            if(operator.alloc){
+                var args = [c_sizes];
+                addInputToArgs(args, entry, programData);
+                operator.alloc.apply(operatorData, args);
+            }
+            var iterateCount = this.getIterateCount(programData);
+            for(var j = 0; j < operator.outputs.length; ++j){
+                var d = operator.outputs[i];
+                var dataEntry = programData.outputs[entry.getOutputIndex(j)].dataEntry;
+
+
+                if (dataEntry.type == Xflow.DATA_TYPE.TEXTURE) {
+                    // texture entry
+                    if (d.customAlloc)
+                    {
+                        var texParams = c_sizes[d.name];
+                        var newWidth = texParams.imageFormat.width;
+                        var newHeight = texParams.imageFormat.height;
+                        var newFormatType = texParams.imageFormat.type;
+                        var newSamplerConfig = texParams.samplerConfig;
+                        dataEntry._createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
+                    } else if (d.sizeof) {
+                        var srcEntry = null;
+                        for(var k = 0; k < operator.mapping.length; ++k){
+                            if (operator.mapping[j].source == d.sizeof) {
+                                srcEntry = programData.getDataEntry(entry.getDirectInputIndex(k));
+                                break;
+                            }
+                        }
+                        if (srcEntry) {
+                            var newWidth = Math.max(srcEntry.getWidth(), 1);
+                            var newHeight = Math.max(srcEntry.getHeight(), 1);
+                            var newFormatType = d.formatType || srcEntry.getFormatType();
+                            var newSamplerConfig = d.samplerConfig || srcEntry.getSamplerConfig();
+                            dataEntry._createImage(newWidth, newHeight, newFormatType, newSamplerConfig);
+                        }
+                        else
+                            throw new Error("Unknown texture input parameter '" + d.sizeof+"' in operator '"+operator.name+"'");
+                    } else
+                        throw new Error("Cannot create texture. Use customAlloc or sizeof parameter attribute");
+                } else {
+
+                    var size = (d.customAlloc ? c_sizes[d.name] : iterateCount) * dataEntry.getTupleSize();
+
+                    if( !dataEntry._value || dataEntry._value.length != size){
+                        switch(dataEntry.type){
+                            case Xflow.DATA_TYPE.FLOAT:
+                            case Xflow.DATA_TYPE.FLOAT2:
+                            case Xflow.DATA_TYPE.FLOAT3:
+                            case Xflow.DATA_TYPE.FLOAT4:
+                            case Xflow.DATA_TYPE.FLOAT4X4: dataEntry.setValue(new Float32Array(size)); break;
+                            case Xflow.DATA_TYPE.INT:
+                            case Xflow.DATA_TYPE.INT4:
+                            case Xflow.DATA_TYPE.BOOL: dataEntry.setValue(new Int32Array(size)); break;
+                            default: XML3D.debug.logWarning("Could not allocate output buffer of TYPE: " + dataEntry.type);
+                        }
+                    }
+                    else{
+                        dataEntry._notifyChanged();
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+    Xflow.OperatorList.prototype.checkInput = function(programData){
+        for(var i = 0; i < this.entries.length; ++i){
+            var entry = this.entries[i];
+            var mapping = entry.operator.mapping;
+            for(var j = 0; j < mapping.length; ++j){
+                if(entry.isTransferInput(j)){
+                    var outputType = this.entries[entry.getTransferInputOperatorIndex(j)].operator.outputs[
+                        entry.getTransferInputOutputIndex(j)].type;
+
+                    if(outputType != entry.type){
+                        XML3D.debug.logError("Xflow: operator " + entry.operator.name + ": Input for " + entry.source +
+                            " has wrong type. Expected: " + Xflow.getTypeName(entry.type)
+                            + ", but got: " +  Xflow.getTypeName(outputType) );
+                        return false;
+                    }
+
+                }
+                else{
+                    var mappingName = entry.getInputMappingName(j);
+                    if(!entry.optional && !mappingName){
+                        XML3D.debug.logError("Xflow: operator " + entry.operator.name + ": Missing input argument for "
+                            + entry.source);
+                        return false;
+                    }
+                    if(mappingName){
+                        var channel = programData.getChannel(entry.getDirectInputIndex(j));
+                        if(!channel){
+                            XML3D.debug.logError("Xflow: operator " + entry.operator.name + ": Input of name '" + mappingName +
+                                "' not found. Used for parameter " + entry.source);
+                            return false;
+                        }
+                        var dataEntry = channel.getDataEntry();
+                        if(!entry.optional && (!dataEntry || dataEntry.getLength() == 0)){
+                            XML3D.debug.logError("Xflow: operator " + entry.operator.name + ": Input for " + entry.source +
+                                ' contains no data.');
+                            return false;
+                        }
+                        if(dataEntry && dataEntry.type != entry.type){
+                            XML3D.debug.logError("Xflow: operator " + entry.operator.name + ": Input for " + entry.source +
+                                " has wrong type. Expected: " + Xflow.getTypeName(entry.type)
+                                + ", but got: " +  Xflow.getTypeName(dataEntry.type) );
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    */
+
+
+
+
+    Xflow.ProgramData = function(){
+        this.inputs = [];
+        this.outputs = [];
+        this.operatorData = [];
+    }
+
+    Xflow.ProgramData.prototype.getChannel = function(index){
+        return this.inputs[index].channel;
+    }
+
+    Xflow.ProgramData.prototype.getDataEntry = function(index){
+        var entry = this.inputs[index];
+        var channel = entry.channel;
+        if(!channel) return null;
+        var key = 0;
+        if(entry.sequenceKeySourceChannel){
+            var keyDataEntry = entry.sequenceKeySourceChannel.getDataEntry();
+            key = keyDataEntry && keyDataEntry._value ? keyDataEntry._value[0] : 0;
+        }
+
+        return channel.getDataEntry(entry.sequenceAccessType, key);
+    }
+
+    Xflow.ProgramInputConnection = function(){
+        this.channel = null;
+        this.arrayAccess = false;
+        this.sequenceAccessType = Xflow.SEQUENCE.NO_ACCESS;
+        this.sequenceKeySourceChannel = null;
+    }
+
+    Xflow.ProgramInputConnection.prototype.getKey = function(){
+        return (this.channel ? this.channel.id : "NULL") + ";" + this.arrayAccess + ";" + this.sequenceAccessType + ";" +
+        ( this.sequenceKeySourceChannel ? this.sequenceKeySourceChannel.id : "");
+    }
+
+
+    var c_program_cache = {};
+
+    Xflow.createProgram = function(operatorList){
+        if(operatorList.entries.length == 0)
+            return null;
+
+        var key = operatorList.getKey();
+        if(!c_program_cache[key]){
+            if(operatorList.platform == Xflow.PLATFORM.GLSL){
+                c_program_cache[key] = new Xflow.VSProgram(operatorList);
+            }
+            else if(operatorList.entries.length == 1)
+                c_program_cache[key] = new Xflow.SingleProgram(operatorList);
+            else
+                XML3D.debug.logError("Could not create program from operatorList");
+        }
+        return c_program_cache[key];
+    }
+
+
+
+    Xflow.SingleProgram = function(operatorList){
+        this.list = operatorList;
+        this.entry = operatorList.entries[0];
+        this.operator = this.entry.operator;
+        this._inlineLoop = null;
+    }
+
+    Xflow.SingleProgram.prototype.run = function(programData){
+        var operatorData = prepareOperatorData(this.list, 0, programData);
+
+        if(this.operator.evaluate_core){
+            applyCoreOperation(this, programData, operatorData);
+        }
+        else{
+            applyDefaultOperation(this.entry, programData, operatorData);
+        }
+    }
+
+    function applyDefaultOperation(entry, programData, operatorData){
+        var args = assembleFunctionArgs(entry, programData);
+        args.push(operatorData);
+        entry.operator.evaluate.apply(operatorData, args);
+    }
+
+    function applyCoreOperation(program, programData, operatorData){
+        var args = assembleFunctionArgs(program.entry, programData);
+        args.push(operatorData.iterateCount);
+
+        if(!program._inlineLoop){
+            program._inlineLoop = createOperatorInlineLoop(program.operator, operatorData);
+        }
+        program._inlineLoop.apply(operatorData, args);
+    }
+
+    var c_VarPattern = /var\s+(.)+[;\n]/;
+    var c_InnerVarPattern = /[^=,\s]+\s*(=[^,]+)?(,)?/;
+    function createOperatorInlineLoop(operator, operatorData){
+
+        var code = "function (";
+        var funcData = parseFunction(operator.evaluate_core);
+        code += funcData.args.join(",") + ",__xflowMax) {\n";
+        code += "    var __xflowI = __xflowMax\n" +
+            "    while(__xflowI--){\n";
+
+        var body = funcData.body;
+        body = replaceArrayAccess(body, funcData.args, operator, operatorData);
+        code += body + "\n  }\n}";
+
+        var inlineFunc = eval("(" + code + ")");
+        return inlineFunc;
+    }
+
+    var c_FunctionPattern = /function\s+([^(]*)\(([^)]*)\)\s*\{([\s\S]*)\}/;
+
+    function parseFunction(func){
+        var result = {};
+        var matches = func.toString().match(c_FunctionPattern);
+        if(!matches){
+            XML3D.debug.logError("Xflow Internal: Could not parse function: " + func);
+            return null;
+        }
+        result.args = matches[2].split(",");
+        for(var i in result.args) result.args[i] = result.args[i].trim();
+        result.body = matches[3];
+        return result;
+    }
+
+    var c_bracketPattern = /([a-zA-Z_$][\w$]*)(\[)/;
+
+    function replaceArrayAccess(code, args, operator, operatorData){
+        var result = "";
+        var index = 0, bracketIndex = code.indexOf("[", index);
+        while(bracketIndex != -1){
+            var key = code.substr(index).match(c_bracketPattern)[1];
+
+            var argIdx = args.indexOf(key);
+            var addIndex = false, tupleCnt = 0;
+            if(argIdx != -1){
+                if(argIdx < operator.outputs.length){
+                    addIndex = true;
+                    tupleCnt = Xflow.DATA_TYPE_TUPLE_SIZE[[operator.outputs[argIdx].type]];
+                }
+                else{
+                    var i = argIdx - operator.outputs.length;
+                    addIndex = operatorData.iterFlag[i];
+                    tupleCnt = Xflow.DATA_TYPE_TUPLE_SIZE[operator.mapping[i].internalType];
+                }
+            }
+
+            result += code.substring(index, bracketIndex) + "["
+            if(addIndex){
+                result += tupleCnt + "*__xflowI + ";
+            }
+            index = bracketIndex + 1;
+            bracketIndex = code.indexOf("[", index);
+        }
+        result +=  code.substring(index);
+        return result;
+    }
+
+
+    function prepareOperatorData(list, idx, programData){
+        var data = programData.operatorData[0];
+        var entry = list.entries[idx];
+        var mapping = entry.operator.mapping;
+        data.iterFlag = {};
+        for(var i = 0; i < mapping.length; ++i){
+            var doIterate = (entry.isTransferInput(i) || list.isInputIterate(entry.getDirectInputIndex(i)));
+            data.iterFlag[i] = doIterate;
+        }
+        data.iterateCount = list.getIterateCount(programData);
+        return data;
+    }
+
+    function assembleFunctionArgs(entry, programData){
+        var args = [];
+        var outputs = entry.operator.outputs;
+        for(var i = 0; i < outputs.length; ++i){
+            var d = outputs[i];
+            var dataEntry = programData.outputs[entry.getOutputIndex(i)].dataEntry;
+            args.push(dataEntry ? dataEntry.getValue() : null);
+        }
+        addInputToArgs(args, entry, programData);
+        return args;
+    }
+
+    function addInputToArgs(args, entry, programData){
+        var mapping = entry.operator.mapping;
+        for(var i = 0; i < mapping.length; ++i){
+            var mapEntry = mapping[i];
+            var dataEntry = programData.getDataEntry(entry.getDirectInputIndex(i));
+            args.push(dataEntry ? dataEntry.getValue() : null);
+        }
+    }
+
+
+}());(function(){
+
+//----------------------------------------------------------------------------------------------------------------------
+// Xflow.OperatorList
+//----------------------------------------------------------------------------------------------------------------------
+
+
+    Xflow.VSProgram = function(operatorList){
+        this.list = operatorList;
+
+        this._glslCode = null;
+        this._shaderInputNames = [];
+        this._shaderOutputNames = [];
+        this._inputIndices = {};
+        constructVS(this);
+    }
+
+
+    function constructVS(program){
+        var operatorList = program.list, entries = operatorList.entries;
+
+        var usedNames = [],
+            directInputNames = {},
+            transferNames = {};
+
+        for(var i = 0; i < entries.length; ++i){
+            if(entries[i].blockedNames){
+                Xflow.nameset.add(usedNames, entries[i].blockedNames);
+            }
+        }
+
+        var code = "#version 140 \n\n";
+        code += "// GLOBALS\n"
+        // Start with Globals
+        for(var type in Xflow.shaderConstant){
+            var name = Xflow.shaderConstant[type];
+            code += "uniform " + (type == Xflow.SHADER_CONSTANT_KEY.OBJECT_ID ? 'float' : 'mat4')  +
+                    " " + name + ";\n";
+            Xflow.nameset.add(usedNames, name);
+        }
+        code += "\n";
+        code += "// OUTPUT\n"
+        // First: collect output names
+        for( var i = 0; i < entries.length; ++i){
+            var entry = entries[i], operator = entry.operator;
+            for(var j = 0; j < operator.outputs.length; ++j){
+                if(entry.isFinalOutput(j)){
+                    var name = operator.outputs[j].name;
+                    code += "out " + getGLSLType(operator.outputs[j].type) + " " + name + ";\n";
+                    Xflow.nameset.add(usedNames, name);
+                    Xflow.nameset.add(program._shaderOutputNames, name);
+                    transferNames[entry.getTransferOutputId(j)] = name;
+                }
+            }
+        }
+        code += "\n";
+        code += "// INPUT\n"
+        // Second: collect input names
+        for(var i = 0; i < entries.length; ++i){
+            var entry = entries[i], operator = entry.operator;
+            for(var j = 0; j < operator.mapping.length; ++j){
+                if(!entry.isTransferInput(j) && !directInputNames[entry.getDirectInputIndex(j)]){
+                    var mapEntry = operator.mapping[j];
+                    var name = getFreeName(mapEntry.name, usedNames), inputIndex = entry.getDirectInputIndex(j),
+                        uniform = !operatorList.isInputIterate(inputIndex);
+                    program._inputIndices[name] = { index: inputIndex, uniform: uniform };
+                    Xflow.nameset.add(program._shaderInputNames, name);
+                    directInputNames[inputIndex] = name;
+
+                    code += (uniform ? "uniform " : "in ") + getGLSLType(mapEntry.internalType) + " " + name;
+
+                    if(mapEntry.array)
+                        code += "[" + operatorList.getInputSize(inputIndex) + "]"
+
+                    code += ";\n";
+                }
+            }
+        }
+
+        // Start main
+        code += "\n// CODE\n"
+        code += "void main(void){\n";
+
+        // Create Code
+        for(var i = 0; i < entries.length; ++i){
+            var entry = entries[i], operator = entry.operator;
+            // Declare transfer output names
+            for(var j = 0; j < operator.outputs.length; ++j){
+                if(!entry.isFinalOutput(j)){
+                    var name = getFreeName(operator.outputs[j].name, usedNames);
+                    transferNames[entry.getTransferOutputId(j)] = name;
+                    code += "\t" + getGLSLType(operator.outputs[j].type) + " " + name + ";\n";
+                }
+            }
+            // Take Code Fragment
+            var codeFragment = operator.evaluate_glsl, index;
+            while((index = codeFragment.indexOf("#I{")) != -1){
+                var end = codeFragment.indexOf("}",index);
+                var mappingIndex = getMappingIndex(operator, codeFragment.substring(index+3,end));
+                var replaceName = entry.isTransferInput(mappingIndex) ?
+                    transferNames[entry.getTransferInputId(mappingIndex)] :
+                    directInputNames[entry.getDirectInputIndex(mappingIndex)];
+                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+            }
+            while((index = codeFragment.indexOf("#O{")) != -1){
+                var end = codeFragment.indexOf("}",index);
+                var outputIndex = getOutputIndex(operator, codeFragment.substring(index+3,end));
+                var replaceName = transferNames[entry.getTransferOutputId(outputIndex)];
+                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+            }
+            var localNames = [];
+            while((index = codeFragment.indexOf("#L{")) != -1){
+                var end = codeFragment.indexOf("}",index);
+                var key = codeFragment.substring(index+3,end);
+                if(!localNames[key]){
+                    localNames[key] = getFreeName(key, usedNames);
+                }
+                var replaceName = localNames[key];
+                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+            }
+            while((index = codeFragment.indexOf("#G{")) != -1){
+                var end = codeFragment.indexOf("}",index);
+                var replaceName = codeFragment.substring(index+3,end);
+                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+            }
+            code += codeFragment + "\n";
+        }
+        code += "}\n";
+
+        program._glslCode = code;
+    }
+
+    function getFreeName(name, usedNames){
+        var result = name, i = 1;
+        while(usedNames.indexOf(result) != -1){
+            result = name + "_" + (++i);
+        }
+        Xflow.nameset.add(usedNames, result);
+        return result;
+    }
+
+    function getMappingIndex(operator, name){
+        for(var i = 0; i < operator.mapping.length; ++i){
+            if(operator.mapping[i].name == name)
+                return i;
+        }
+        throw new Error("Invalid input name '" + name  + "' inside of code fragment" );
+    }
+
+    function getOutputIndex(operator, name){
+        for(var i = 0; i < operator.outputs.length; ++i){
+            if(operator.outputs[i].name == name)
+                return i;
+        }
+    }
+
+    function getGLSLType(xflowType){
+        switch(xflowType){
+            case Xflow.DATA_TYPE.BOOL : return 'bool';
+            case Xflow.DATA_TYPE.BYTE : return 'uint';
+            case Xflow.DATA_TYPE.FLOAT : return 'float';
+            case Xflow.DATA_TYPE.FLOAT2 : return 'vec2';
+            case Xflow.DATA_TYPE.FLOAT3 : return 'vec3';
+            case Xflow.DATA_TYPE.FLOAT4 : return 'vec4';
+            case Xflow.DATA_TYPE.FLOAT4X4 : return 'mat4';
+            case Xflow.DATA_TYPE.INT : return 'int';
+            case Xflow.DATA_TYPE.INT4 : return 'ivec4';
+        }
+        throw new Error("Type not supported for GLSL " + Xflow.getTypeName(xflowType) );
+    }
+
+
+}());Xflow.registerOperator("xflow.morph", {
     outputs: [{type: 'float3', name: 'result'}],
     params:  [
         { type: 'float3', source: 'value' },
@@ -13211,7 +16012,10 @@ Xflow.registerOperator("xflow.morph", {
         result[0] = value[0] + weight[0] * valueAdd[0];
         result[1] = value[1] + weight[0] * valueAdd[1];
         result[2] = value[2] + weight[0] * valueAdd[2];
-    }
+    },
+    evaluate_glsl:
+        "\t// xflow.morph \n" +
+        "\t#O{result} = #I{value} + vec3(#I{weight}) * #I{valueAdd};\n"
 });Xflow.registerOperator("xflow.sub", {
     outputs: [  {type: 'float3', name: 'result'}],
     params:  [  {type: 'float3', source: 'value1'},
@@ -13298,8 +16102,8 @@ Xflow.registerOperator("xflow.lerpKeys", {
             result[2] = values[3*idx+2];
         }
         else{
-            var weight = (key - keys[idx]) / (keys[idx+1] - keys[idx]);
-            var invWeight = 1 - weight[0];
+            var weight = (key[0] - keys[idx]) / (keys[idx+1] - keys[idx]);
+            var invWeight = 1 - weight;
             result[0] = invWeight*values[3*idx] + weight*values[3*idx + 3];
             result[1] = invWeight*values[3*idx+1] + weight*values[3*idx + 4];
             result[2] = invWeight*values[3*idx+2] + weight*values[3*idx + 5];
@@ -13368,7 +16172,7 @@ Xflow.registerOperator("xflow.slerpKeys", {
             result[3] = values[4*idx+3];
         }
         else{
-            var weight = (key - keys[idx]) / (keys[idx+1] - keys[idx]);
+            var weight = (key[0] - keys[idx]) / (keys[idx+1] - keys[idx]);
             XML3D.math.quat.slerpOffset(  values, idx*4,
                 values,(idx+1)*4, weight,
                 result, 0, true);
@@ -14982,7 +17786,94 @@ Xflow.registerOperator("xflow.selectBool", {
         }
     }
 });
-XML3D.data = {
+(function(){
+
+var c_CubePositions =  [
+    [-1,-1,-1], [1,-1,-1], [-1,1,-1], [1,1,-1], // front
+    [-1,-1,-1], [-1,-1,1], [-1,1,-1], [-1,1,1], // left
+    [-1,-1,-1], [1,-1,-1], [-1,-1,1], [1,-1,1], // top
+    [1,-1,-1], [1,1,-1], [1,-1,1], [1,1,1],     // right
+    [-1,1,-1], [1,1,-1], [-1,1,1], [1,1,1],     // bottom
+    [-1,-1,1], [1,-1,1], [-1,1,1], [1,1,1]      // back
+];
+var c_CubeNormals =  [
+    [0,0,-1], [0,0,-1], [0,0,-1], [0,0,-1], // front
+    [-1,0,0], [-1,0,0], [-1,0,0], [-1,0,0], // left
+    [0,-1,0], [0,-1,0], [0,-1,0], [0,-1,0], // top
+    [1,0,0], [1,0,0], [1,0,0], [1,0,0],     // right
+    [0,1,0], [0,1,0], [0,1,0], [0,1,0],     // bottom
+    [0,0,1], [0,0,1], [0,0,1], [0,0,1]      // back
+];
+var c_CubeIndex = [
+    [0,1,2,1,2,3],
+    [4,5,6,5,6,7],
+    [8,9,10,9,10,11],
+    [12,13,14,13,14,15],
+    [16,17,18,17,18,19],
+    [20,21,22,21,22,23]
+]
+
+/**
+ * Grid Generation
+ */
+Xflow.registerOperator("xflow.debug.createSkinCubes", {
+    outputs: [	{type: 'int', name: 'index', customAlloc: true},
+                {type: 'float3', name: 'position', customAlloc: true},
+				{type: 'float3', name: 'normal', customAlloc: true},
+				{type: 'int4', name: 'boneIndices', customAlloc: true},
+				{type: 'float4', name: 'boneWeights', customAlloc: true}],
+    params:  [{type: 'float4x4', source: 'bindTransforms', array: true},
+              {type: 'float', source: 'size', array: true, optional: true}],
+    alloc: function(sizes, bindTransforms)
+    {
+        var s = bindTransforms.length / 16;
+        sizes['position'] = s * 4 * 6;
+        sizes['normal'] = s * 4 * 6;
+        sizes['boneIndices'] = s * 4 * 6;
+        sizes['boneWeights'] = s * 4 * 6;
+        sizes['index'] = s * 6 * 6;
+    },
+    evaluate: function(index, position, normal, boneIdx, boneWeight, bindTransforms, size) {
+		var cubeCount = bindTransforms.length / 16;
+		var size = (size && size[0] || 1) / 2;
+
+        var tmpPosition = XML3D.math.vec3.create(),
+            tmpNormal = XML3D.math.vec3.create();
+
+		for(var i = 0; i < cubeCount; ++i){
+            for(var j = 0; j < 6; ++j){
+                for(var k = 0; k < 4; k++){
+                    var localIdx = j*4+ k, globalIdx = i*6*4 + localIdx;
+
+                    XML3D.math.vec3.copy(tmpPosition, c_CubePositions[localIdx]);
+                    XML3D.math.vec3.scale(tmpPosition, tmpPosition, size);
+                    XML3D.math.mat4.multiplyOffsetVec3(bindTransforms, i*16, tmpPosition, 0);
+                    XML3D.math.vec3.copy(tmpNormal, c_CubeNormals[localIdx]);
+                    XML3D.math.mat4.multiplyOffsetDirection(bindTransforms, i*16, tmpNormal, 0);
+
+                    position[globalIdx*3+0] = tmpPosition[0];
+                    position[globalIdx*3+1] = tmpPosition[1];
+                    position[globalIdx*3+2] = tmpPosition[2];
+                    normal[globalIdx*3+0] = tmpNormal[0];
+                    normal[globalIdx*3+1] = tmpNormal[1];
+                    normal[globalIdx*3+2] = tmpNormal[2];
+                    boneIdx[globalIdx*4+0] = i;
+                    boneIdx[globalIdx*4+1] = boneIdx[globalIdx*4+2] = boneIdx[globalIdx*4+3]= 0;
+                    boneWeight[globalIdx*4+0] = 1;
+                    boneWeight[globalIdx*4+1] = boneWeight[globalIdx*4+2] = boneWeight[globalIdx*4+3]= 0;
+                }
+                var globalIndexIdx = i*6*6 + j*6;
+                for(var k = 0; k < 6; ++k){
+                    index[globalIndexIdx+k] = i*6*4 + c_CubeIndex[j][k];
+                }
+            }
+		}
+		// We are done!
+		position = position;
+	}
+});
+
+}());XML3D.data = {
     toString : function() {
         return "data";
     }
@@ -15062,7 +17953,7 @@ XML3D.data.DataAdapter.prototype.getComputeRequest = function(filter, callback){
 
 XML3D.data.DataAdapter.prototype.getComputeResult = function(filter)
 {
-    var result = this.xflowDataNode._getComputeResult(filter);
+    var result = this.xflowDataNode._getResult(Xflow.RESULT_TYPE.COMPUTE, filter);
     return result;
 }
 
@@ -15137,7 +18028,7 @@ function updateLoadState(dataAdpater){
     if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
         loading = true;
     }
-    dataAdpater.xflowDataNode.loading = loading;
+    dataAdpater.xflowDataNode.setLoading(loading);
 }
 
 XML3D.data.DataAdapter.prototype.updateHandle = function(attributeName) {
@@ -15203,14 +18094,23 @@ XML3D.data.DataAdapter.prototype.toString = function() {
 
     ValueDataAdapter.prototype.init = function()
     {
+        var config = this.node._configured, value;
+        if(this.node.textContent == XML3D.scriptValueLabel){
+            value = config.scriptValue;
+        }
+        else{
+            delete config.scriptValue;
+            value = this.node.value;
+        }
+
         var type = BUFFER_TYPE_TABLE[this.node.localName];
-        var buffer = new Xflow.BufferEntry(type, this.node.value);
+        var buffer = new Xflow.BufferEntry(type, value);
 
         this.xflowInputNode = XML3D.data.xflowGraph.createInputNode();
         this.xflowInputNode.name = this.node.name;
         this.xflowInputNode.data = buffer;
         this.xflowInputNode.key = this.node.key;
-        this.xflowInputNode.param = this.node.param;
+        this.xflowInputNode.paramName = this.node.param ? this.node.name : null;
     }
 
     ValueDataAdapter.prototype.getXflowNode = function(){
@@ -15225,6 +18125,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         if(evt.type == XML3D.events.VALUE_MODIFIED){
             var attr = evt.wrapped.attrName;
             if(!attr){
+                delete this.node._configured.scriptValue;
                 this.xflowInputNode.data.setValue(this.node.value);
             }
             else if(attr == "name"){
@@ -15234,10 +18135,15 @@ XML3D.data.DataAdapter.prototype.toString = function() {
                 this.xflowInputNode.key = this.node.key;
             }
             else if(attr == "param"){
-                this.xflowInputNode.param = this.node.param;
+                this.xflowInputNode.paramName = this.node.param ? this.node.name : null;
             }
         }
     };
+
+    ValueDataAdapter.prototype.setScriptValue = function(value){
+        // TODO: Add Type check
+        this.xflowInputNode.data.setValue(value);
+    }
 
     /**
      * Returns String representation of this DataAdapter
@@ -15292,6 +18198,7 @@ XML3D.data.DataAdapter.prototype.toString = function() {
         config.wrapT = clampToGL(node.wrapT);
         config.minFilter = filterToGL(node.filterMin);
         config.magFilter = filterToGL(node.filterMin);
+        config.textureType = Xflow.TEX_TYPE.TEXTURE_2D;
 
         var imageAdapter = this.factory.getAdapter(this.node.firstElementChild, XML3D.data.XML3DDataAdapterFactory.prototype);
         if(imageAdapter) {
@@ -15303,8 +18210,14 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     TextureDataAdapter.prototype.createXflowNode = function() {
         var xnode = XML3D.data.xflowGraph.createInputNode();
         xnode.name = this.node.name;
+        xnode.paramName = this.node.param ? this.node.name : null;
+        xnode.key = this.node.key;
         return xnode;
     };
+
+    TextureDataAdapter.prototype.setScriptValue = function(value){
+        XML3D.debug.logError("Texture currently does not support setScriptValue()");
+    }
 
     TextureDataAdapter.prototype.getOutputs = function() {
         var result = {};
@@ -15314,6 +18227,22 @@ XML3D.data.DataAdapter.prototype.toString = function() {
 
     TextureDataAdapter.prototype.getValue = function() {
         return this.value;
+    };
+
+    TextureDataAdapter.prototype.notifyChanged = function(evt)
+    {
+        if(evt.type == XML3D.events.VALUE_MODIFIED){
+            var attr = evt.wrapped.attrName;
+            if(attr == "name"){
+                this.xflowInputNode.name = this.node.name;
+            }
+            else if(attr == "key"){
+                this.xflowInputNode.key = this.node.key;
+            }
+            else if(attr == "param"){
+                this.xflowInputNode.paramName = this.node.param ? this.node.name : null;
+            }
+        }
     };
 
     /**
@@ -15922,9 +18851,21 @@ XML3D.data.DataAdapter.prototype.toString = function() {
     var binaryFactoryInstance = new BinaryFactory();
 }());
 XML3D.webgl = {
-    toString : function() {
+    toString: function () {
         return "webgl";
-    }
+    },
+    supported: (function() {
+        var canvas = document.createElement("canvas");
+
+        return function () {
+            try {
+                return !!(window.WebGLRenderingContext && (canvas.getContext('experimental-webgl')));
+            } catch (e) {
+                return false;
+            }
+        };
+    }()),
+    MAX_PICK_BUFFER_DIMENSION : 512
 };
 
 /**
@@ -15965,28 +18906,25 @@ XML3D.webgl.getXflowEntryWebGlData = function(entry, canvasId){
 }// Create global symbol XML3D.webgl
 XML3D.webgl.MAXFPS = 30;
 
-/**
- * Creates the CanvasHandler.
- *
- * The Handler is the interface between the renderer, canvas and SpiderGL
- * elements. It responds to user interaction with the scene and manages
- * redrawing of the canvas.
- * The canvas handler also manages the rendering loop including triggering
- * of redraws.
- */
 (function() {
 
-    var canvas = document.createElement("canvas");
-    XML3D.webgl.supported = function() {
-        try {
-            return !!(window.WebGLRenderingContext && (canvas.getContext('experimental-webgl')));
-        } catch (e) {
-            return false;
-        }
+    var CONTEXT_OPTIONS = {
+        alpha: true,
+        premultipliedAlpha: true,
+        antialias: true,
+        stencil: true,
+        preserveDrawingBuffer: true
     };
 
-
+    /**
+     *
+     * @param {Element|Array.<Element>} xml3ds
+     */
     XML3D.webgl.configure = function(xml3ds) {
+
+        if(!(xml3ds instanceof Array))
+            xml3ds = [xml3ds];
+
         var handlers = {};
         for(var i in xml3ds) {
             // Creates a HTML <canvas> using the style of the <xml3d> Element
@@ -15994,13 +18932,18 @@ XML3D.webgl.MAXFPS = 30;
             // Creates the CanvasHandler for the <canvas>  Element
             var canvasHandler = new XML3D.webgl.CanvasHandler(canvas, xml3ds[i]);
             handlers[i] = canvasHandler;
-            canvasHandler.tick();
+            window.requestAnimFrame(canvasHandler.tick, XML3D.webgl.MAXFPS);
         }
     };
 
     var globalCanvasId = 0;
 
     XML3D.webgl.handlers = [];
+
+    // Events
+    XML3D.webgl.events =  {
+        available : []
+    };
 
     /**
      * CanvasHandler class.
@@ -16016,14 +18959,11 @@ XML3D.webgl.MAXFPS = 30;
     function CanvasHandler(canvas, xml3dElem) {
         this.canvas = canvas;
         this.xml3dElem = xml3dElem;
+
         this.id = ++globalCanvasId; // global canvas id starts at 1
         XML3D.webgl.handlers[this.id] = this;
 
-        this.needDraw = true;
-        this.needPickingDraw = true;
         this._pickingDisabled = false;
-        /** @type {Drawable} */
-        this.currentPickObj = null;
         this.lastPickObj = null;
         this.timeNow = Date.now() / 1000.0;
 
@@ -16042,8 +18982,7 @@ XML3D.webgl.MAXFPS = 30;
      */
     CanvasHandler.prototype.getContextForCanvas = function(canvas) {
         try {
-            var args = {preserveDrawingBuffer: true};
-            return canvas.getContext('experimental-webgl', args);
+            return canvas.getContext('experimental-webgl', CONTEXT_OPTIONS);
         } catch (e) {
             return null;
         }
@@ -16051,99 +18990,58 @@ XML3D.webgl.MAXFPS = 30;
 
     /**
      *
-     * @param {WebGLRenderingContext!} context
+     * @param {WebGLRenderingContext!} renderingContext
      */
-    CanvasHandler.prototype.initialize = function(context) {
+    CanvasHandler.prototype.initialize = function(renderingContext) {
         // Register listeners on canvas
         this.registerCanvasListeners();
 
         // This function is called at regular intervals by requestAnimFrame to
         // determine if a redraw
         // is needed
-        var handler = this;
+        var that = this;
         this.tick = function() {
 
             XML3D.updateXflowObserver();
 
-            if (handler.canvasSizeChanged() || handler.needDraw) {
-                handler.dispatchUpdateEvent();
-                handler.draw();
+            if (that.canvasSizeChanged() || that.renderer.needsRedraw()) {
+                that.dispatchUpdateEvent();
+                that.draw();
             }
 
-            window.requestAnimFrame(handler.tick, XML3D.webgl.MAXFPS);
+            window.requestAnimFrame(that.tick, XML3D.webgl.MAXFPS);
         };
 
-        this.redraw = function(reason, forcePickingRedraw) {
-            //XML3D.debug.logDebug("Request redraw:", reason);
-            forcePickingRedraw = forcePickingRedraw === undefined ? true : forcePickingRedraw;
-            if (this.needDraw !== undefined) {
-                this.needDraw = true;
-                this.needPickingDraw = this.needPickingDraw || forcePickingRedraw;
-            } else {
-                // This is a callback from a texture, don't need to redraw the
-                // picking buffers
-                handler.needDraw = true;
-            }
-        };
-
+        var context = new XML3D.webgl.GLContext(renderingContext, this.id, this.canvas.clientWidth, this.canvas.clientHeight);
+        var scene = new XML3D.webgl.GLScene(context);
+        var factory = XML3D.base.xml3dFormatHandler.getFactory(XML3D.webgl, this.id);
+        factory.setScene(scene);
         // Create renderer
-        this.renderer = new XML3D.webgl.Renderer(this, context, { width: this.canvas.clientWidth, height: this.canvas.clientHeight });
+        /** @type XML3D.webgl.IRenderer */
+        this.renderer = XML3D.webgl.rendererFactory.createRenderer(context, scene, this.canvas);
+        factory.setRenderer(this.renderer);
+
+        var xml3dAdapter = factory.getAdapter(this.xml3dElem);
+        xml3dAdapter.traverse(function(){});
+
+        scene.rootNode.setVisible(true);
+
+
     }
 
-    CanvasHandler.prototype.registerCanvasListeners = function() {
-        var handler = this;
-        var canvas = this.canvas;
-        canvas.addEventListener("mousedown", function(e) {
-            handler.mousedown(e);
-        }, false);
-        canvas.addEventListener("mouseup", function(e) {
-            handler.mouseup(e);
-        }, false);
-        canvas.addEventListener("mousemove", function(e) {
-            handler.mousemove(e);
-        }, false);
-        canvas.addEventListener("click", function(e) {
-            handler.click(e);
-        }, false);
-        canvas.addEventListener("dblclick", function(e) {
-            handler.click(e, true);
-        }, false);
-        canvas.addEventListener("mousewheel", function(e) {
-            handler.mousewheel(e);
-        }, false);
-        canvas.addEventListener("DOMMouseScroll", function(e) {
-            handler.mousewheel(e);
-        }, false);
-        canvas.addEventListener("mouseout", function(e) {
-            handler.mouseout(e);
-        }, false);
-        canvas.addEventListener("drop", function(e) {
-            handler.drop(e);
-        }, false);
-        canvas.addEventListener("dragover", function(e) {
-            handler.dragover(e);
-        }, false);
-
-        // Block the right-click context menu on the canvas unless it's explicitly toggled
-        var cm = this.xml3dElem.getAttribute("contextmenu");
-        if (!cm || cm == "false") {
-            this.canvas.addEventListener("contextmenu", function(e) {XML3D.webgl.stopEvent(e);}, false);
+    /*
+    CanvasHandler.prototype.redraw = function(reason, forcePickingRedraw) {
+        //XML3D.debug.logDebug("Request redraw:", reason);
+        forcePickingRedraw = (forcePickingRedraw === undefined) ? true : forcePickingRedraw;
+        if (this.needDraw !== undefined) {
+            this.needDraw = true;
+            this.needPickingDraw = this.needPickingDraw || forcePickingRedraw;
+        } else {
+            // This is a callback from a texture, don't need to redraw the
+            // picking buffers
+            handler.needDraw = true;
         }
-    };
-
-
-    /**
-     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in
-     * the GL context. The y-coordinate gets turned upside-down. The lowest possible
-     * canvas coordinate is 0, so we need to subtract 1 from the height, too.
-     *
-     * @param {number} canvasY
-     * @return {number} the converted y-coordinate
-     */
-    CanvasHandler.prototype.canvasToGlY = function(canvasY) {
-
-        return this.canvas.height - canvasY - 1;
-    };
+    };   */
 
     /**
      * Binds the picking buffer and passes the request for a picking pass to the
@@ -16153,73 +19051,28 @@ XML3D.webgl.MAXFPS = 30;
      * @param {number} canvasY
      * @return {Drawable|null} newly picked object
      */
-    CanvasHandler.prototype.updatePickObjectByPoint = function(canvasX, canvasY) {
+    CanvasHandler.prototype.getPickObjectByPoint = function(canvasX, canvasY) {
         if (this._pickingDisabled)
             return null;
-        if(this.needPickingDraw) {
-            this.renderer.prepareRendering();
-            this.renderer.renderSceneToPickingBuffer();
-        }
-
-        /** Temporary workaround: this function is called when drawable objects are not yet
-         *  updated. Thus, the renderer.render() updates the objects after the picking buffer
-         *  has been updated. In that case, the picking buffer needs to be updated again.
-         *  Thus, we only set needPickingDraw to false when we are sure that objects don't
-         *  need any updates, i.e. when needDraw is false.
-         *  A better solution would be to separate drawable objects updating from rendering
-         *  and to update the objects either during render() or renderSceneToPickingBuffer().
-         */
-        if(!this.needDraw)
-            this.needPickingDraw = false;
-
-        var glY = this.canvasToGlY(canvasY);
-
-        this.currentPickObj = this.renderer.getRenderObjectFromPickingBuffer(canvasX, glY);
-
-
-        return this.currentPickObj;
+        return this.renderer.getRenderObjectFromPickingBuffer(canvasX, canvasY);
     };
 
     /**
-     * @param {Object} pickedObj
      * @param {number} canvasX
      * @param {number} canvasY
      * @return {vec3|null} The world space normal on the object's surface at the given coordinates
      */
-    CanvasHandler.prototype.getWorldSpaceNormalByPoint = function(pickedObj, canvasX, canvasY) {
-        if (!pickedObj || this._pickingDisabled)
-            return null;
-
-        var glY = this.canvasToGlY(canvasY);
-
-        this.renderer.renderPickedNormals(pickedObj);
-        return this.renderer.readNormalFromPickingBuffer(canvasX, glY);
+    CanvasHandler.prototype.getWorldSpaceNormalByPoint = function(canvasX, canvasY) {
+        return this.renderer.getWorldSpaceNormalByPoint(canvasX, canvasY);
     };
 
     /**
-     * @param {Object} pickedObj
      * @param {number} canvasX
      * @param {number} canvasY
      * @return {vec3|null} The world space position on the object's surface at the given coordinates
      */
-    CanvasHandler.prototype.getWorldSpacePositionByPoint = function(pickedObj, canvasX, canvasY) {
-    	if (!pickedObj)
-    		return null;
-
-        var glY = this.canvasToGlY(canvasY);
-
-        this.renderer.renderPickedPosition(pickedObj);
-        return this.renderer.readPositionFromPickingBuffer(canvasX, glY);
-    };
-
-    CanvasHandler.prototype.getCanvasHeight = function() {
-
-    	return this.canvas.height;
-    };
-
-    CanvasHandler.prototype.getCanvasWidth = function() {
-
-    	return this.canvas.width;
+    CanvasHandler.prototype.getWorldSpacePositionByPoint = function(canvasX, canvasY) {
+	    return this.renderer.getWorldSpacePositionByPoint(canvasX, canvasY);
     };
 
     CanvasHandler.prototype.canvasSizeChanged = function() {
@@ -16229,59 +19082,10 @@ XML3D.webgl.MAXFPS = 30;
 
             this.lastKnownDimensions.width = canvas.width = canvas.clientWidth;
             this.lastKnownDimensions.height = canvas.height = canvas.clientHeight;
-            this.renderer.resizeCanvas(canvas.width, canvas.height);
-
-            this.needDraw = this.needPickingDraw = true;
+            this.renderer.handleResizeEvent(canvas.width, canvas.height);
             return true;
         }
         return false;
-    };
-
-    /**
-     * Uses gluUnProject() to transform the 2D screen point to a 3D ray.
-     * Not tested!!
-     *
-     * @param {number} canvasX
-     * @param {number} canvasY
-     */
-    CanvasHandler.prototype.generateRay = function(canvasX, canvasY) {
-
-        var glY = this.canvasToGlY(canvasY);
-
-        // setup input to unproject
-        var viewport = new Array();
-        viewport[0] = 0;
-        viewport[1] = 0;
-        viewport[2] = this.renderer.width;
-        viewport[3] = this.renderer.height;
-
-        // get view and projection matrix arrays
-        var viewMat = this.renderer.camera.viewMatrix;
-        var projMat = this.renderer.camera.getProjectionMatrix(viewport[2] / viewport[3]);
-
-        var ray = new window.XML3DRay();
-
-        var nearHit = new Array();
-        var farHit = new Array();
-
-        // do unprojections
-        if (false === GLU.unProject(canvasX, glY, 0, viewMat, projMat, viewport, nearHit)) {
-            return ray;
-        }
-
-        if (false === GLU.unProject(canvasX, glY, 1, viewMat, projMat, viewport, farHit)) {
-            return ray;
-        }
-
-        // calculate ray
-        var worldToViewMat = this.renderer.currentView.getViewMatrix().inverse();
-        var viewPos = new window.XML3DVec3(worldToViewMat.m41, worldToViewMat.m42, worldToViewMat.m43);
-
-        ray.origin.set(viewPos);
-        ray.direction.set(farHit[0] - nearHit[0], farHit[1] - nearHit[1], farHit[2] - nearHit[2]);
-        ray.direction.set(ray.direction.normalize());
-
-        return ray;
     };
 
     /**
@@ -16300,11 +19104,9 @@ XML3D.webgl.MAXFPS = 30;
     CanvasHandler.prototype.draw = function() {
         try {
             var start = Date.now();
-            this.renderer.prepareRendering();
-            var stats = this.renderer.render();
-            var end = Date.now();
 
-            this.needDraw = false;
+            var stats = this.renderer.renderToCanvas();
+            var end = Date.now();
             this.dispatchFrameDrawnEvent(start, end, stats);
 
         } catch (e) {
@@ -16313,254 +19115,48 @@ XML3D.webgl.MAXFPS = 30;
 
     };
 
-    /**
-     * Initalizes an DOM MouseEvent, picks the scene and sends the event to the
-     * hit object, if one was hit.
-     *
-     * It dispatches it on two ways: calling dispatchEvent() on the target
-     * element and going through the tree up to the root xml3d element invoking
-     * all on[type] attribute code.
-     *
-     * @param type
-     *            the type string according to the W3 DOM MouseEvent
-     * @param button
-     *            which mouse button is pressed, if any
-     * @param x
-     *            the screen x-coordinate
-     * @param y
-     *            the screen y-coordinate
-     * @param event
-     *            the W3 DOM MouseEvent, if present (currently not when
-     *            SpiderGL's blur event occurs)
-     * @param target
-     *            the element to which the event is to be dispatched. If
-     *            this is not given, the currentPickObj will be taken or the
-     *            xml3d element, if no hit occured.
-     *
-     */
-    CanvasHandler.prototype.dispatchMouseEvent = function(type, button, x, y, event, target) {
-        // init event
-        if (event === null || event === undefined) {
-            event = document.createEvent("MouseEvents");
-            event.initMouseEvent(type,
-            // canBubble, cancelable, view, detail
-            true, true, window, 0,
-            // screenX, screenY, clientX, clientY
-            0, 0, x, y,
-            // ctrl, alt, shift, meta, button
-            false, false, false, false, button,
-            // relatedTarget
-            null);
-        }
 
-        // Copy event to avoid DOM dispatch errors (cannot dispatch event more
-        // than once)
-        var evt = this.copyMouseEvent(event);
-        this.initExtendedMouseEvent(evt, x, y);
-
-        // find event target
-        var tar = null;
-        if (target !== undefined && target !== null)
-            tar = target;
-        else if (this.currentPickObj)
-            tar = this.currentPickObj.meshAdapter.node;
-        else
-            tar = this.xml3dElem;
-
-        tar.dispatchEvent(evt);
-    };
-
-    /**
-     * Creates an DOM mouse event based on the given event and returns it
-     *
-     * @param event
-     *            the event to copy
-     * @return the new event
-     */
-    CanvasHandler.prototype.copyMouseEvent = function(event) {
-        var evt = document.createEvent("MouseEvents");
-        evt.initMouseEvent(event.type,
-        // canBubble, cancelable, view, detail
-        event.bubbles, event.cancelable, event.view, event.detail,
-        // screenX, screenY, clientX, clientY
-        event.screenX, event.screenY, event.clientX, event.clientY,
-        // ctrl, alt, shift, meta, button
-        event.ctrlKey, event.altKey, event.shiftKey, event.metaKey, event.button,
-        // relatedTarget
-        event.relatedTarget);
-        if (event.dataTransfer)
-        	evt.data = {url: event.dataTransfer.getData("URL"), text: event.dataTransfer.getData("Text")};
-        return evt;
-    };
-
-    /**
-     * Adds position and normal attributes to the given event.
-     *
-     * @param {Event} event
-     * @param {number} x
-     * @param {number} y
-     * @return {XML3DVec3}
-     */
-    CanvasHandler.prototype.initExtendedMouseEvent = function(event, x, y) {
-
+    CanvasHandler.prototype.registerCanvasListeners = function() {
         var handler = this;
-        var xml3dElem = this.xml3dElem;
 
-        (function(){
-            var cachedPosition = undefined;
-            var cachedNormal = undefined;
-
-            event.__defineGetter__("normal", function(){
-                if(cachedNormal !== undefined) return cachedNormal;
-                var norm = (handler.getWorldSpaceNormalByPoint(handler.currentPickObj, x, y));
-                cachedNormal = norm ? new window.XML3DVec3(norm[0], norm[1], norm[2]) : null;
-                return cachedNormal;
+        XML3D.webgl.events.available.forEach( function(name) {
+            handler.canvas.addEventListener(name, function(e) {
+                handler[name] && handler[name].call(handler, e);
+                e.stopPropagation();
             });
-            event.__defineGetter__("position", function() {
-                if (!cachedPosition) {
-                    var pos = handler.getWorldSpacePositionByPoint(handler.currentPickObj, x, y);
-                    cachedPosition = pos ? new window.XML3DVec3(pos[0], pos[1], pos[2]) : null;
-                }
-                return cachedPosition;
-            });
+        });
 
-        })();
-
-
-    };
-
-
-    /**
-     *
-     * @param evt
-     */
-    CanvasHandler.prototype.drop = function(evt) {
-        var pos = this.getMousePosition(evt);
-
-        this.updatePickObjectByPoint(pos.x, pos.y);
-        this.dispatchMouseEvent("drop", evt.button, pos.x, pos.y, evt);
-        evt.preventDefault();
-    };
-
-    /**
-     *
-     * @param evt
-     */
-    CanvasHandler.prototype.dragover = function(evt) {
-    	evt.preventDefault();
-    };
-
-    /**
-     * This method is called each time a 'mouseup' event is triggered on the
-     * canvas
-     *
-     * @param {MouseEvent} evt
-     */
-    CanvasHandler.prototype.mouseup = function(evt) {
-        var pos = this.getMousePosition(evt);
-
-        this.updatePickObjectByPoint(pos.x, pos.y);
-        this.dispatchMouseEvent("mouseup", evt.button, pos.x, pos.y, evt);
-    };
-
-    /**
-     * This method is called each time a 'mousedown' event is triggered on the
-     * canvas
-     *
-     * @param {MouseEvent} evt
-     */
-    CanvasHandler.prototype.mousedown = function(evt) {
-        var pos = this.getMousePosition(evt);
-        this.updatePickObjectByPoint(pos.x, pos.y);
-
-        this.dispatchMouseEvent("mousedown", evt.button, pos.x, pos.y, evt);
-    };
-
-    /**
-     * This method is called each time a click event is triggered on the canvas
-     *
-     * @param {MouseEvent} evt
-     * @param {boolean} isdbl
-     */
-    CanvasHandler.prototype.click = function(evt, isdbl) {
-        var pos = this.getMousePosition(evt);
-        // Click follows always 'mouseup' => no update of pick object needed
-        if (isdbl == true)
-            this.dispatchMouseEvent("dblclick", evt.button, pos.x, pos.y, evt);
-        else
-            this.dispatchMouseEvent("click", evt.button, pos.x, pos.y, evt);
-    };
-
-    /**
-     * This method is called each time a mouseMove event is triggered on the
-     * canvas.
-     *
-     * This method also triggers mouseover and mouseout events of objects in the
-     * scene.
-     *
-     * @param {MouseEvent} evt
-     */
-    CanvasHandler.prototype.mousemove = function(evt) {
-        var pos = this.getMousePosition(evt);
-
-        this.updatePickObjectByPoint(pos.x, pos.y);
-        this.dispatchMouseEvent("mousemove", 0, pos.x, pos.y, evt);
-
-        var curObj = this.currentPickObj ? this.currentPickObj.meshAdapter.node : null;
-
-        // trigger mouseover and mouseout
-        if (curObj !== this.lastPickObj) {
-            if (this.lastPickObj) {
-                // The mouse has left the last object
-                this.dispatchMouseEvent("mouseout", 0, pos.x, pos.y, null, this.lastPickObj);
-            }
-            if (curObj) {
-                // The mouse is now over a different object, so call the new
-                // object's mouseover method
-                this.dispatchMouseEvent("mouseover", 0, pos.x, pos.y);
-            }
-
-            this.lastPickObj = curObj;
+        // Block the right-click context menu on the canvas unless it's explicitly toggled
+        var cm = this.xml3dElem.getAttribute("contextmenu");
+        if (!cm || cm == "false") {
+            this.canvas.addEventListener("contextmenu", function(e) {XML3D.webgl.stopEvent(e);}, false);
         }
     };
 
-    /**
-     * This method is called each time the mouse leaves the canvas
-     *
-     * @param {MouseEvent} evt
-     */
-    CanvasHandler.prototype.mouseout = function(evt) {
-        var pos = this.getMousePosition(evt);
-        this.dispatchMouseEvent("mouseout", 0, pos.x, pos.y, null, this.lastPickObj);
-    };
-
-    /**
-     * This method is called each time the mouse leaves the canvas
-     *
-     * @param {MouseEvent} evt
-     */
-    CanvasHandler.prototype.mousewheel = function(evt) {
-        var pos = this.getMousePosition(evt);
-        // note: mousewheel type is not W3C standard, used in WebKit!
-        this.dispatchMouseEvent("mousewheel", 0, pos.x, pos.y, evt, this.xml3dElem);
-    };
 
     /**
      * Dispatches a FrameDrawnEvent to listeners
      *
      * @param start
      * @param end
-     * @param numObjDrawn
+     * @param stats
      * @return
      */
     CanvasHandler.prototype.dispatchFrameDrawnEvent = function(start, end, stats) {
+        stats = stats || {
+            count: {
+                primitives: 0,
+                objects: 0
+            }
+        };
+
         var event = document.createEvent('CustomEvent');
+
         var data = {
                 timeStart : start,
                 timeEnd : end,
                 renderTimeInMilliseconds : end - start,
-                numberOfObjectsDrawn : stats[0],
-                numberOfTrianglesDrawn : Math.floor(stats[1])
+                count : stats.count
         };
         event.initCustomEvent('framedrawn', true, true, data);
 
@@ -16572,17 +19168,6 @@ XML3D.webgl.MAXFPS = 30;
         if (this.renderer) {
             this.renderer.dispose();
         }
-    };
-
-    CanvasHandler.prototype.getMousePosition = function(evt) {
-        var rct = this.canvas.getBoundingClientRect();
-        return {
-            x : (evt.clientX - rct.left),
-            y : (evt.clientY - rct.top)
-        };
-    };
-
-    CanvasHandler.prototype.setMouseMovePicking = function(isEnabled) {
     };
 
     XML3D.webgl.CanvasHandler = CanvasHandler;
@@ -16621,10 +19206,368 @@ XML3D.webgl.stopEvent = function(ev) {
         ev.stopPropagation();
     ev.returnValue = false;
 };
-// Utility functions
-(function() {
+(function () {
 
-    XML3D.webgl.checkError = function(gl, text)
+    var module = XML3D.webgl;
+
+    if (!('ontouchstart' in window)) {
+        XML3D.extend(module.CanvasHandler.prototype, {
+            hasTouchEvents:function () {
+                return false;
+            }
+        });
+        return;
+    }
+
+    module.events.available.push("touchstart", "touchmove", "touchend", "touchcancel");
+
+    XML3D.extend(module.CanvasHandler.prototype, {
+
+        hasTouchEvents:function () {
+            return true;
+        },
+
+        copyTouchEvent:function (event, options) {
+            var touchEventData = this.copyTouchEventData(event, options);
+            var touchEvent = this.createTouchEvent(touchEventData);
+            return touchEvent;
+        },
+
+
+        copyTouchEventData:function (event, options) {
+            var touchEventData = {
+                type:options.type || event.type,
+                timeStamp:Date.now(),
+                bubbles:event.bubbles,
+                cancelable:event.cancelable,
+                detail:event.detail,
+                screenX:event.screenX,
+                screenY:event.screenY,
+                pageX:event.pageX,
+                pageY:event.pageY,
+                clientX:event.clientX,
+                clientY:event.clientY,
+                ctrlKey:event.ctrlKey,
+                altKey:event.altKey,
+                shiftKey:event.shiftKey,
+                metaKey:event.metaKey,
+                scale:event.scale,
+                rotation:event.rotation,
+                view:event.view,
+                touches:event.touches,
+                changedTouches:event.changedTouches,
+                targetTouches:event.targetTouches
+            };
+            return touchEventData;
+        },
+
+        createTouchEvent:function (data) {
+            var touchEvent;
+
+            try {
+                touchEvent = document.createEvent('TouchEvent');
+            } catch (e) {
+                XML3D.debug.logWarning("Create Touch Event failed, creating UI instead");
+                touchEvent = document.createEvent('UIEvent');
+            }
+
+            if (touchEvent && touchEvent.initTouchEvent) {
+                if (touchEvent.initTouchEvent.length == 0) { //chrome
+                    touchEvent.initTouchEvent(data.touches, data.targetTouches, data.changedTouches,
+                        data.type, data.view, data.screenX, data.screenY, data.clientX, data.clientY);
+                } else if ( touchEvent.initTouchEvent.length == 12 ) { //firefox
+                    touchEvent.initTouchEvent(data.type, data.bubbles, data.cancelable, data.view,
+                        data.detail, data.ctrlKey, data.altKey, data.shiftKey, data.metaKey, data.touches,
+                        data.targetTouches,	data.changedTouches);
+                } else { //iOS length = 18
+                    touchEvent.initTouchEvent(data.type, data.bubbles, data.cancelable, data.view,
+                        data.detail, data.screenX, data.screenY, data.pageX, data.pageY, data.ctrlKey,
+                        data.altKey, data.shiftKey, data.metaKey, data.touches, data.targetTouches,
+                        data.changedTouches, data.scale, data.rotation);
+                }
+            }
+            return touchEvent;
+        },
+
+        /**
+         * @param {TouchEvent} evt
+         * @param {object?} opt
+         */
+        dispatchTouchEventOnPickedObject:function (evt, opt) {
+            opt = opt || {};
+            var touchEvent = this.copyTouchEvent(evt, opt);
+            touchEvent.preventDefault = function () { evt.preventDefault(); }
+            this.xml3dElem.dispatchEvent(touchEvent);
+        },
+
+        touchstart:function (evt) {
+            this.dispatchTouchEventOnPickedObject(evt);
+        },
+
+        touchend:function (evt) {
+            this.dispatchTouchEventOnPickedObject(evt);
+        },
+
+        touchmove:function (evt) {
+            this.dispatchTouchEventOnPickedObject(evt);
+        },
+
+        touchcancel:function (evt) {
+            this.dispatchTouchEventOnPickedObject(evt);
+        }
+
+    });
+
+
+}());(function () {
+
+    var module = XML3D.webgl;
+
+    module.events.available.push("click", "dblclick", "mousedown", "mouseup", "mouseover", "mousemove", "mouseout", "mousewheel");
+
+    XML3D.extend(module.CanvasHandler.prototype, {
+        /**
+         * @param {MouseEvent} event  The original event
+         * @param {Element} target  target to dispatch on
+         * @param {object}     opt    Options
+         */
+        dispatchMouseEvent:function (event, target, opt) {
+            opt = opt || {};
+            target = target || this.xml3dElem;
+            var x = opt.x !== undefined ? opt.x : event.clientX;
+            var y = opt.y !== undefined ? opt.y : event.clientY;
+            var noCopy = opt.noCopy || false;
+
+            // Copy event to avoid DOM dispatch errors (cannot dispatch event more
+            // than once)
+            event = noCopy ? event : this.copyMouseEvent(event);
+            this.initExtendedMouseEvent(event, x, y);
+
+            target.dispatchEvent(event);
+        },
+
+        /**
+         * @param {MouseEvent} event the event to copy
+         * @return {MouseEvent} the new event
+         */
+        copyMouseEvent:function (event) {
+            var evt = document.createEvent("MouseEvents");
+            evt.initMouseEvent(event.type,
+                // canBubble, cancelable, view, detail
+                event.bubbles, event.cancelable, event.view, event.detail,
+                // screenX, screenY, clientX, clientY
+                event.screenX, event.screenY, event.clientX, event.clientY,
+                // ctrl, alt, shift, meta, button
+                event.ctrlKey, event.altKey, event.shiftKey, event.metaKey, event.button,
+                // relatedTarget
+                event.relatedTarget);
+            if (event.dataTransfer)
+                evt.data = {url:event.dataTransfer.getData("URL"), text:event.dataTransfer.getData("Text")};
+            // override preventDefault to actually prevent the default of the original event
+            evt.preventDefault = function(){
+                event.preventDefault();
+            };
+            return evt;
+        },
+
+        createMouseEvent:function (type, opts) {
+            opts = opts || {};
+            var event = document.createEvent("MouseEvents");
+            event.initMouseEvent(type,
+                opts.canBubble !== undefined ? opts.canBubble : true,
+                opts.cancelable !== undefined ? opts.cancelable : true,
+                opts.view || window,
+                opts.detail != undefined ? opts.detail : 0,
+                opts.screenX != undefined ? opts.screenX : 0,
+                opts.screenY != undefined ? opts.screenY : 0,
+                opts.clientX != undefined ? opts.clientX : 0,
+                opts.clientY != undefined ? opts.clientY : 0,
+                opts.ctrl != undefined ? opts.ctrl : false,
+                opts.alt != undefined ? opts.alt : false,
+                opts.shift != undefined ? opts.shift : false,
+                opts.meta != undefined ? opts.meta : false,
+                opts.button != undefined ? opts.button : 0,
+                opts.relatedTarget);
+            return event;
+        },
+
+        /**
+         * Adds position and normal attributes to the given event.
+         *
+         * @param {Event} event
+         * @param {number} x
+         * @param {number} y
+         * @return {XML3DVec3}
+         */
+        initExtendedMouseEvent:function (event, x, y) {
+
+            var handler = this;
+            var xml3dElem = this.xml3dElem;
+
+            (function () {
+                var cachedPosition = undefined;
+                var cachedNormal = undefined;
+
+                event.__defineGetter__("normal", function () {
+                    if (cachedNormal !== undefined) return cachedNormal;
+                    var norm = (handler.getWorldSpaceNormalByPoint(x, y));
+                    cachedNormal = norm ? new window.XML3DVec3(norm[0], norm[1], norm[2]) : null;
+                    return cachedNormal;
+                });
+                event.__defineGetter__("position", function () {
+                    if (!cachedPosition) {
+                        var pos = handler.getWorldSpacePositionByPoint(x, y);
+                        cachedPosition = pos ? new window.XML3DVec3(pos[0], pos[1], pos[2]) : null;
+                    }
+                    return cachedPosition;
+                });
+
+            })();
+
+
+        },
+
+        setMouseMovePicking:function (isEnabled) {
+        },
+
+        /**
+         * @param {MouseEvent} evt
+         * @param {object?} opt
+         */
+        dispatchMouseEventOnPickedObject:function (evt, opt) {
+            opt = opt || {};
+            var pos = this.getMousePosition(evt);
+
+            var picked = null;
+            if (!opt.omitUpdate)
+                picked = this.getPickObjectByPoint(pos.x, pos.y);
+
+            this.dispatchMouseEvent(evt, picked && picked.node, pos);
+        },
+
+        getMousePosition:function (evt) {
+            var rct = this.canvas.getBoundingClientRect();
+            return {
+                x:(evt.clientX - rct.left),
+                y:(evt.clientY - rct.top)
+            };
+        },
+
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        mouseup:function (evt) {
+            this.dispatchMouseEventOnPickedObject(evt);
+        },
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        mousedown:function (evt) {
+            this.dispatchMouseEventOnPickedObject(evt);
+        },
+
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        click:function (evt) {
+            // Click follows always 'mouseup' => no update of pick object needed
+            this.dispatchMouseEventOnPickedObject(evt, { omitUpdate:true });
+        },
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        dblclick:function (evt) {
+            // Click follows always 'mouseup' => no update of pick object needed
+            this.dispatchMouseEventOnPickedObject(evt, { omitUpdate:true });
+        },
+
+        /**
+         * This method is called each time a mouseMove event is triggered on the
+         * canvas.
+         *
+         * This method also triggers mouseover and mouseout events of objects in the
+         * scene.
+         *
+         * @param {MouseEvent} evt
+         */
+        mousemove:function (evt) {
+            var pos = this.getMousePosition(evt);
+            this.dispatchMouseEventOnPickedObject(evt);
+            var curObj = this.renderer.pickedObject ? this.renderer.pickedObject.node : null;
+
+            // trigger mouseover and mouseout
+            if (curObj !== this.lastPickObj) {
+                if (this.lastPickObj) {
+                    // The mouse has left the last object
+                    this.dispatchMouseEvent(this.createMouseEvent("mouseout", {
+                        clientX:pos.x,
+                        clientY:pos.y,
+                        button:evt.button
+                    }), this.lastPickObj);
+                    if (!curObj) { // Nothing picked, this means we enter the xml3d canvas
+                        this.dispatchMouseEvent(this.createMouseEvent("mouseover", {
+                            clientX:pos.x,
+                            clientY:pos.y,
+                            button:evt.button
+                        }), this.xml3dElem);
+                    }
+                }
+                if (curObj) {
+                    // The mouse is now over a different object, so call the new
+                    // object's mouseover method
+                    this.dispatchMouseEvent(this.createMouseEvent("mouseover", {
+                        clientX:pos.x,
+                        clientY:pos.y,
+                        button:evt.button
+                    }), curObj);
+                    if (!this.lastPickObj) { // Nothing was picked before, this means we leave the xml3d canvas
+                        this.dispatchMouseEvent(this.createMouseEvent("mouseout", {
+                            clientX:pos.x,
+                            clientY:pos.y,
+                            button:evt.button
+                        }), this.xml3dElem);
+                    }
+                }
+
+                this.lastPickObj = curObj;
+            }
+        },
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        mouseout:function (evt) {
+            var pos = this.getMousePosition(evt);
+            this.dispatchMouseEvent(evt, this.lastPickObj, pos);
+        },
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        mouseover:function (evt) {
+            var pos = this.getMousePosition(evt);
+            this.dispatchMouseEventOnPickedObject(evt);
+        },
+
+        /**
+         * @param {MouseEvent} evt
+         */
+        mousewheel:function (evt) {
+            var pos = this.getMousePosition(evt);
+            // note: mousewheel type is not W3C standard, used in WebKit!
+            this.dispatchMouseEventOnPickedObject(evt);
+        }
+
+    });
+
+}());// Utility functions
+(function(webgl) {
+
+    webgl.checkError = function(gl, text)
     {
         var error = gl.getError();
         if (error !== gl.NO_ERROR) {
@@ -16644,22 +19587,27 @@ XML3D.webgl.stopEvent = function(ev) {
         }
     };
 
-    var minmax = new Float32Array(6);
-
-    XML3D.webgl.calculateBoundingBox = function(positions, index) {
-        var bbox = new window.XML3DBox();
+    /**
+     * Calculate bounding box from psoitions and optional indices
+     * TODO: Remove FloatArray creation
+     * @param {Float32Array} positions
+     * @param {Int16Array|null} index
+     * @returns {Float32Array}
+     */
+    webgl.calculateBoundingBox = function(positions, index) {
+        var bbox = new XML3D.math.bbox.create();
 
         if (!positions || positions.length < 3)
             return bbox;
 
         if (index) {
             var i0 = index[0]*3;
-            minmax[0] = positions[i0];
-            minmax[1] = positions[i0 + 1];
-            minmax[2] = positions[i0 + 2];
-            minmax[3] = positions[i0];
-            minmax[4] = positions[i0 + 1];
-            minmax[5] = positions[i0 + 2];
+            bbox[0] = positions[i0];
+            bbox[1] = positions[i0 + 1];
+            bbox[2] = positions[i0 + 2];
+            bbox[3] = positions[i0];
+            bbox[4] = positions[i0 + 1];
+            bbox[5] = positions[i0 + 2];
 
             for ( var i = 1; i < index.length; i++) {
                 var i1 = index[i] * 3;
@@ -16667,72 +19615,69 @@ XML3D.webgl.stopEvent = function(ev) {
                 var p2 = positions[i1 + 1];
                 var p3 = positions[i1 + 2];
 
-                if (p1 < minmax[0])
-                    minmax[0] = p1;
-                if (p2 < minmax[1])
-                    minmax[1] = p2;
-                if (p3 < minmax[2])
-                    minmax[2] = p3;
-                if (p1 > minmax[3])
-                    minmax[3] = p1;
-                if (p2 > minmax[4])
-                    minmax[4] = p2;
-                if (p3 > minmax[5])
-                    minmax[5] = p3;
+                if (p1 < bbox[0])
+                    bbox[0] = p1;
+                if (p2 < bbox[1])
+                    bbox[1] = p2;
+                if (p3 < bbox[2])
+                    bbox[2] = p3;
+                if (p1 > bbox[3])
+                    bbox[3] = p1;
+                if (p2 > bbox[4])
+                    bbox[4] = p2;
+                if (p3 > bbox[5])
+                    bbox[5] = p3;
             }
         } else {
-            minmax[0] = positions[0];
-            minmax[1] = positions[1];
-            minmax[2] = positions[2];
-            minmax[3] = positions[0];
-            minmax[4] = positions[1];
-            minmax[5] = positions[2];
+            bbox[0] = positions[0];
+            bbox[1] = positions[1];
+            bbox[2] = positions[2];
+            bbox[3] = positions[0];
+            bbox[4] = positions[1];
+            bbox[5] = positions[2];
 
             for ( var i = 3; i < positions.length; i += 3) {
-                if (positions[i] < minmax[0])
-                    minmax[0] = positions[i];
-                if (positions[i + 1] < minmax[1])
-                    minmax[1] = positions[i + 1];
-                if (positions[i + 2] < minmax[2])
-                    minmax[2] = positions[i + 2];
-                if (positions[i] > minmax[3])
-                    minmax[3] = positions[i];
-                if (positions[i + 1] > minmax[4])
-                    minmax[4] = positions[i + 1];
-                if (positions[i + 2] > minmax[5])
-                    minmax[5] = positions[i + 2];
+                if (positions[i] < bbox[0])
+                    bbox[0] = positions[i];
+                if (positions[i + 1] < bbox[1])
+                    bbox[1] = positions[i + 1];
+                if (positions[i + 2] < bbox[2])
+                    bbox[2] = positions[i + 2];
+                if (positions[i] > bbox[3])
+                    bbox[3] = positions[i];
+                if (positions[i + 1] > bbox[4])
+                    bbox[4] = positions[i + 1];
+                if (positions[i + 2] > bbox[5])
+                    bbox[5] = positions[i + 2];
             }
         }
-        bbox.min.set(minmax[0], minmax[1], minmax[2]);
-        bbox.max.set(minmax[3], minmax[4], minmax[5]);
         return bbox;
     };
 
     var absMat = XML3D.math.mat4.create();
 
-    XML3D.webgl.transformAABB = function(bbox, gmatrix) {
+    var transformAABB = function(bbox, gmatrix) {
         if (bbox.isEmpty())
             return;
 
         var min = bbox.min._data;
         var max = bbox.max._data;
-    
+
         var center = XML3D.math.vec3.scale(XML3D.math.vec3.create(), XML3D.math.vec3.add(XML3D.math.vec3.create(), min, max), 0.5);
         var extend = XML3D.math.vec3.scale(XML3D.math.vec3.create(), XML3D.math.vec3.subtract(XML3D.math.vec3.create(), max, min), 0.5);
-    
+
         XML3D.math.mat4.copy(absMat, gmatrix);
         absMat.set([0, 0, 0, 1], 12)
         for ( var i = 0; i < 16; i++) {
             absMat[i] = Math.abs(absMat[i]);
         }
-    
+
         XML3D.math.vec3.transformMat4(extend, extend, absMat);
         XML3D.math.vec3.transformMat4(center, center, gmatrix);
-    
+
         XML3D.math.vec3.add(bbox.max._data, center, extend);
         XML3D.math.vec3.subtract(bbox.min._data, center, extend);
     };
-
 
     /**
      * Splits mesh data into smaller chunks. WebGL only supports 65,535 indices, meshes of greater size are
@@ -16942,44 +19887,44 @@ XML3D.webgl.stopEvent = function(ev) {
 
 
     };
-    
-    /** for every component of v1 and v2 applies f, i.e. f(v1[.],v2[.]), 
+
+    /** for every component of v1 and v2 applies f, i.e. f(v1[.],v2[.]),
      *  and returns it.
-     *  
-     *  @param {vec3} v1 
+     *
+     *  @param {vec3} v1
      *  @param {vec3} v2
      *  @param {function(number, number):number} f
-     *  @return {vec3} the mapped vector 
-     */    
+     *  @return {vec3} the mapped vector
+     */
     function mapVec(v1, v2, f)
     {
-        var vec = XML3D.math.vec3.create(); 
-        vec[0] = f(v1[0], v2[0]); 
+        var vec = XML3D.math.vec3.create();
+        vec[0] = f(v1[0], v2[0]);
         vec[1] = f(v1[1], v2[1]);
-        vec[2] = f(v1[2], v2[2]); 
-        
-        return vec; 
+        vec[2] = f(v1[2], v2[2]);
+
+        return vec;
     };
 
     /**
-     * @param {XML3DBox} bbox
-     * @param {XML3DVec3} min
-     * @param {XML3DVec3} max
+     * @param {XML3D.webgl.BoundingBox} bbox
+     * @param {vec3} min
+     * @param {vec3} max
      * @param {mat4} trafo
      */
     XML3D.webgl.adjustMinMax = function(bbox, min, max, trafo) {
         var xfmmin = XML3D.math.vec3.create();
         var xfmmax = XML3D.math.vec3.create();
-        XML3D.math.vec3.transformMat4(xfmmin, bbox.min._data, trafo);
-        XML3D.math.vec3.transformMat4(xfmmax, bbox.max._data, trafo);
-        
+        XML3D.math.vec3.transformMat4(xfmmin, bbox.min, trafo);
+        XML3D.math.vec3.transformMat4(xfmmax, bbox.max, trafo);
+
         /* bounding box is axis-aligned, but through transformation
-         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57), 
-         * here min's and max' x and z values are swapped). So we 
-         * order them now. 
+         * min and max values might be shuffled (image e.g. a rotation (0, 1, 0, 1.57),
+         * here min's and max' x and z values are swapped). So we
+         * order them now.
          */
-        var bbmin = mapVec(xfmmin, xfmmax, Math.min); 
-        var bbmax = mapVec(xfmmin, xfmmax, Math.max); 
+        var bbmin = mapVec(xfmmin, xfmmax, Math.min);
+        var bbmax = mapVec(xfmmin, xfmmax, Math.max);
 
         if (bbmin[0] < min[0])
             min[0] = bbmin[0];
@@ -16993,15 +19938,6 @@ XML3D.webgl.stopEvent = function(ev) {
             max[1] = bbmax[1];
         if (bbmax[2] > max[2])
             max[2] = bbmax[2];
-    };
-
-    XML3D.webgl.createEmptyTexture = function(gl) {
-        var handle = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, handle);
-        var data = new Uint8Array([ 255, 128, 128, 255 ]);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     };
 
     /** Calculate the offset of the given element and return it.
@@ -17046,511 +19982,38 @@ XML3D.webgl.stopEvent = function(ev) {
      *  @param {!number} pageY the y-coordinate relative to the page
      *  @return {{x: number, y: number}} the converted coordinates
      */
-    XML3D.webgl.convertPageCoords = function(xml3dEl, pageX, pageY)
+    webgl.convertPageCoords = function(xml3dEl, pageX, pageY)
     {
         var off = calculateOffset(xml3dEl);
 
         return {x: pageX - off.left, y: pageY - off.top};
     };
-})();
-(function() {
 
-    /***************************************************************************
-     * Class XML3D.webgl.XML3DShaderManager
+    /**
+     * Convert the given y-coordinate on the canvas to a y-coordinate appropriate in
+     * the GL context. The y-coordinate gets turned upside-down. The lowest possible
+     * canvas coordinate is 0, so we need to subtract 1 from the height, too.
      *
-     * The XML3DShaderManager is an abstraction between the renderer and WebGL.
-     * It handles the creation and management of all shaders used in the scene,
-     * including internal shaders (eg. picking shader).
-     *
-     **************************************************************************/
-    var TEXTURE_STATE = {
-        INVALID : -1,
-        UNLOADED : 0,
-        LOADED : 1,
-        VALID : 2
-    };
-
-    var TextureInfo = function(handle, opt) {
-        opt = opt || {};
-        this.handle = handle;
-        this.status = opt.status || TEXTURE_STATE.INVALID;
-        this.onload = opt.onload;
-        this.unit = opt.unit || 0;
-        this.image = opt.image || null;
-        this.config = opt.config || null;
-        this.canvas = opt.canvas || null;
-        this.context = opt.context || null; // canvas context
-    };
-
-    TextureInfo.prototype.setLoaded = function() {
-        if (this.status != TEXTURE_STATE.UNLOADED)
-            XML3D.debug.logError("Trying to set Texture with state " + this.status + " to 'loaded'");
-        this.status = TEXTURE_STATE.LOADED;
-        if (this.onload)
-            this.onload.call(this);
-    };
-
-    var InvalidTexture = function() {
-        this.status = TEXTURE_STATE.INVALID;
-    };
-
-    /**
-     * @constructor
-     * @param {WebGLProgram} program
-     * @param {{ fragment: string, vertex: string }} sources
+     * @param {HTMLCanvasElement} canvas
+     * @param {number} y
+     * @return {number} the converted y-coordinate
      */
-    var ProgramObject = function(program, sources) {
-        this.attributes = {};
-        this.uniforms = {};
-        this.samplers = {};
-        this.handle = program;
-        this.needsLights = true;
-        this.vSource = sources.vertex;
-        this.fSource = sources.fragment;
-        var maxTextureUnit = 0;
-        this.nextTextureUnit = function() {
-            return maxTextureUnit++;
-        }
-    };
-
-    var XML3DShaderManager = function(renderer, canvasId) {
-        this.renderer = renderer;
-        this.gl = renderer.gl;
-        this.canvasId = canvasId;
-
-        this.shaderCache = {
-            fragment : {},
-            vertex : {}
-        };
-
-        this.currentProgram = null;
-
-        /** @type {Object.<String,ProgramObject>} */
-        this.shaders = {};
-
-        this.createDefaultShaders();
-    };
-
-    /**
-     * @param {Array!} directives
-     * @param {string!} source
-     * @returns {string}
-     */
-    XML3DShaderManager.addDirectivesToSource = function(directives, source) {
-        var fragment = "";
-        Array.forEach(directives, function(v) {
-            fragment += "#define " + v + "\n";
-        });
-        return fragment + "\n" + source;
-    };
-
-    XML3DShaderManager.prototype.createDefaultShaders = function() {
-        this.createFallbackShader();
-        this.createPickingShader();
-    };
-
-    /**
-     * Always create a default flat shader as a fallback for error handling
-     */
-    XML3DShaderManager.prototype.createFallbackShader = function() {
-        var desc = XML3D.shaders.getScript("matte");
-        var mat = this.createMaterialFromShaderDescriptor(desc);
-        var fallbackShader = mat.getProgram();
-        this.bindShader(fallbackShader);
-        XML3DShaderManager.setUniform(this.gl, fallbackShader.uniforms["diffuseColor"], [ 1, 0, 0 ]);
-        this.unbindShader(fallbackShader);
-        this.shaders["defaultShader"] = fallbackShader;
-    };
-
-    /**
-     * Create picking shaders
-     */
-    XML3DShaderManager.prototype.createPickingShader = function() {
-        this.shaders["pickobjectid"] = this.getStandardShaderProgram("pickobjectid");
-        this.shaders["pickedposition"] = this.getStandardShaderProgram("pickedposition");
-        this.shaders["pickedNormals"] = this.getStandardShaderProgram("pickedNormals");
-    };
-
-    /**
-     * @param descriptor
-     * @returns {Material}
-     */
-    XML3DShaderManager.prototype.createMaterialFromShaderDescriptor = function(descriptor) {
-        var result = new Material(this);
-        XML3D.extend(result, descriptor);
-        return result;
-    };
-
-
-    /**
-     *
-     * @param shaderAdapter
-     * @param lights
-     * @returns {string}
-     */
-    XML3DShaderManager.prototype.createShader = function(shaderAdapter, lights) {
-        if (!shaderAdapter || !shaderAdapter.node.script) {
-            return "defaultShader";
-        }
-
-        var shaderNode = shaderAdapter.node;
-        var uri = new XML3D.URI("#" + shaderNode.id);
-        var shaderId = uri.getAbsoluteURI(shaderNode.ownerDocument.documentURI).toString();
-
-        var program = this.shaders[shaderId];
-
-        if (program && !lights.structureChanged)
-            return shaderId;
-
-        var scriptURI = new XML3D.URI(shaderNode.script);
-        if (scriptURI.scheme != "urn") {
-            return "defaultShader";
-        }
-
-        var descriptor = XML3DShaderManager.getShaderDescriptor(scriptURI.path);
-        var material = this.createMaterialFromShaderDescriptor(descriptor);
-        var dataTable = shaderAdapter.requestData(material.getRequestFields());
-
-        program = material.getProgram(lights, dataTable);
-
-        if (!program) {
-             XML3D.debug.logError("Unknown shader URI: " + scriptURI + ". Using default shader instead.");
-            return "defaultShader";
-        }
-
-        this.shaders[shaderId] = program;
-        this.gl.useProgram(program.handle);
-
-        var canvasId = shaderAdapter.factory.canvasId;
-
-        this.setUniformsFromComputeResult(program, dataTable, canvasId, { force: true });
-        this.createTexturesFromComputeResult(program, dataTable, canvasId, { force: true });
-        //XML3D.webgl.checkError(this.gl, "setSamplers");
-        return shaderId;
-    };
-
-    /**
-     * @param {string} path
-     * @returns {string}
-     */
-    XML3DShaderManager.getShaderDescriptor = function(path) {
-        var shaderName = path.substring(path.lastIndexOf(':') + 1);
-        return XML3D.shaders.getScript(shaderName);
-    };
-
-    XML3DShaderManager.prototype.getStandardShaderProgram = function(name) {
-        var sources = {};
-
-        sources = XML3D.shaders.getScript(name);
-        if (!sources || !sources.vertex) {
-            sources = {};
-            XML3D.debug.logError("Unknown shader: " + name + ". Using flat shader instead.");
-        }
-
-        var shaderProgram = this.createProgramFromSources(sources);
-
-        return shaderProgram;
-    };
-
-    /**
-     *
-     * @param {{fragment: string, vertex: string}!} sources
-     * @returns {ProgramObject}
-     */
-    XML3DShaderManager.prototype.createProgramFromSources = function(sources) {
-        var gl = this.gl;
-
-        if (!sources.vertex || !sources.fragment) {
-            return this.shaders["defaultShader"];
-        }
-
-        var sc = this.shaderCache;
-        var vertexShader = sc.vertex[sources.vertex];
-        if (!vertexShader) {
-            vertexShader = sc.vertex[sources.vertex] = XML3DShaderManager.createWebGLShaderFromSource(gl, gl.VERTEX_SHADER, sources.vertex);
-        }
-        var fragmentShader = sc.fragment[sources.fragment];
-        if (!fragmentShader) {
-            fragmentShader = sc.fragment[sources.fragment] = XML3DShaderManager.createWebGLShaderFromSource(gl, gl.FRAGMENT_SHADER, sources.fragment);
-        }
-
-        if (!vertexShader || !fragmentShader) {
-            // Use a default flat shader instead
-            return this.shaders["defaultShader"];
-        }
-
-        var prg = gl.createProgram();
-
-        // Link shader program
-        gl.attachShader(prg, vertexShader);
-        gl.attachShader(prg, fragmentShader);
-        gl.linkProgram(prg);
-
-        if (gl.getProgramParameter(prg, gl.LINK_STATUS) == 0) {
-            var errorString = "Shader linking failed: \n";
-            errorString += gl.getProgramInfoLog(prg);
-            errorString += "\n--------\n";
-            XML3D.debug.logError(errorString);
-            gl.getError();
-
-            return this.shaders["defaultShaders"];
-        }
-
-        var programObject = new ProgramObject(prg, sources);
-        this.currentProgram = prg;
-        gl.useProgram(prg);
-
-        // Tally shader attributes
-        var numAttributes = gl.getProgramParameter(prg, gl.ACTIVE_ATTRIBUTES);
-        for ( var i = 0; i < numAttributes; i++) {
-            var att = gl.getActiveAttrib(prg, i);
-            if (!att)
-                continue;
-            var attInfo = {};
-            attInfo.name = att.name;
-            attInfo.size = att.size;
-            attInfo.glType = att.type;
-            attInfo.location = gl.getAttribLocation(prg, att.name);
-            programObject.attributes[att.name] = attInfo;
-        }
-
-        // Tally shader uniforms and samplers
-        var numUniforms = gl.getProgramParameter(prg, gl.ACTIVE_UNIFORMS);
-        for ( var i = 0; i < numUniforms; i++) {
-            var uni = gl.getActiveUniform(prg, i);
-            if (!uni)
-                continue;
-            var uniInfo = {};
-            uniInfo.name = uni.name;
-            uniInfo.size = uni.size;
-            uniInfo.glType = uni.type;
-            uniInfo.location = gl.getUniformLocation(prg, uni.name);
-
-            var name = uniInfo.name;
-            // Need to discuss how to sort out the consequences of doing this in the renderer first --Chris
-            if(name.substring(name.length-3) == "[0]") {
-                name = name.substring(0, name.length -3); // Remove [0]
-            }
-
-            if (uni.type == gl.SAMPLER_2D || uni.type == gl.SAMPLER_CUBE) {
-                uniInfo.unit = programObject.nextTextureUnit();
-                programObject.samplers[name] = uniInfo;
-            } else
-                programObject.uniforms[name] = uniInfo;
-        }
-
-        programObject.changes = [];
-        return programObject;
-    };
-
-    /**
-     * @param {number} type
-     * @param {string} shaderSource
-     * @returns {WebGLShader|null}
-     */
-    XML3DShaderManager.createWebGLShaderFromSource = function(gl, type, shaderSource) {
-        var shd = gl.createShader(type);
-        gl.shaderSource(shd, shaderSource);
-        gl.compileShader(shd);
-
-        if (gl.getShaderParameter(shd, gl.COMPILE_STATUS) == 0) {
-            var errorString = "";
-            if (type == gl.VERTEX_SHADER)
-                errorString = "Vertex shader failed to compile: \n";
-            else
-                errorString = "Fragment shader failed to compile: \n";
-
-            errorString += gl.getShaderInfoLog(shd) + "\n--------\n";
-            XML3D.debug.logError(errorString);
-            gl.getError();
-            return null;
-        }
-
-        return shd;
-    };
-
-    /**
-     *
-     * @param {Object} shaderAdapter
-     * @param {ProgramObject} programObject
-     * @param {Array.<string>} names
-     */
-    XML3DShaderManager.prototype.resetUniformVariables = function(shaderAdapter, programObject, names)
-    {
-        if(!shaderAdapter)
-            return;
-        var result = shaderAdapter.computeRequest.getResult();
-        for(var i in names) {
-            var name = names[i];
-            var entry = result.getOutputData(name);
-            if(entry) {
-                XML3DShaderManager.setUniform(this.gl, programObject.uniforms[name], entry.getValue());
-            }
-        }
+    webgl.canvasToGlY = function(canvas, y) {
+        return canvas.height - y - 1;
     }
 
-    XML3DShaderManager.prototype.recompileShader = function(shaderAdapter, lights) {
-        var shaderName = shaderAdapter.node.id;
-        var shader = this.shaders[shaderName];
-        if (shader) {
-            this.destroyShader(shader);
-            delete this.shaders[shaderName];
-            this.createShader(shaderAdapter, lights);
-        }
+    webgl.FRAGMENT_HEADER = [
+        "#ifdef GL_FRAGMENT_PRECISION_HIGH",
+        "precision highp float;",
+        "#else",
+        "precision mediump float;",
+        "#endif // GL_FRAGMENT_PRECISION_HIGH",
+        "\n"
+    ].join("\n");
+
+    webgl.addFragmentShaderHeader = function(fragmentShaderSource) {
+        return webgl.FRAGMENT_HEADER + fragmentShaderSource;
     };
-
-    XML3DShaderManager.prototype.shaderDataChanged = function(adapter, request, changeType) {
-        var canvasId = adapter.factory.canvasId;
-        var shaderId = new XML3D.URI("#" + adapter.node.id).getAbsoluteURI(adapter.node.ownerDocument.documentURI).toString();
-        var program = this.shaders[shaderId];
-        if(!program) return; // No Program - probably invalid shader
-        var result = request.getResult();
-        this.bindShader(program);
-        this.setUniformsFromComputeResult(program, result, canvasId);
-        this.createTexturesFromComputeResult(program, result);
-        if(program.material) {
-            program.material.parametersChanged(result.getOutputMap());
-            program.hasTransparency = program.material.isTransparent;
-        }
-        this.renderer.requestRedraw("Shader data changed");
-    };
-
-    XML3DShaderManager.prototype.getShaderById = function(shaderId) {
-        var sp = this.shaders[shaderId];
-        if (!sp) {
-            var shaderAdapter = XML3D.base.resourceManager.getAdapter(document.getElementById(shaderId), XML3D.webgl, this.canvasId);
-            if (shaderAdapter) {
-                // This must be a shader we haven't created yet (maybe it was
-                // just added or
-                // was not assigned to a group until now
-                this.createShader(shaderAdapter, this.renderer.lights);
-                if (this.shaders[shaderId])
-                    return this.shaders[shaderId];
-            }
-
-            XML3D.debug.logError("Could not find the shader [ " + shaderId + " ]");
-            sp = this.shaders["default"];
-        }
-        return sp;
-    };
-
-    /**
-     * @param {ProgramObject} programObject
-     * @param {Xflow.ComputeResult} data
-     * @param {Object?} opt
-     */
-    XML3DShaderManager.prototype.setUniformsFromComputeResult = function(programObject, data, canvasId, opt) {
-        var dataMap = data.getOutputMap();
-        var uniforms = programObject.uniforms;
-        var opt = opt || {};
-
-        var force = opt.force || false;
-
-        for ( var name in uniforms) {
-            var entry = dataMap[name];
-
-            if(!entry)
-                continue;
-
-            var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, canvasId);
-
-            if(force || webglData.changed) {
-                XML3DShaderManager.setUniform(this.gl, uniforms[name], entry.getValue());
-                webglData.changed = 0;
-            }
-        }
-    };
-
-    /**
-     * @param {ProgramObject} programObject
-     * @param {Xflow.ComputeResult} result
-     * @param {Object?} opt options
-     */
-    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result, canvasId, opt) {
-        var texUnit = 0;
-        var samplers = programObject.samplers;
-        var opt = opt || {};
-
-        var force = opt.force || false;
-
-        for ( var name in samplers) {
-            var sampler = samplers[name];
-            var entry = result.getOutputData(name);
-
-            if (!entry) {
-                sampler.info = new InvalidTexture();
-                continue;
-            }
-
-            var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, canvasId);
-
-            if(force || webglData.changed) {
-                this.createTextureFromEntry(entry, sampler, texUnit);
-                webglData.changed = 0;
-            }
-            texUnit++;
-        }
-    };
-
-
-    XML3DShaderManager.prototype.setUniformVariables = function(shader, uniforms) {
-        for ( var name in uniforms) {
-            var u = uniforms[name];
-
-            if (u.value)
-                u = u.value;
-
-            if (shader.uniforms[name]) {
-                XML3DShaderManager.setUniform(this.gl, shader.uniforms[name], u);
-            }
-        }
-
-    };
-
-    /**
-     *
-     * @param {ProgramObject} programObject
-     */
-    XML3DShaderManager.prototype.bindShader = function(programObject) {
-        var sp = (typeof programObject == typeof "") ? this.getShaderById(programObject) : programObject;
-
-        if (this.currentProgram != sp.handle) {
-            this.currentProgram = sp.handle;
-            this.gl.useProgram(sp.handle);
-        }
-
-        var samplers = sp.samplers;
-        for ( var tex in samplers) {
-            this.bindTexture(samplers[tex]);
-        }
-    };
-
-    /** Assumes, the shader is already bound **/
-    XML3DShaderManager.prototype.updateActiveShader = function(sp) {
-        // Apply any changes encountered since the last time this shader was
-        // rendered
-        for ( var i = 0, l = sp.changes.length; i < l; i++) {
-            var change = sp.changes[i];
-            if (change.type == "uniform" && sp.uniforms[change.name]) {
-                XML3DShaderManager.setUniform(this.gl, sp.uniforms[change.name], change.newValue);
-            }
-        }
-        sp.changes = [];
-    };
-
-    XML3DShaderManager.prototype.unbindShader = function(shader) {
-        // TODO: unbind samplers (if any)
-        var sp = (typeof shader == typeof "") ? this.getShaderById(shader) : shader;
-        var samplers = sp.samplers;
-        for ( var tex in samplers) {
-            this.unbindTexture(samplers[tex]);
-        }
-
-        this.currentProgram = null;
-        this.gl.useProgram(null);
-    };
-
-    var rc = window.WebGLRenderingContext;
 
     /**
      * Set uniforms for active program
@@ -17559,647 +20022,2560 @@ XML3D.webgl.stopEvent = function(ev) {
      * @param value
      * @param {boolean=} transposed
      */
-    XML3DShaderManager.setUniform = function(gl, u, value, transposed) {
+    webgl.setUniform = function(gl, u, value, transposed) {
 
         switch (u.glType) {
-        case rc.BOOL:
-        case rc.INT:
-        case rc.SAMPLER_2D:
-            if (value.length)
-                gl.uniform1i(u.location, value[0]);
-            else
-                gl.uniform1i(u.location, value);
-            break;
+            case 35670: //gl.BOOL
+            case 5124:  //gl.INT
+            case 35678: //gl.SAMPLER_2D
+                if (value.length !== undefined) {
+                    gl.uniform1iv(u.location, value);
+                } else {
+                    gl.uniform1i(u.location, value);
+                }
+                break;
 
-        case 35671: // gl.BOOL_VEC2
-        case 35667:
-            gl.uniform2iv(u.location, value);
-            break; // gl.INT_VEC2
+            case 35671: // gl.BOOL_VEC2
+            case 35667:
+                gl.uniform2iv(u.location, value);
+                break; // gl.INT_VEC2
 
-        case 35672: // gl.BOOL_VEC3
-        case 35668:
-            gl.uniform3iv(u.location, value);
-            break; // gl.INT_VEC3
+            case 35672: // gl.BOOL_VEC3
+            case 35668:
+                gl.uniform3iv(u.location, value);
+                break; // gl.INT_VEC3
 
-        case 35673: // gl.BOOL_VEC4
-        case 35669:
-            gl.uniform4iv(u.location, value);
-            break; // gl.INT_VEC4
+            case 35673: // gl.BOOL_VEC4
+            case 35669:
+                gl.uniform4iv(u.location, value);
+                break; // gl.INT_VEC4
 
-        case 5126:
-            if (value.length != null)
-                gl.uniform1fv(u.location, value);
-            else
-                gl.uniform1f(u.location, value);
-            break; // gl.FLOAT
-        case 35664:
-            gl.uniform2fv(u.location, value);
-            break; // gl.FLOAT_VEC2
-        case 35665:
-            gl.uniform3fv(u.location, value);
-            break; // gl.FLOAT_VEC3
-        case 35666:
-            gl.uniform4fv(u.location, value);
-            break; // gl.FLOAT_VEC4
+            case 5126:
+                if (value.length != null)
+                    gl.uniform1fv(u.location, value);
+                else
+                    gl.uniform1f(u.location, value);
+                break; // gl.FLOAT
+            case 35664:
+                gl.uniform2fv(u.location, value);
+                break; // gl.FLOAT_VEC2
+            case 35665:
+                gl.uniform3fv(u.location, value);
+                break; // gl.FLOAT_VEC3
+            case 35666:
+                gl.uniform4fv(u.location, value);
+                break; // gl.FLOAT_VEC4
 
-        case 35674:
-            gl.uniformMatrix2fv(u.location, transposed || false, value);
-            break;// gl.FLOAT_MAT2
-        case 35675:
-            gl.uniformMatrix3fv(u.location, transposed || false, value);
-            break;// gl.FLOAT_MAT3
-        case 35676:
-            gl.uniformMatrix4fv(u.location, transposed || false, value);
-            break;// gl.FLOAT_MAT4
+            case 35674:
+                gl.uniformMatrix2fv(u.location, transposed || false, value);
+                break;// gl.FLOAT_MAT2
+            case 35675:
+                gl.uniformMatrix3fv(u.location, transposed || false, value);
+                break;// gl.FLOAT_MAT3
+            case 35676:
+                gl.uniformMatrix4fv(u.location, transposed || false, value);
+                break;// gl.FLOAT_MAT4
 
-        default:
-            XML3D.debug.logError("Unknown uniform type " + u.glType);
-            break;
+            default:
+                XML3D.debug.logError("Unknown uniform type " + u.glType);
+                break;
         }
     };
 
-    XML3DShaderManager.prototype.destroyShader = function(shader) {
-        for ( var tex in shader.samplers) {
-            this.destroyTexture(shader.samplers[tex]);
-        }
+})(XML3D.webgl);
+(function(webgl){
 
-        this.gl.deleteProgram(shader.handle);
+    var Pager = function() {
+        /** @type Array<Float32Array> */
+        this.pages = [];
+        /** @type number */
+        this.nextOffset = 0;
+        /** @type Array<*> */
+        this.freeEntries = [];
+        // Add a first page
+        this.addPage();
     };
+
+    XML3D.createClass(Pager, XML3D.util.EventDispatcher, {
+        addPage : function() {
+            var page = new Float32Array(Pager.PAGE_SIZE);
+            this.pages.push(page);
+            this.nextOffset = 0;
+            XML3D.debug.logInfo("adding page", this.pages.length);
+        },
+
+        getPageEntry : function(size) {
+            if(!size)
+                throw new Error("No size given for page entry");
+            return this.reusePageEntry(size) || this.createPageEntry(size);
+        },
+
+        /**
+         * @param {number} size Requested size in number of floats
+         * @returns {{ page: Float32Array, offset: number, size: number }}
+         */
+        reusePageEntry : function(size) {
+            var sameSizeEntries = this.freeEntries[size];
+            if(sameSizeEntries && sameSizeEntries.length) {
+                return sameSizeEntries.pop();
+            }
+            return null;
+        },
+
+        /**
+         * @param {number} size  Size in number of floats
+         * @returns {{ page: Float32Array, offset: number, size: number }}
+         */
+        createPageEntry : function(size) {
+            if (this.nextOffset + size > Pager.PAGE_SIZE) {
+                this.addPage();
+                return this.getPageEntry(size);
+            }
+            var page = this.pages[this.pages.length-1];
+            var localOffset = this.nextOffset;
+            this.nextOffset += size;
+            return { page: page, offset: localOffset, size: size };
+        },
+
+        /**
+         *
+         * @param {{ page: Float32Array, offset: number, size: number }} entryInfo
+         */
+        freePageEntry : function(entryInfo) {
+            var sameSizeEntries = this.freeEntries[entryInfo.size];
+            if(!sameSizeEntries) {
+                sameSizeEntries = this.freeEntries[entryInfo.size] = [];
+            }
+            sameSizeEntries.push(entryInfo);
+        }
+    });
+    Pager.PAGE_SIZE = 1<<12;
+
+    webgl.Pager = Pager;
+
+}(XML3D.webgl));(function() {
+    /** @const */
+    var WORLD_MATRIX_OFFSET = 0;
 
     /**
-     *
-     * @param {ProgramObject} programObject
-     * @param {Xflow.ComputeResult} result
+     * @constructor
+     * @param {Scene} scene
+     * @param {Object} pageEntry
+     * @param {Object} opt
      */
-    XML3DShaderManager.prototype.createTexturesFromComputeResult = function(programObject, result) {
-        var samplers = programObject.samplers;
-        for ( var name in samplers) {
-            var sampler = samplers[name];
-            var entry = result.getOutputData(name);
+    var RenderNode = function(type, scene, pageEntry, opt) {
+        opt = opt || {};
 
-            if (!entry) {
-                sampler.info = sampler.info || new InvalidTexture();
-                continue;
-            }
-
-            this.createTextureFromEntry(entry, sampler);
-        }
+        this.scene = scene;
+        this.type = type;
+        this.name = opt.name || "";
+        this.page = pageEntry.page;
+        this.offset = pageEntry.offset;
+        this.entrySize = pageEntry.size;
+        this.localVisible = opt.visible;
+        this.visible = this.localVisible !== undefined ? this.localVisible : opt.parent ? opt.parent.isVisible() : true;
+        this.transformDirty = true;
+        this.children = [];
+        this.setParent(opt.parent || scene.rootNode);
     };
 
-    /**
-     *
-     * @param {Xflow.TextureEntry} texEntry
-     * @param sampler
-     */
-    XML3DShaderManager.prototype.createTextureFromEntry = function(texEntry, sampler) {
-        var img = texEntry.getImage();
-        if (img) {
-            var handle = null;
-            var canvas = null;
-            var context = null;
-            if (sampler.info && sampler.info.status != TEXTURE_STATE.INVALID) {
-                handle = sampler.info.handle;
-                canvas = sampler.info.canvas;
-                context = sampler.info.context;
-            } else {
-                handle = this.gl.createTexture();
-            }
+    XML3D.extend(RenderNode.prototype, {
 
-            var renderer = this.renderer;
-            var info = new TextureInfo(handle, {
-                status : (img.complete || img.readyState) ? TEXTURE_STATE.LOADED : TEXTURE_STATE.UNLOADED,
-                onload : function() {
-                    renderer.requestRedraw.call(renderer, "Texture loaded");
-                },
-                unit : sampler.unit,
-                image : img,
-                config : texEntry.getSamplerConfig(),
-                canvas : canvas,
-                context : context
+        getChildren: function() {
+            return this.children;
+        },
+
+        getParent: function() {
+            return this.parent;
+        },
+
+        setParent: function(parent) {
+            this.parent = parent;
+            if (parent && parent.addChild) {
+                parent.addChild(this);
+            }
+        },
+        traverse: function(callback) {
+            callback(this);
+            this.children.forEach(function(child){
+                child.traverse(callback);
+            })
+        },
+
+        getWorldMatrix: function(dest) {
+            if (this.transformDirty) {
+                this.parent.getWorldMatrix(dest);
+                this.updateWorldMatrix(dest);
+            }
+            var o = this.offset + WORLD_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                dest[i] = this.page[o];
+            }
+        },
+
+        setWorldMatrix: function(source) {
+            var o = this.offset + WORLD_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                this.page[o] = source[i];
+            }
+            this.transformDirty = false;
+            if (this.setBoundingBoxDirty) {
+                this.setBoundingBoxDirty();
+            }
+        },
+
+        isVisible: function() {
+            return this.visible;
+        },
+
+        setTransformDirty: function() {
+            this.transformDirty = true;
+        },
+
+        setLocalVisible: function(newVal) {
+            this.localVisible = newVal;
+            if (this.parent.isVisible()) {
+                // if parent is not visible this group is also invisible
+                this.setVisible(newVal);
+            }
+        },
+
+        setVisible: function(newVal) {
+            var downstream = newVal;
+            if (this.localVisible === false) {
+                downstream = false;
+            }
+            this.visible = downstream;
+            this.children.forEach(function(obj) {
+                obj.setVisible(downstream);
             });
-            sampler.info = info;
-        } else {
-            sampler.info = new InvalidTexture();
-            XML3D.debug.logWarning("No image found for texture: " + sampler);
+        },
+
+        remove: function() {
+            this.parent.removeChild(this);
+            this.scene.freePageEntry({ page: this.page, offset: this.offset, size: this.entrySize });
         }
+
+    });
+
+    XML3D.webgl.RenderNode = RenderNode;
+})();
+(function (webgl) {
+    /**
+     * @interface
+     */
+    var IRenderObject = function() {};
+    IRenderObject.prototype.getModelViewMatrix = function() {};
+    IRenderObject.prototype.getModelViewProjectionMatrix = function() {};
+    IRenderObject.prototype.getNormalMatrix = function() {};
+    IRenderObject.prototype.getObjectSpaceBoundingBox = function() {};
+    IRenderObject.prototype.getWorldSpaceBoundingBox = function() {};
+    IRenderObject.prototype.updateWorldSpaceMatrices = function() {};
+    IRenderObject.prototype.isVisible = function() {};
+    IRenderObject.prototype.setTransformDirty = function() {};
+    IRenderObject.prototype.setShader = function() {};
+    IRenderObject.prototype.hasTransparency = function() {};
+
+    // Entry:
+    /** @const */
+    var WORLD_MATRIX_OFFSET = 0;
+    /** @const */
+    var OBJECT_BB_OFFSET = WORLD_MATRIX_OFFSET + 16;
+    /** @const */
+    var WORLD_BB_OFFSET = OBJECT_BB_OFFSET + 6;
+    /** @const */
+    var MODELVIEW_MATRIX_OFFSET = WORLD_BB_OFFSET + 6;
+    /** @const */
+    var MODELVIEWPROJECTION_MATRIX_OFFSET = MODELVIEW_MATRIX_OFFSET + 16;
+    /** @const */
+    var NORMAL_MATRIX_OFFSET = MODELVIEWPROJECTION_MATRIX_OFFSET + 16;
+    /** @const */
+    var ENTRY_SIZE = NORMAL_MATRIX_OFFSET + 16;
+
+    //noinspection JSClosureCompilerSyntax,JSClosureCompilerSyntax
+    /**
+     * Represents a renderable object in the scene.
+     * The RenderObject has these responsibilities:
+     *  1. Keep track of the transformation hierarchy and bounding boxes
+     *  2. Connect the DrawableClosure with the ShaderClosure
+     *
+     *  The {@link DrawableClosure} is a DrawableObject plus it's data
+     *  The {@link ShaderClosure} is a ProgramObject plus it's data
+     *  The concrete ShaderClosure can vary per DrawableObject and change
+     *  due to scene or object changes. Thus we have to keep track of the
+     *  related {@link IShaderComposer}.
+     *
+     * @constructor
+     * @implements {IRenderObject}
+     * @param {Scene} scene
+     * @param {Object} pageEntry
+     * @param {Object} opt
+     */
+    var RenderObject = function (scene, pageEntry, opt) {
+        XML3D.webgl.RenderNode.call(this, webgl.Scene.NODE_TYPE.OBJECT, scene, pageEntry, opt);
+        opt = opt || {};
+
+        /**
+         * Keep reference to DOM Element need e.g. for picking
+         * @type {Element}
+         */
+        this.node = opt.node;
+
+        /**
+         * Object related data
+         * @type {{data: Xflow.DataNode|null, type: string}}
+         */
+        this.object = opt.object || { data: null, type: "triangles" };
+
+        /**
+         * Can we rely on current WorldMatrix?
+         * @type {boolean}
+         */
+        this.transformDirty = true;
+
+        /**
+         * Can we rely on current Bounding Boxes?
+         * @type {boolean}
+         */
+        this.boundingBoxDirty = true;
+
+        /**
+         * The drawable closure transforms object data and type into
+         * a drawable entity
+         * @type {DrawableClosure}
+         */
+        this.drawable = this.createDrawable();
+
+        this.shader = opt.shader || {};
+        // Set start values;
+        this.initialize();
     };
+    RenderObject.ENTRY_SIZE = ENTRY_SIZE;
 
-    XML3DShaderManager.prototype.replaceTexture = function(adapter, texture) {
-        this.destroyTexture(texture);
-        var dtable = adapter.requestData([ texture.name ]);
-        var dtopt = dtable[texture.name].getValue();
+    RenderObject.IDENTITY_MATRIX = XML3D.math.mat4.create();
 
-        // FIX ME PLEASE
-        dtopt.imageAdapter.image = null;
-
-        this.createTexture(dtopt, texture, texture.texUnit);
-
-        return texture;
-
-    };
-
-    XML3DShaderManager.prototype.createTex2DFromData = function(internalFormat, width, height, sourceFormat, sourceType, texels, opt) {
-        var gl = this.gl;
-        var info = {};
-        if (!texels) {
-            if (sourceType == gl.FLOAT) {
-                texels = new Float32Array(width * height * 4);
-            } else {
-                texels = new Uint8Array(width * height * 4);
+    XML3D.createClass(RenderObject, XML3D.webgl.RenderNode, {
+        createDrawable: function () {
+            var result = this.scene.createDrawable(this);
+            if (result) {
+                var that = this;
+                result.addEventListener(webgl.Scene.EVENT_TYPE.DRAWABLE_STATE_CHANGED, function (evt) {
+                    if (evt.newState === webgl.DrawableClosure.READY_STATE.COMPLETE) {
+                        that.scene.moveFromQueueToReady(that);
+                    }
+                    else if (evt.newState === webgl.DrawableClosure.READY_STATE.INCOMPLETE &&
+                        evt.oldState === webgl.DrawableClosure.READY_STATE.COMPLETE) {
+                        that.scene.moveFromReadyToQueue(that);
+                    }
+                });
             }
-        }
+            return result;
+        },
+        initialize: function () {
+            this.setObjectSpaceBoundingBox(XML3D.math.EMPTY_BOX);
 
-        var handle = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, handle);
+            /** {Object?} **/
+            this.override = null;
+        },
+        setType: function(type) {
+            this.object.type = type;
+            // TODO: this.typeChangedEvent
+        },
+        getType: function() {
+            return this.object.type;
+        },
+        getDataNode: function() {
+            return this.object ? this.object.data : null;
+        },
 
-        // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, opt.wrapS);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, opt.wrapT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, opt.minFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, opt.magFilter);
+        dispose :function () {
+            this.scene.remove(this);
+        },
 
-        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, sourceFormat, sourceType, texels);
+        refreshShaderProgram: function() {
+            this.program = this.shader.composer.getShaderAfterStructureChanged(this.program, this.scene, this.override || {});
+        },
 
-        if (opt.isDepth) {
-            gl.texParameteri(gl.TEXTURE_2D, gl.DEPTH_TEXTURE_MODE, opt.depthMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, opt.depthCompareMode);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, opt.depthCompareFunc);
-        }
-        if (opt.generateMipmap) {
-            gl.generateMipmap(gl.TEXTURE_2D);
-        }
+        getModelViewMatrix: function(target) {
+            var o = this.offset + MODELVIEW_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                target[i] = this.page[o];
+            }
+        },
 
-        gl.bindTexture(gl.TEXTURE_2D, null);
+        getNormalMatrix: function(target) {
+            var o = this.offset + NORMAL_MATRIX_OFFSET;
+            target[0] = this.page[o];
+            target[1] = this.page[o+1];
+            target[2] = this.page[o+2];
+            target[3] = this.page[o+4];
+            target[4] = this.page[o+5];
+            target[5] = this.page[o+6];
+            target[6] = this.page[o+8];
+            target[7] = this.page[o+9];
+            target[8] = this.page[o+10];
+        },
 
-        info.handle = handle;
-        info.options = opt;
-        info.status = TEXTURE_STATE.VALID;
-        info.glType = gl.TEXTURE_2D;
-        info.format = internalFormat;
+        getModelViewProjectionMatrix: function(dest) {
+            var o = this.offset + MODELVIEWPROJECTION_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                dest[i] = this.page[o];
+            }
+        },
 
-        return info;
-    };
+        updateWorldSpaceMatrices: function(view, projection) {
+            if (this.transformDirty) {
+                this.updateWorldMatrix();
+            }
+            this.updateModelViewMatrix(view);
+            this.updateNormalMatrix();
+            this.updateModelViewProjectionMatrix(projection);
+        },
 
-    XML3DShaderManager.prototype.createTex2DFromImage = function(info) {
-        if (info.status == TEXTURE_STATE.INVALID) {
-            throw new Error("Invalid texture");
-        }
+        updateWorldMatrix: (function() {
+            var tmp_mat = XML3D.math.mat4.create();
+            return function() {
+                this.parent.getWorldMatrix(tmp_mat);
+                this.setWorldMatrix(tmp_mat);
+                this.updateWorldSpaceBoundingBox();
+                this.transformDirty = false;
+            }
+        })(),
 
-        var gl = this.gl;
-        var opt = info.config || {};
-        var image = info.image;
+        /** Relies on an up-to-date transform matrix **/
+        updateModelViewMatrix: function(view) {
+            if (this.transformDirty) {
+                this.updateWorldMatrix();
+            }
+            var page = this.page;
+            var offset = this.offset;
+            XML3D.math.mat4.multiplyOffset(page, offset+MODELVIEW_MATRIX_OFFSET, page, offset+WORLD_MATRIX_OFFSET,  view, 0);
+        },
 
-        gl.bindTexture(gl.TEXTURE_2D, info.handle);
+        /** Relies on an up-to-date view matrix **/
+        updateNormalMatrix: (function() {
+            var c_tmpMatrix = XML3D.math.mat4.create();
+            return function () {
+                this.getModelViewMatrix(c_tmpMatrix);
+                var normalMatrix = XML3D.math.mat4.invert(c_tmpMatrix, c_tmpMatrix);
+                normalMatrix = normalMatrix ? XML3D.math.mat4.transpose(normalMatrix, normalMatrix) : RenderObject.IDENTITY_MATRIX;
+                var o = this.offset + NORMAL_MATRIX_OFFSET;
+                for(var i = 0; i < 16; i++, o++) {
+                    this.page[o] = normalMatrix[i];
+                }
+            }
+        })(),
 
-        // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, opt.wrapS);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, opt.wrapT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, opt.minFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, opt.magFilter);
+        /** Relies on an up-to-date view matrix **/
+        updateModelViewProjectionMatrix: function(projection) {
+            var page = this.page;
+            var offset = this.offset;
+            XML3D.math.mat4.multiplyOffset(page, offset+MODELVIEWPROJECTION_MATRIX_OFFSET, page, offset+MODELVIEW_MATRIX_OFFSET,  projection, 0);
+        },
 
-        var width = image.videoWidth || image.width;
-        var height = image.videoHeight || image.height;
-        // We need to scale texture when one of the wrap modes is not CLAMP_TO_EDGE and
-        // one of the texture dimensions is not power of two.
-        // Otherwise rendered texture will be just black.
-        if ((opt.wrapS != gl.CLAMP_TO_EDGE || opt.wrapT != gl.CLAMP_TO_EDGE) &&
-            (!this.isPowerOfTwo(width) || !this.isPowerOfTwo(height))) {
-            // Scale up the texture to the next highest power of two dimensions.
-            // Reuse existing canvas if available.
-            var canvas = info.canvas !== null ? info.canvas : document.createElement("canvas");
-
-            var potWidth = this.nextHighestPowerOfTwo(width);
-            var potHeight = this.nextHighestPowerOfTwo(height);
-            var context = null;
-            // Reuse existing context if possible.
-            if (info.context !== null && potWidth == canvas.width && potHeight == canvas.height) {
-                context = info.context;
-            } else {
-                canvas.width = potWidth;
-                canvas.height = potHeight;
-                context = canvas.getContext("2d");
+        /*
+         * @param {Xflow.Result} result
+         */
+        setOverride: function(result) {
+            this.override = null;
+            if(!result.outputNames.length) {
+                return;
             }
 
-            // stretch to fit
-            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            var prog = this.program;
+            var overrides = {};
+            for(var name in prog.uniforms) {
+                var entry = result.getOutputData(name);
+                if (entry && entry.getValue()) {
+                    overrides[name] = entry.getValue();
+                }
+            }
+            if (Object.keys(overrides).length > 0) {
+                this.override = overrides;
+            }
+            XML3D.debug.logInfo("Shader attribute override", result, this.override);
+        },
 
-            // centered with transparent padding around edges
-            //ctx.drawImage(image, 0, 0, image.width, image.height);
-            image = canvas;
-            info.canvas = canvas;
-            info.context = context;
+        setTransformDirty: function() {
+            this.transformDirty = true;
+            this.scene.requestRedraw("Transformation changed");
+        },
+        /**
+         * @param {AdapterHandleNotification} notification
+         */
+        shaderHandleCallback: function(notification) {
+            XML3D.debug.assert(notification.type == XML3D.events.ADAPTER_HANDLE_CHANGED);
+            this.updateShaderFromHandle(notification.adapterHandle);
+        },
+
+
+        createProgram: function(composer, objectData) {
+            this.program = composer.getShaderClosure(this.scene, objectData);
+            this.setOverride(objectData);
+        },
+
+        createShaderForDrawable: function (shaderInfo, drawable) {
+            var composer = this.scene.shaderFactory.createComposerForShaderInfo(shaderInfo);
+            composer.addEventListener(webgl.ShaderComposerFactory.EVENT_TYPE.MATERIAL_STRUCTURE_CHANGED, this.refreshShaderProgram.bind(this));
+
+            var that = this;
+            var objectRequest = drawable.getRequest(composer.getRequestFields(), function (req, state) {
+                that.createProgram(composer, req.getResult());
+            });
+
+            this.createProgram(composer, objectRequest.getResult());
+
+            return {
+                composer: composer
+            }
+        },
+
+        setShader: function(newHandle) {
+
+            // If we don't have a drawable, we don't need a shader
+            // This is for testing purposes and won't occur during normal
+            // run
+            if(!this.drawable)
+                return;
+
+            var oldHandle = this.shader.handle;
+
+            if(oldHandle == newHandle)
+                return;
+
+            if (oldHandle) {
+                oldHandle.removeListener(this.shaderHandleCallback.bind(this));
+            }
+            if (newHandle) {
+                newHandle.addListener(this.shaderHandleCallback.bind(this));
+            }
+            this.updateShaderFromHandle(newHandle);
+
+            this.shader.handle = newHandle;
+            // TODO this.materialChanged();
+        },
+
+        /**
+         *
+         * @param {AdapterHandle|null} handle
+         */
+        updateShaderFromHandle: function(handle) {
+            var shaderInfo = null;
+
+            if(handle) {
+                switch (handle.status) {
+                    case XML3D.base.AdapterHandle.STATUS.NOT_FOUND:
+                        XML3D.debug.logWarning("Shader not found.", handle.url, this.name);
+                        break;
+                    case XML3D.base.AdapterHandle.STATUS.LOADING:
+                        break;
+                    case XML3D.base.AdapterHandle.STATUS.READY:
+                        shaderInfo = handle.getAdapter().getShaderInfo();
+                }
+            }
+
+            this.shader = this.createShaderForDrawable(shaderInfo, this.drawable);
+            // Request the attributes required for shader from the drawable (e.g. normal, color etc)
+            this.drawable.setAttributeRequest(this.shader.composer.getShaderAttributes());
+        },
+
+        setObjectSpaceBoundingBox: function(box) {
+            var o = this.offset + OBJECT_BB_OFFSET;
+            this.page[o] =   box[0];
+            this.page[o+1] = box[1];
+            this.page[o+2] = box[2];
+            this.page[o+3] = box[3];
+            this.page[o+4] = box[4];
+            this.page[o+5] = box[5];
+            this.setBoundingBoxDirty();
+        },
+
+        getObjectSpaceBoundingBox: function(box) {
+            var o = this.offset + OBJECT_BB_OFFSET;
+            box[0] = this.page[o];
+            box[1] = this.page[o+1];
+            box[2] = this.page[o+2];
+            box[3] = this.page[o+3];
+            box[4] = this.page[o+4];
+            box[5] = this.page[o+5];
+        },
+
+        setBoundingBoxDirty: function() {
+            this.boundingBoxDirty = true;
+            this.parent.setBoundingBoxDirty();
+        },
+
+        setWorldSpaceBoundingBox: function(bbox) {
+            var o = this.offset + WORLD_BB_OFFSET;
+            this.page[o] = bbox[0];
+            this.page[o+1] = bbox[1];
+            this.page[o+2] = bbox[2];
+            this.page[o+3] = bbox[3];
+            this.page[o+4] = bbox[4];
+            this.page[o+5] = bbox[5];
+        },
+
+        getWorldSpaceBoundingBox: function(bbox) {
+            if (this.boundingBoxDirty) {
+                this.updateWorldSpaceBoundingBox();
+            }
+            var o = this.offset + WORLD_BB_OFFSET;
+            bbox[0] = this.page[o];
+            bbox[1] = this.page[o+1];
+            bbox[2] = this.page[o+2];
+            bbox[3] = this.page[o+3];
+            bbox[4] = this.page[o+4];
+            bbox[5] = this.page[o+5];
+
+        },
+
+        updateWorldSpaceBoundingBox: (function() {
+            var c_box = new XML3D.math.bbox.create();
+
+            return function() {
+                this.getObjectSpaceBoundingBox(c_box);
+                this.setWorldSpaceBoundingBox(c_box);
+                this.boundingBoxDirty = false;
+            }
+        })(),
+
+        setLocalVisible: function(newVal) {
+            this.localVisible = newVal;
+            if (this.parent.isVisible()) {
+                // if parent is not visible this group is also invisible
+                this.setVisible(newVal);
+                this.setBoundingBoxDirty();
+            }
+        },
+
+        getProgram: function() {
+            return this.shader.composer.getProgram();
+        },
+
+        hasTransparency : function() {
+            return this.program ? this.program.hasTransparency() : false;
+        },
+
+        updateForRendering: function() {
+            this.setShader(this.parent.getShaderHandle());
+            this.drawable.update();
         }
 
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    });
 
-        if (opt.generateMipmap) {
-            gl.generateMipmap(gl.TEXTURE_2D);
+
+    // Export
+    webgl.RenderObject = RenderObject;
+
+}(XML3D.webgl));
+(function(webgl){
+
+    /** @const */
+    var BBOX_ANNOTATION_FILTER = ["boundingBox"];
+
+    /**
+     * A RenderMesh is a RenderObject with some mesh-specific behaviors.
+     * It handles all primitive types also known by GL: triangles, lines, points, etc.
+     * @param {Scene} scene
+     * @param {Object} pageEntry
+     * @param {Object} opt
+     * @constructor
+     */
+    var RenderMesh = function(scene, pageEntry, opt) {
+        webgl.RenderObject.call(this, scene, pageEntry, opt);
+
+        /**
+         * Can we take an annotated bounding box or do we have to
+         * calculate it from the drawable?
+         * @type {boolean}
+         */
+        this.boundingBoxAnnotated = false;
+
+        if (this.object.data) {
+            // Bounding Box annotated
+            this.annotatedBoundingBoxRequest = new Xflow.ComputeRequest(this.object.data, BBOX_ANNOTATION_FILTER, this.boundingBoxAnnotationChanged.bind(this));
+            this.boundingBoxAnnotationChanged(this.annotatedBoundingBoxRequest);
         }
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        info.status = TEXTURE_STATE.VALID;
-        info.glType = gl.TEXTURE_2D;
-        info.format = gl.RGBA;
-
-        return info;
     };
+    // No additional entries for RenderMeshes
+    RenderMesh.ENTRY_SIZE = webgl.RenderObject.ENTRY_SIZE;
+
+
+    XML3D.createClass(RenderMesh, webgl.RenderObject, {
+        boundingBoxAnnotationChanged: function(request){
+            var result = request.getResult();
+            var bboxData = result.getOutputData(BBOX_ANNOTATION_FILTER[0]);
+            if(bboxData) {
+                var bboxVal = bboxData.getValue();
+                this.setObjectSpaceBoundingBox(bboxVal);
+                this.boundingBoxAnnotated = true;
+            } else {
+                this.boundingBoxAnnotated = false;
+            }
+            // Check for drawable only necessary for tests
+            this.drawable && this.drawable.setBoundingBoxRequired(!this.boundingBoxAnnotated);
+        }
+    });
+
+    // Export
+    webgl.RenderMesh = RenderMesh;
+
+
+}(XML3D.webgl));
+(function(webgl) {
+    /** @const */
+    var WORLD_MATRIX_OFFSET = 0;
+    /** @const */
+    var LOCAL_MATRIX_OFFSET = WORLD_MATRIX_OFFSET + 16;
+    /** @const */
+    var WORLD_BB_OFFSET = LOCAL_MATRIX_OFFSET + 16;
+    /** @const */
+    var ENTRY_SIZE = WORLD_BB_OFFSET + 6;
+
 
     /**
      *
-     * @param {Object} tex
+     * @constructor
+     * @extends {RenderNode}
      */
-    XML3DShaderManager.prototype.bindTexture = function(tex) {
-        var info = tex.info;
-        var gl = this.gl;
+    var RenderGroup = function(scene, pageEntry, opt) {
+        webgl.RenderNode.call(this, webgl.Scene.NODE_TYPE.GROUP, scene, pageEntry, opt);
+        opt = opt || {};
+        this.shaderHandle = opt.shaderHandle || null;
+        this.boundingBoxDirty = false;
+        this.setWorldSpaceBoundingBox(XML3D.math.EMPTY_BOX);
+    };
+    RenderGroup.ENTRY_SIZE = ENTRY_SIZE;
 
-        switch (info.status) {
-        case TEXTURE_STATE.VALID:
-            gl.activeTexture(gl.TEXTURE0 + info.unit + 1);
-            gl.bindTexture(info.glType, info.handle);
-            // console.log("Bind texture (unit, name)", info.unit, tex.name);
-            // Should not be here, since the texunit is static
-            XML3DShaderManager.setUniform(gl, tex, info.unit + 1);
-            break;
-        case TEXTURE_STATE.LOADED:
-            // console.log("Creating '"+ tex.name + "' from " + info.image.src);
-            this.createTex2DFromImage(info);
-            this.bindTexture(tex);
-            break;
-        case TEXTURE_STATE.UNLOADED:
-            gl.activeTexture(gl.TEXTURE0 + info.unit + 1);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            XML3DShaderManager.setUniform(gl, tex, info.unit + 1);
-            break;
-        default:
-            XML3D.debug.logDebug("Invalid texture: ", tex.name, tex);
+    XML3D.createClass(RenderGroup, webgl.RenderNode);
+    XML3D.extend(RenderGroup.prototype, {
+        getLocalMatrix: function(dest) {
+            var o = this.offset + LOCAL_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                dest[i] = this.page[o];
+            }
+        },
+
+        setLocalMatrix: function(source) {
+            var o = this.offset + LOCAL_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                this.page[o] = source[i];
+            }
+            this.setTransformDirty();
+            this.setBoundingBoxDirty();
+        },
+
+        getWorldSpaceBoundingBox: function(bbox) {
+            if (this.boundingBoxDirty) {
+                this.updateWorldSpaceBoundingBox();
+            }
+            var o = this.offset + WORLD_BB_OFFSET;
+            bbox[0] = this.page[o];
+            bbox[1] = this.page[o+1];
+            bbox[2] = this.page[o+2];
+            bbox[3] = this.page[o+3];
+            bbox[4] = this.page[o+4];
+            bbox[5] = this.page[o+5];
+        },
+
+        setWorldSpaceBoundingBox: function(bbox) {
+            var o = this.offset + WORLD_BB_OFFSET;
+            this.page[o] = bbox[0];
+            this.page[o+1] = bbox[1];
+            this.page[o+2] = bbox[2];
+            this.page[o+3] = bbox[3];
+            this.page[o+4] = bbox[4];
+            this.page[o+5] = bbox[5];
+        },
+
+
+
+    updateWorldSpaceBoundingBox: (function() {
+            var local_mat = XML3D.math.mat4.create();
+            var childBB = XML3D.math.bbox.create();
+
+            return function() {
+                var localBB = XML3D.math.bbox.create();
+
+                for(var i = 0, j = this.children.length; i < j; i++) {
+                    var obj = this.children[i];
+                    if (obj.isVisible()) {
+                        obj.getWorldSpaceBoundingBox(childBB);
+                        XML3D.math.bbox.extendWithBox(localBB, childBB);
+                    }
+                }
+
+                this.getLocalMatrix(local_mat);
+                XML3D.math.bbox.transform(localBB, local_mat, localBB);
+                this.setWorldSpaceBoundingBox(localBB);
+                this.boundingBoxDirty = false;
+            }
+        })(),
+
+        addChild: function(child) {
+            this.children.push(child);
+            this.setBoundingBoxDirty();
+            this.scene.dispatchEvent({type : webgl.Scene.EVENT_TYPE.SCENE_STRUCTURE_CHANGED, newChild: child});
+        },
+
+        removeChild: function(child) {
+            this.children.splice(this.children.indexOf(child), 1);
+            this.scene.dispatchEvent({type : webgl.Scene.EVENT_TYPE.SCENE_STRUCTURE_CHANGED, removedChild: child});
+        },
+
+        getChildren: function() {
+            return this.children;
+        },
+
+        updateWorldMatrix: function(source) {
+            var page = this.page;
+            var offset = this.offset;
+            XML3D.math.mat4.multiplyOffset(page, offset+WORLD_MATRIX_OFFSET, page, offset+LOCAL_MATRIX_OFFSET,  source, 0);
+            this.transformDirty = false;
+        },
+
+        setTransformDirty: function() {
+            if (this.transformDirty) {
+                //We can be sure all child nodes are already set to transformDirty from here
+                //return;
+            }
+            this.transformDirty = true;
+            this.children.forEach(function(obj) {
+                obj.setTransformDirty();
+            });
+        },
+
+        setLocalShaderHandle: function(newHandle) {
+            this.shaderHandle = undefined;
+            if (newHandle === undefined) {
+                // Shader was removed, we need to propagate the parent shader down
+                this.setShader(this.parent.getShaderHandle());
+            } else {
+                this.setShader(newHandle);
+            }
+            this.shaderHandle = newHandle;
+        },
+
+        setShader: function(newHandle) {
+            if (this.shaderHandle !== undefined) {
+                // Local shader overrides anything coming from upstream
+                return;
+            }
+            this.children.forEach(function(obj) {
+                obj.setShader(newHandle);
+            });
+        },
+
+        getShaderHandle: function() {
+            if (!this.shaderHandle) {
+                return this.parent.getShaderHandle();
+            }
+            return this.shaderHandle;
+        },
+
+        setBoundingBoxDirty: function() {
+            this.boundingBoxDirty = true;
+            if (this.parent) {
+                this.parent.setBoundingBoxDirty();
+            }
+        },
+
+        setLocalVisible: function(newVal) {
+            this.localVisible = newVal;
+            if (this.parent.isVisible()) {
+                // if parent is not visible this group is also invisible
+                this.setVisible(newVal);
+                this.setBoundingBoxDirty();
+            }
+        }
+
+    });
+
+    // Export
+    webgl.RenderGroup = RenderGroup;
+
+})(XML3D.webgl);
+(function(webgl) {
+
+    /** @const */
+    var XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION = XML3D.math.vec3.fromValues(0,0,-1);
+    /** @const */
+    var XML3D_SPOTLIGHT_DEFAULT_DIRECTION = XML3D.math.vec3.fromValues(0,0,1);
+
+    /** @const */
+    var LIGHT_DEFAULT_INTENSITY = XML3D.math.vec3.fromValues(1,1,1);
+    /** @const */
+    var LIGHT_DEFAULT_ATTENUATION = XML3D.math.vec3.fromValues(0,0,1);
+    /** @const */
+    var SPOTLIGHT_DEFAULT_FALLOFFANGLE = Math.PI / 4.0;
+    /** @const */
+    var SPOTLIGHT_DEFAULT_SOFTNESS = 0.0;
+
+    /** @const */
+    var LIGHT_PARAMETERS = ["intensity", "attenuation", "softness", "falloffAngle"];
+
+    /** @const */
+    var ENTRY_SIZE = 16;
+
+    /**
+     * @constructor
+     * @param {Scene} scene
+     * @param {Object} pageEntry
+     * @param {Object} opt
+     * @extends {RenderNode}
+     */
+    var RenderLight = function(scene, pageEntry, opt) {
+        XML3D.webgl.RenderNode.call(this, webgl.Scene.NODE_TYPE.LIGHT ,scene, pageEntry, opt);
+        opt = opt || {};
+        var light = opt.light || {};
+        this.light = {
+            type : light.type || "directional",
+            data : light.data
+        }
+        this.intensity   = XML3D.math.vec3.clone(LIGHT_DEFAULT_INTENSITY);
+        this.position    = XML3D.math.vec3.fromValues(0,0,0);
+        this.direction   = XML3D.math.vec3.clone(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION);
+        this.attenuation = XML3D.math.vec3.clone(LIGHT_DEFAULT_ATTENUATION);
+
+        if (this.light.data) {
+            // Bounding Box annotated
+            this.lightParameterRequest = new Xflow.ComputeRequest(
+                this.light.data, LIGHT_PARAMETERS, this.lightParametersChanged.bind(this));
+            this.lightParametersChanged(this.lightParameterRequest, null);
+        } else {
+            XML3D.debug.logWarning("External light shaders not supported yet"); // TODO
+        }
+
+        this.localIntensity = opt.localIntensity !== undefined ? opt.localIntensity : 1.0;
+        this.addLightToScene();
+    };
+    RenderLight.ENTRY_SIZE = ENTRY_SIZE;
+
+    XML3D.createClass(RenderLight, webgl.RenderNode);
+    XML3D.extend(RenderLight.prototype, {
+
+        addLightToScene : function() {
+            var lightEntry = this.scene.lights[this.light.type];
+            if (Array.isArray(lightEntry)) {
+                lightEntry.push(this);
+                this.updateWorldMatrix(); // Implicitly fills light position/direction
+                this.lightStructureChanged();
+            } else {
+                XML3D.debug.logError("Unsupported light shader script: urn:xml3d:lightshader:" + this.light.type);
+            }
+        },
+        removeLightFromScene : function() {
+            var container = this.scene.lights[this.light.type];
+            if (Array.isArray(container)) {
+                container = container.splice(this);
+                this.lightStructureChanged();
+            }
+        },
+        lightParametersChanged: function(request, changeType) {
+            // console.log("Light parameters have changed", arguments);
+            var result = request.getResult();
+            if (result) {
+                var entry = result.getOutputData("intensity");
+                entry && XML3D.math.vec3.copy(this.intensity, entry.getValue());
+                entry = result.getOutputData("attenuation");
+                entry && XML3D.math.vec3.copy(this.attenuation, entry.getValue());
+                changeType && this.lightValueChanged();
+            }
+        },
+        lightValueChanged: function() {
+            this.scene.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.LIGHT_VALUE_CHANGED, light: this });
+        },
+        lightStructureChanged: function() {
+            this.scene.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.LIGHT_STRUCTURE_CHANGED, light: this });
+        },
+        getLightData: function(target, offset) {
+            var off3 = offset*3;
+            ["position", "direction", "attenuation"].forEach( function(name) {
+                if(target[name]) {
+                    target[name][off3+0] = this[name][0];
+                    target[name][off3+1] = this[name][1];
+                    target[name][off3+2] = this[name][2];
+                }
+            }, this);
+            if (target["intensity"]) {
+                target["intensity"][off3+0] = this.intensity[0] * this.localIntensity;
+                target["intensity"][off3+1] = this.intensity[1] * this.localIntensity;
+                target["intensity"][off3+2] = this.intensity[2] * this.localIntensity;
+            }
+            if (target["on"]) {
+                target["on"][offset] = this.visible;
+            }
+            var result;
+            var data;
+            if (target["softness"]) {
+                target["softness"][offset] = SPOTLIGHT_DEFAULT_SOFTNESS;
+                if (this.light.data) {
+                    result = this.lightParameterRequest.getResult();
+                    data = result.getOutputData("softness");
+                    target["softness"][offset] = data ? data.getValue()[0] : SPOTLIGHT_DEFAULT_SOFTNESS;
+                }
+            }
+            if (target["falloffAngle"]) {
+                target["falloffAngle"][offset] = SPOTLIGHT_DEFAULT_FALLOFFANGLE;
+                if (this.light.data) {
+                    result = this.lightParameterRequest.getResult();
+                    data = result.getOutputData("falloffAngle");
+                    target["falloffAngle"][offset] = data ? data.getValue()[0] : SPOTLIGHT_DEFAULT_FALLOFFANGLE;
+                }
+            }
+        },
+
+        setTransformDirty: function() {
+            this.updateWorldMatrix();
+        },
+
+        updateWorldMatrix: (function() {
+            var tmp_mat = XML3D.math.mat4.create();
+            return function() {
+                this.parent.getWorldMatrix(tmp_mat);
+                this.setWorldMatrix(tmp_mat);
+                this.updateLightTransformData(tmp_mat);
+            }
+        })(),
+
+        updateLightTransformData: function(transform) {
+            switch (this.light.type) {
+                case "directional":
+                    XML3D.math.vec3.copy(this.direction, this.applyTransformDir(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION, transform));
+                    break;
+                case "spot":
+                    XML3D.math.vec3.copy(this.direction, this.applyTransformDir(XML3D_SPOTLIGHT_DEFAULT_DIRECTION, transform));
+                    XML3D.math.vec3.copy(this.position, this.applyTransform([0,0,0], transform));
+                    break;
+                case "point":
+                    XML3D.math.vec3.copy(this.position, this.applyTransform([0,0,0], transform));
+            }
+            this.lightValueChanged();
+        },
+
+        applyTransform: function(vec, transform) { // TODO: closure
+            var newVec = XML3D.math.vec4.transformMat4(XML3D.math.vec4.create(), [vec[0], vec[1], vec[2], 1], transform);
+            return [newVec[0]/newVec[3], newVec[1]/newVec[3], newVec[2]/newVec[3]];
+        },
+
+        applyTransformDir: function(vec, transform) { // TODO: closure
+            var newVec = XML3D.math.vec4.transformMat4(XML3D.math.vec4.create(), [vec[0], vec[1], vec[2], 0], transform);
+            return [newVec[0], newVec[1], newVec[2]];
+        },
+
+        setLocalVisible: function(newVal) {
+            this.localVisible = newVal;
+            if (newVal === false) {
+                this.visible = false;
+                this.lightValueChanged();
+            } else {
+                this.setVisible(this.parent.isVisible());
+            }
+        },
+
+        setVisible: function(newVal) {
+            if (this.localVisible !== false) {
+                this.visible = newVal;
+                this.lightValueChanged();
+            }
+        },
+
+        setLocalIntensity: function(intensity) {
+            this.localIntensity = intensity;
+            this.lightValueChanged();
+        },
+
+        setLightType: function(type) {
+            type = type || "directional";
+            if(type != this.light.type) {
+                this.removeLightFromScene();
+                this.light.type = type;
+                this.addLightToScene();
+            }
+        },
+        remove: function() {
+            this.parent.removeChild(this);
+            this.removeLightFromScene();
+        },
+
+        getWorldSpaceBoundingBox: function(bbox) {
+            XML3D.math.bbox.empty(bbox);
+        }
+
+    });
+
+    webgl.RenderLight = RenderLight;
+
+
+})(XML3D.webgl);
+(function(webgl) {
+    /** @const */
+    var VIEW_MATRIX_OFFSET = 0;
+    /** @const */
+    var PROJECTION_MATRIX_OFFSET = 16;
+    /** @const */
+    var ENTRY_SIZE = PROJECTION_MATRIX_OFFSET + 16;
+
+    /**
+     *
+     * @constructor
+     * @extends {RenderNode}
+     */
+    var RenderView = function(scene, pageEntry, opt) {
+        XML3D.webgl.RenderNode.call(this, webgl.Scene.NODE_TYPE.VIEW, scene, pageEntry, opt);
+        opt = opt || {};
+        this.position = opt.position || XML3D.math.vec3.create();
+        this.orientation = opt.orientation || XML3D.math.mat4.create();
+        this.fieldOfView = opt.fieldOfView !== undefined ? opt.fieldOfView : 0.78;
+        this.worldSpacePosition = XML3D.math.vec3.create();
+        this.projectionAdapter = opt.projectionAdapter;
+        this.viewDirty = true;
+        this.projectionDirty = true;
+    };
+    RenderView.ENTRY_SIZE = ENTRY_SIZE;
+
+    XML3D.createClass(RenderView, XML3D.webgl.RenderNode);
+    XML3D.extend(RenderView.prototype, {
+        updateViewMatrix: (function() {
+            var tmp_mat4 = XML3D.math.mat4.create();
+            var tmp_parent = XML3D.math.mat4.create();
+
+            return function (source) {
+                XML3D.math.mat4.identity(tmp_mat4);
+                tmp_mat4[12] = this.position[0];
+                tmp_mat4[13] = this.position[1];
+                tmp_mat4[14] = this.position[2];
+                // tmp = T * O
+                XML3D.math.mat4.multiply(tmp_mat4, tmp_mat4, this.orientation);
+                this.parent.getWorldMatrix(tmp_parent);
+                XML3D.math.mat4.multiply(tmp_mat4, tmp_parent, tmp_mat4);
+                XML3D.math.vec3.set(this.worldSpacePosition, tmp_mat4[12], tmp_mat4[13], tmp_mat4[14]);
+                XML3D.math.mat4.invert(tmp_mat4, tmp_mat4);
+                this.setViewMatrix(tmp_mat4);
+            }
+        })(),
+
+        updateProjectionMatrix: (function() {
+            var tmp = XML3D.math.mat4.create();
+
+            return function(aspect) {
+                if (this.projectionAdapter) {
+                    this.setProjectionMatrix(this.projectionAdapter.getMatrix("perspective"));
+                    return;
+                }
+                var clipPlane = this.getClippingPlanes();
+                var f = 1 / Math.tan(this.fieldOfView / 2);
+
+                tmp[0] = f / aspect;
+                tmp[1] = 0;
+                tmp[2] = 0;
+                tmp[3] = 0;
+                tmp[4] = 0;
+                tmp[5] = f;
+                tmp[6] = 0;
+                tmp[7] = 0;
+                tmp[8] = 0;
+                tmp[9] = 0;
+                tmp[10] = (clipPlane.near + clipPlane.far) / (clipPlane.near - clipPlane.far);
+                tmp[11] = -1;
+                tmp[12] = 0;
+                tmp[13] = 0;
+                tmp[14] = 2 * clipPlane.near * clipPlane.far / (clipPlane.near - clipPlane.far);
+                tmp[15] = 0;
+
+                this.setProjectionMatrix(tmp);
+            }
+        })(),
+
+        getClippingPlanes: (function() {
+            var t_mat = XML3D.math.mat4.create();
+            var bb = new XML3D.math.bbox.create();
+
+            return function() {
+                this.scene.getBoundingBox(bb);
+                if (XML3D.math.bbox.isEmpty(bb)) {
+                    return { near: 1, far: 10 };
+                };
+
+                this.getViewMatrix(t_mat);
+                XML3D.math.bbox.transform(bb, t_mat, bb);
+
+                var bounds = { zMin: bb[2], zMax: bb[5] };
+                var length = XML3D.math.bbox.longestSide(bb);
+
+                // Expand the view frustum a bit to ensure 2D objects parallel to the camera are rendered
+                bounds.zMin -= length * 0.005;
+                bounds.zMax += length * 0.005;
+                //console.log(bounds);
+
+                return {near: Math.max(-bounds.zMax, 0.01*length), far: -bounds.zMin};
+            }
+        })(),
+
+        setViewMatrix: function(source) {
+            var o = this.offset + VIEW_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                this.page[o] = source[i];
+            }
+            this.viewDirty = false;
+        },
+
+        setProjectionMatrix: function(source) {
+            var o = this.offset + PROJECTION_MATRIX_OFFSET;
+            for(var i = 0; i < 16; i++, o++) {
+                this.page[o] = source[i];
+            }
+            this.projectionDirty = false;
+        },
+
+        setProjectionAdapter: function(projAdapter) {
+            this.projectionAdapter = projAdapter;
+            this.setProjectionDirty();
+        },
+
+        setTransformDirty: function() {
+            this.viewDirty = true;
+            this.setProjectionDirty();
+            this.scene.requestRedraw("Transformation changed");
+        },
+
+        setProjectionDirty: function() {
+            this.projectionDirty = true;
+        },
+
+        updatePosition: function(newPos) {
+            this.setTransformDirty();
+            this.position = newPos;
+        },
+
+        updateOrientation: function(newOrientation) {
+            this.setTransformDirty();
+            this.orientation = newOrientation;
+        },
+
+        updateFieldOfView: function(newFov) {
+            this.setTransformDirty();
+            this.fieldOfView = newFov;
+        },
+
+        getViewMatrix: function(dest) {
+                if (this.viewDirty) {
+                    this.updateViewMatrix();
+                }
+                var o = this.offset + VIEW_MATRIX_OFFSET;
+                for(var i = 0; i < 16; i++, o++) {
+                    dest[i] = this.page[o];
+                }
+        },
+
+        getProjectionMatrix: function(dest, aspect) {
+                if (this.projectionDirty) {
+                    this.updateProjectionMatrix(aspect);
+                }
+                var o = this.offset + PROJECTION_MATRIX_OFFSET;
+                for(var i = 0; i < 16; i++, o++) {
+                    dest[i] = this.page[o];
+                }
+        },
+
+        getWorldSpacePosition: function() {
+            return this.worldSpacePosition;
+        },
+
+        getWorldSpaceBoundingBox: function(bbox) {
+            XML3D.math.bbox.empty(bbox);
+        }
+    });
+
+    // Export
+    webgl.RenderView = RenderView;
+
+})(XML3D.webgl);
+(function (webgl) {
+
+    /**
+     *
+     * @constructor
+     * @extends Pager
+     */
+    var Scene = function () {
+        webgl.Pager.call(this);
+
+        this.boundingBox = new XML3D.math.bbox.create();
+        this.lights = {
+            queue: [],
+            point: [],
+            directional: [],
+            spot: [],
+            length: function () {
+                return this.point.length + this.directional.length + this.spot.length;
+            }
+        };
+        this.shaderInfos = [];
+        /** @type RenderView */
+        this.activeView = null;
+        this.rootNode = this.createRootNode();
+    };
+    XML3D.createClass(Scene, webgl.Pager);
+
+    Scene.NODE_TYPE = {
+        GROUP:  "group",
+        OBJECT: "object",
+        LIGHT:  "light",
+        VIEW:   "view"
+    };
+
+    Scene.EVENT_TYPE = {
+        VIEW_CHANGED: "view_changed",
+        LIGHT_STRUCTURE_CHANGED: "light_structure_changed",
+        LIGHT_VALUE_CHANGED: "light_value_changed",
+        SCENE_STRUCTURE_CHANGED: "scene_structure_changed",
+        DRAWABLE_STATE_CHANGED: "drawable_state_changed"
+    };
+
+
+    var empty = function () {
+    };
+
+    XML3D.extend(Scene.prototype, {
+        /**
+         * @returns {RenderView}
+         */
+        getActiveView: function () {
+            return this.activeView;
+        },
+        /**
+         * @param {RenderView} view
+         */
+        setActiveView: function (view) {
+            if(view != this.activeView) {
+                if(!view)
+                    throw new Error("Active view must not be null");
+                this.activeView = view;
+                this.dispatchEvent({type: Scene.EVENT_TYPE.VIEW_CHANGED, newView: this.activeView });
+            }
+        },
+        /**
+         *
+         * @param opt
+         * @returns {webgl.RenderMesh}
+         */
+        createRenderMesh: function (opt) {
+            var pageEntry = this.getPageEntry(webgl.RenderMesh.ENTRY_SIZE);
+            var renderObject = new webgl.RenderMesh(this, pageEntry, opt);
+            return renderObject;
+        },
+        /**
+         * @param opt
+         * @returns {webgl.RenderObject}
+         * @deprecated
+         */
+        createRenderObject: function (opt) {
+            var pageEntry = this.getPageEntry(webgl.RenderObject.ENTRY_SIZE);
+            var renderObject = new webgl.RenderObject(this, pageEntry, opt);
+            return renderObject;
+        },
+
+        createRenderGroup: function (opt) {
+            var pageEntry = this.getPageEntry(webgl.RenderGroup.ENTRY_SIZE);
+            return new webgl.RenderGroup(this, pageEntry, opt);
+        },
+
+        createRenderView: function (opt) {
+            var pageEntry = this.getPageEntry(webgl.RenderView.ENTRY_SIZE);
+            return new webgl.RenderView(this, pageEntry, opt);
+        },
+
+        createRenderLight: function (opt) {
+            var pageEntry = this.getPageEntry(webgl.RenderLight.ENTRY_SIZE);
+            var renderLight = new webgl.RenderLight(this, pageEntry, opt);
+            return renderLight;
+        },
+        createShaderInfo: function (opt) {
+            return new webgl.ShaderInfo(this, opt);
+        },
+
+        createRootNode: function () {
+            var pageEntry = this.getPageEntry(webgl.RenderGroup.ENTRY_SIZE);
+            var root = new webgl.RenderGroup(this, pageEntry, {});
+            root.setWorldMatrix(XML3D.math.mat4.create());
+            root.setLocalMatrix(XML3D.math.mat4.create());
+            root.transformDirty = false;
+            root.shaderDirty = false;
+            root.visible = true;
+            root.shaderHandle = new XML3D.base.AdapterHandle("not_found");
+            root.shaderHandle.status = XML3D.base.AdapterHandle.STATUS.NOT_FOUND;
+            return root;
+        },
+        updateBoundingBox: function () {
+            if (this.rootNode.boundingBoxDirty) {
+                // TODO: There should always be an active view
+                this.activeView && this.activeView.setProjectionDirty();
+            }
+            this.rootNode.getWorldSpaceBoundingBox(this.boundingBox);
+        },
+        getBoundingBox: function (bb) {
+            this.updateBoundingBox();
+            XML3D.math.bbox.copy(bb, this.boundingBox);
+        },
+        createDrawable: function(obj) {
+            throw new Error("Scene::createDrawable not implemented");
+        },
+        requestRedraw: function(reason) {
+            throw new Error("Scene::requestRedraw not implemented");
+        },
+        traverse: function(callback) {
+            this.rootNode.traverse(callback);
+        }
+    });
+
+
+    webgl.Scene = Scene;
+
+})(XML3D.webgl);
+(function(webgl){
+
+    var getUniqueId = (function(){
+        var c_counter = 0;
+        return function() {
+              return c_counter++;
+        }
+    }());
+
+    /**
+     * @param {XML3D.webgl.Scene} scene
+     * @param {Object} opt
+     * @constructor
+     */
+    var ShaderInfo = function(scene, opt) {
+        opt = opt || {};
+        this.id = getUniqueId();
+        this.scene = scene;
+        this.data = opt.data;
+        /** @type XML3D.URI */
+        this.script = opt.script;
+        this.scene.shaderInfos.push(this);
+    };
+
+    XML3D.extend(ShaderInfo.prototype, {
+        setScript: function(script) {
+            if(this.script != script) {
+                this.script = script;
+                this.scriptChangedEvent();
+            }
+        },
+        getScript: function() {
+            return this.script;
+        },
+        getData: function() {
+            return this.data;
+        },
+        scriptChangedEvent: function() {
 
         }
-        ;
+    });
+
+    webgl.ShaderInfo = ShaderInfo;
+
+}(XML3D.webgl));(function(webgl){
+
+    /**
+     * Contex that includes all GL related resources / handlers
+     * @param {WebGLRenderingContext} gl
+     * @param {number} id
+     * @param {number} width
+     * @param {number} height
+     * @constructor
+     */
+    var GLContext = function(gl, id, width, height) {
+        this.gl = gl;
+        this.id = id;
+        this.canvasTarget = new XML3D.webgl.GLCanvasTarget(this, width, height);
+        this.programFactory = new XML3D.webgl.ProgramFactory(this);
+        this.stats = {
+            materials: 0,
+            meshes: 0
+        };
+    };
+    XML3D.extend(GLContext.prototype, {
+        getXflowEntryWebGlData: function (entry) {
+            return XML3D.webgl.getXflowEntryWebGlData(entry, this.id);
+        },
+        requestRedraw: function(reason) {
+            //handler.redraw(reason, forcePicking);
+        },
+        handleResizeEvent: function(width, height) {
+            this.canvasTarget = new XML3D.webgl.GLCanvasTarget(this, width, height);
+        },
+        getStatistics: function() {
+            return this.stats;
+        }
+    });
+
+    webgl.GLContext = GLContext;
+
+}(XML3D.webgl));
+(function(webgl) {
+
+    //noinspection JSValidateJSDoc
+    /**
+     * @param {WebGLRenderingContext} gl
+     * @constructor
+     */
+    var GLTexture = function(gl) {
+        Xflow.SamplerConfig.call(this);
+        this.setDefaults();
+        this.gl = gl;
+        this.handle = null;
+    };
+    XML3D.createClass(GLTexture, Xflow.SamplerConfig);
+
+    GLTexture.State = {
+        NONE :    "none",
+        LOADING : "loading",
+        READY :   "ready",
+        ERROR :   "error"
     };
 
-    XML3DShaderManager.prototype.unbindTexture = function(tex) {
-        this.gl.activeTexture(this.gl.TEXTURE1 + tex.info.unit);
-        this.gl.bindTexture(tex.info.glType, null);
-    };
 
-    XML3DShaderManager.prototype.destroyTexture = function(tex) {
-        if (tex.info && tex.info.handle)
-            this.gl.deleteTexture(tex.info.handle);
-    };
+    var getOrCreateFallbackTexture = (function () {
 
-    XML3DShaderManager.prototype.isPowerOfTwo = function(dimension) {
+        var c_fallbackTexture = null;
+
+        return function (gl) {
+            if (!c_fallbackTexture) {
+                c_fallbackTexture = new GLTexture(gl);
+                var size = 16;
+                var texels = new Uint8Array(size * size * 3);
+                for (var i = 0; i < texels.length; i++) {
+                    texels[i] = 128;
+                }
+                c_fallbackTexture.createTex2DFromData(gl.RGB, size, size, gl.RGB, gl.UNSIGNED_BYTE, {
+                    texels: texels,
+                    wrapS: gl.REPEAT,
+                    wrapT: gl.REPEAT,
+                    minFilter: gl.LINEAR,
+                    magFilter: gl.LINEAR
+                });
+            }
+            return c_fallbackTexture;
+        }
+    }());
+
+    var isPowerOfTwo = function(dimension) {
         return (dimension & (dimension - 1)) == 0;
     };
-
-    XML3DShaderManager.prototype.nextHighestPowerOfTwo = function(x) {
+    var nextHighestPowerOfTwo = function(x) {
         --x;
         for ( var i = 1; i < 32; i <<= 1) {
             x = x | x >> i;
         }
         return x + 1;
     };
-    XML3D.webgl.XML3DShaderManager = XML3DShaderManager;
-}());
+
+    /**
+     * Scale up the texture to the next highest power of two dimensions.
+     * @returns {HTMLCanvasElement}
+     */
+    var scaleImage = function (image, width, height) {
+        var canvas = document.createElement("canvas");
+        canvas.width = nextHighestPowerOfTwo(width);
+        canvas.height = nextHighestPowerOfTwo(height);
+
+        var context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas;
+    };
+
+    /**
+     * @param {Image|HTMLVideoElement} img
+     * @returns {boolean}
+     */
+    var isLoaded = function (img) {
+        return img.complete || img.readyState;
+    };
+
+    XML3D.extend(GLTexture.prototype, {
+        /**
+         * @param {Xflow.TextureEntry} textureEntry
+         */
+        updateFromTextureEntry : function(textureEntry) {
+            var img = textureEntry.getImage();
+            if(img) {
+                if(!this.handle) {
+                    this.handle = this.gl.createTexture();
+                }
+                this.set(textureEntry.getSamplerConfig());
+                if(isLoaded(img)) {
+                    this.updateTex2DFromImage(img);
+                } else {
+                    this.loads();
+                }
+            } else {
+                this.failed();
+            }
+        },
+        /**
+         * We need to scale texture when one of the wrap modes is not CLAMP_TO_EDGE and
+         * one of the texture dimensions is not power of two.
+         * Otherwise rendered texture will be just black.
+         * @param {number} width
+         * @param {number} height
+         * @returns {boolean}
+         */
+        needsScale: function(width, height) {
+            return (this.wrapS != this.gl.CLAMP_TO_EDGE || this.wrapT != this.gl.CLAMP_TO_EDGE) &&
+            (!isPowerOfTwo(width) || !isPowerOfTwo(height))
+        },
+
+        /**
+         * @param {Image|HTMLVideoElement} image
+         */
+        updateTex2DFromImage : function(image) {
+            var gl = this.gl;
+            gl.bindTexture(gl.TEXTURE_2D, this.handle);
+
+            var width = image.videoWidth || image.width;
+            var height = image.videoHeight || image.height;
+
+            if(this.needsScale(width, height)) {
+                image = scaleImage(image, width, height);
+            }
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter);
+
+            if (this.generateMipMap) {
+                gl.generateMipmap(gl.TEXTURE_2D);
+            }
+            gl.bindTexture(gl.TEXTURE_2D, null);
+
+            this.created();
+        },
+        bind : function(unit) {
+            if (this.canBind()) {
+                this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+                this.gl.bindTexture(this.textureType, this.handle);
+            } else {
+                getOrCreateFallbackTexture(this.gl).bind(unit);
+            }
+        },
+        unbind : function(unit) {
+            this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+            this.gl.bindTexture(this.textureType, null);
+        },
+        destroy : function() {
+            this.gl.deleteTexture(this.handle);
+        },
+        canBind : function() {
+            return this.current == GLTexture.State.READY;
+        },
+        createTex2DFromData: function(internalFormat, width, height, sourceFormat, sourceType, opt) {
+            var gl = this.gl;
+
+            var opt = opt || {};
+            var texels = opt.texels;
+
+            if (!texels) {
+                if (sourceType == gl.FLOAT) {
+                    texels = new Float32Array(width * height * 4);
+                } else {
+                    texels = new Uint8Array(width * height * 4);
+                }
+            }
+
+            this.handle = gl.createTexture();
+            this.textureType = gl.TEXTURE_2D;
+            gl.bindTexture(gl.TEXTURE_2D, this.handle);
+
+            // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, opt.wrapS);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, opt.wrapT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, opt.minFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, opt.magFilter);
+
+            gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, sourceFormat, sourceType, texels);
+
+            if (opt.isDepth) {
+                gl.texParameteri(gl.TEXTURE_2D, gl.DEPTH_TEXTURE_MODE, opt.depthMode);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, opt.depthCompareMode);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, opt.depthCompareFunc);
+            }
+            if (opt.generateMipmap) {
+                gl.generateMipmap(gl.TEXTURE_2D);
+            }
+
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            this.created();
+        }
+
+    });
+
+    window.StateMachine.create({
+        target: GLTexture.prototype,
+        initial: GLTexture.State.NONE,
+        events: [
+            { name:'created', from: '*',    to: GLTexture.State.READY   },
+            { name:'failed',  from: '*',    to: GLTexture.State.ERROR   },
+            { name:'loads',   from: '*',    to: GLTexture.State.LOADING }
+        ]
+    });
+
+
+    webgl.GLTexture = GLTexture;
+
+}(XML3D.webgl));(function (webgl) {
+    /**
+     * @param {WebGLRenderingContext} gl
+     * @param {number} type
+     * @param {string} shaderSource
+     * @returns {WebGLShader|null}
+     */
+    var createWebGLShaderFromSource = function (gl, type, shaderSource) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, shaderSource);
+        gl.compileShader(shader);
+
+        if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) == 0) {
+            var errorString = "";
+            if (type == gl.VERTEX_SHADER)
+                errorString = "Vertex shader failed to compile: \n";
+            else
+                errorString = "Fragment shader failed to compile: \n";
+
+            errorString += gl.getShaderInfoLog(shader) + "\n--------\n";
+            XML3D.debug.logError(errorString);
+            gl.getError();
+            return null;
+        }
+        return shader;
+    };
+
+    var createProgramFromSources = function (gl, vertexSources, fragmentSources) {
+        var shd = null;
+        var shaders = [ ];
+        for (var s in vertexSources) {
+            var src = vertexSources[s];
+            shd = createWebGLShaderFromSource(gl, gl.VERTEX_SHADER, src);
+            shaders.push(shd);
+        }
+        for (var s in fragmentSources) {
+            var src = fragmentSources[s];
+            shd = createWebGLShaderFromSource(gl, gl.FRAGMENT_SHADER, src);
+            shaders.push(shd);
+        }
+        return createProgramFromShaders(gl, shaders);
+    }
+
+    var createProgramFromShaders = function (gl, shaders) {
+        var program = gl.createProgram();
+        for (var s in shaders) {
+            var shader = shaders[s];
+            gl.attachShader(program, shader);
+        }
+        gl.linkProgram(program);
+        if (gl.getProgramParameter(program, gl.LINK_STATUS) == 0) {
+            var errorString = "Shader linking failed: \n";
+            errorString += gl.getProgramInfoLog(program);
+            errorString += "\n--------\n";
+            XML3D.debug.logError(errorString);
+            gl.getError();
+            return null;
+        }
+        return program;
+    }
+
+    var tally = function (gl, handle, programObject) {
+        // Tally shader attributes
+        var numAttributes = gl.getProgramParameter(handle, gl.ACTIVE_ATTRIBUTES);
+        for (var i = 0; i < numAttributes; i++) {
+            var att = gl.getActiveAttrib(handle, i);
+            if (!att)
+                continue;
+            var attInfo = {};
+            attInfo.name = att.name;
+            attInfo.size = att.size;
+            attInfo.glType = att.type;
+            attInfo.location = gl.getAttribLocation(handle, att.name);
+            programObject.attributes[att.name] = attInfo;
+        }
+
+
+        // Tally shader uniforms and samplers
+        var numUniforms = gl.getProgramParameter(handle, gl.ACTIVE_UNIFORMS);
+        for (var i = 0; i < numUniforms; i++) {
+            var uni = gl.getActiveUniform(handle, i);
+            if (!uni)
+                continue;
+            var uniInfo = {};
+            uniInfo.name = uni.name;
+            uniInfo.size = uni.size;
+            uniInfo.glType = uni.type;
+            uniInfo.location = gl.getUniformLocation(handle, uni.name);
+
+            var name = uniInfo.name;
+            // Need to discuss how to sort out the consequences of doing this in the renderer first --Chris
+            if (name.substring(name.length - 3) == "[0]") {
+                name = name.substring(0, name.length - 3); // Remove [0]
+            }
+
+            if (uni.type == gl.SAMPLER_2D || uni.type == gl.SAMPLER_CUBE) {
+                uniInfo.unit = programObject.nextTextureUnit();
+                uniInfo.texture = new XML3D.webgl.GLTexture(gl);
+                webgl.setUniform(gl, uniInfo, uniInfo.unit);
+                programObject.samplers[name] = uniInfo;
+            } else
+                programObject.uniforms[name] = uniInfo;
+        }
+
+    };
+
+    var uniqueObjectId = (function() {
+        var c_counter = 0;
+        return function() {
+            return c_counter++;
+        }
+    }());
+
     /**
      * @constructor
+     * @param {WebGLRenderingContext} gl
+     * @param {{ fragment: string, vertex: string }} sources
      */
-    var Material = function(shaderManager) {
-        this.shaderManager = shaderManager;
-        /** @type boolean */
-        this.isTransparent = false;
-    };
-    Material.prototype.parametersChanged = function(shaderEntries) {
-        if (this.hasTransparency)
-            this.isTransparent = this.hasTransparency(shaderEntries);
-    };
+    var ProgramObject = function (gl, sources) {
+        this.gl = gl;
+        this.sources = sources;
 
-    Material.prototype.uniforms = {};
-    Material.prototype.samplers = {};
-    Material.prototype.fragment = null;
-    Material.prototype.vertex = null;
-    Material.prototype.meshRequest = {
-        index : null,
-        position: { required: true },
-        normal: null,
-        color: null,
-        texcoord: null
-    };
+        this.id = uniqueObjectId();
+        this.attributes = {};
+        this.uniforms = {};
+        this.samplers = {};
+        this.needsLights = true;
+        this.handle = null;
 
-    Material.prototype.getRequestFields = function() {
-        return Object.keys(this.uniforms).concat(Object.keys(this.samplers));
-    };
 
-    Material.prototype.addDirectives = function(directives, lights, data) {};
-
-    Material.prototype.createProgram = function(lights, data) {
-        if(!this.fragment)
-            return null;
-        if(!this.vertex)
-            return null;
-
-        var directives = [],
-            sources = {};
-        this.addDirectives(directives, lights || {}, data ? data.getOutputMap() : {});
-        sources.fragment = Material.addDirectivesToSource(directives, this.fragment);
-        sources.vertex = Material.addDirectivesToSource(directives, this.vertex);
-        //console.log(sources.fragment);
-        var programObject = this.shaderManager.createProgramFromSources(sources);
-        this.shaderManager.setUniformVariables(programObject, this.uniforms);
-        if(data) {
-            this.parametersChanged(data.getOutputMap());
+        var maxTextureUnit = 0;
+        this.nextTextureUnit = function () {
+            return maxTextureUnit++;
         }
-        programObject.hasTransparency = this.isTransparent;
-        programObject.material = this;
-        return programObject;
+
+        this.create();
     };
 
+    XML3D.extend(ProgramObject.prototype, {
+        create: function () {
+            XML3D.debug.logDebug("Create shader program: ", this.id);
+            this.handle = createProgramFromSources(this.gl, [this.sources.vertex], [this.sources.fragment]);
+            if (!this.handle)
+                return;
+            this.bind();
+            tally(this.gl, this.handle, this);
+        },
+        bind: function () {
+            if (!this.handle) {
+                XML3D.debug.logError("Trying to bind invalid GLProgram.");
+            }
+            this.gl.useProgram(this.handle);
+            for(var s in this.samplers) {
+                var sampler = this.samplers[s];
+                sampler.texture.bind(sampler.unit);
+            }
+        },
+        unbind: function () {
+            //this.gl.useProgram(null);
+        },
+        isValid: function() {
+            return !!this.handle;
+        },
+        setUniformVariables: function(uniforms) {
+            for ( var name in uniforms) {
+                if (this.uniforms[name]) {
+                    var value = uniforms[name];
+                    webgl.setUniform(this.gl, this.uniforms[name], value);
+                }
+            }
+        }
+    });
+
+    webgl.GLProgramObject = ProgramObject;
+
+}(XML3D.webgl));(function (webgl) {
 
     /**
-     * @param {Array!} directives
-     * @param {string!} source
-     * @returns {string}
+     * @interface
      */
-    Material.addDirectivesToSource = function(directives, source) {
-        var header = "";
-        Array.forEach(directives, function(v) {
-            header += "#define " + v + "\n";
-        });
-        return header + "\n" + source;
+    var IRenderTarget = function() {
     };
-
+    IRenderTarget.prototype.bind = function(){};
+    IRenderTarget.prototype.unbind = function(){};
+    IRenderTarget.prototype.getWidth = function(){};
+    IRenderTarget.prototype.getHeight = function(){};
+    IRenderTarget.prototype.getScale = function(){};
+    IRenderTarget.prototype.resize = function(width, height){};
 
     /**
-     * @param {Xflow.ComputeResult} dataTable
-     * @returns {ProgramObject}
+     * Wrapper to handle screen context as render target
+     * @param {XML3D.webgl.context} context
+     * @constructor
+     * @implements IRenderTarget
      */
-    Material.prototype.getProgram = function(lights, dataTable) {
-        if(!this.program) {
-            this.program = this.createProgram(lights, dataTable);
-        }
-        return this.program;
-    };/*******************************************
- * Class XML3D.webgl.XML3DBufferHandler
- *
- * The XML3DBufferHandler is an abstraction layer between the renderer and WebGL. It handles all operations
- * on Framebuffer Objects but doesn't store any of these internally. FBOs are returned and expected as a
- * 'struct' containing the following information:
- *
- *         handle            : The WebGL handle returned when gl.createFramebuffer() is called
- *         valid            : A flag indicating whether this FBO is complete
- *         width            : Width of this FBO
- *         height            : Height of this FBO
- *         colorTarget
- *         depthTarget
- *         stencilTarget    : The targets that will be rendered to, can be either a RenderBuffer or Texture2D contained
- *                           in another 'struct' with fields "handle" and "isTexture"
- *
- * @author Christian Schlinkmann
- *******************************************/
-
-XML3D.webgl.MAX_PICK_BUFFER_WIDTH = 512;
-XML3D.webgl.MAX_PICK_BUFFER_HEIGHT = 512;
-
-/**
- * @constructor
- */
-XML3D.webgl.XML3DBufferHandler = function(gl, renderer, shaderManager) {
-    this.renderer = renderer;
-    this.gl = gl;
-    this.shaderManager = shaderManager;
-};
-
-XML3D.webgl.XML3DBufferHandler.prototype.createPickingBuffer = function(width, height) {
-    var gl = this.gl;
-    var scale = 1.0;
-
-    var hDiff = height - XML3D.webgl.MAX_PICK_BUFFER_HEIGHT;
-    var wDiff = width - XML3D.webgl.MAX_PICK_BUFFER_WIDTH;
-
-    if (hDiff > 0 || wDiff > 0) {
-        if (hDiff > wDiff) {
-            scale = XML3D.webgl.MAX_PICK_BUFFER_HEIGHT / height;
-        } else {
-            scale = XML3D.webgl.MAX_PICK_BUFFER_WIDTH / width;
-        }
-    }
-
-    width = Math.floor(width * scale);
-    height = Math.floor(height * scale);
-
-    return this.createFrameBuffer(width, height, gl.RGBA, gl.DEPTH_COMPONENT16, null, { depthAsRenderbuffer : true }, scale );
-};
-
-XML3D.webgl.XML3DBufferHandler.prototype.createShadowBuffer = function() {
-    //TODO: this
-};
-
-XML3D.webgl.XML3DBufferHandler.prototype.createFrameBuffer = function(width, height, colorFormat, depthFormat, stencilFormat, options, scale) {
-
-    var gl = this.gl;
-    options = this.fillOptions(options);
-
-    var handle = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, handle);
-
-    //Create targets
-    var colorTarget = { handle : null, isTexture : false };
-    if (colorFormat) {
-        var colorTargets = [];
-        if (options.colorAsRenderbuffer) {
-            var ct = gl.createRenderbuffer();
-            gl.bindRenderbuffer(gl.RENDERBUFFER, ct);
-            gl.renderbufferStorage(gl.RENDERBUFFER, colorFormat, width, height);
-            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
-            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, ct);
-
-            colorTarget.handle = ct;
-            colorTarget.isTexture = false;
-        } else {
-            //opt.generateMipmap = opt.generateColorsMipmap;
-            var ctex = this.shaderManager.createTex2DFromData(colorFormat, width, height, gl.RGBA,
-                    gl.UNSIGNED_BYTE, null, options);
-
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, ctex.handle, 0);
-
-            colorTarget.handle = handle;
-            colorTarget.isTexture = true;
-        }
-    }
-
-    var depthTarget = { handle : null, isTexture : false };
-    if (depthFormat) {
-        options.isDepth = true;
-        if (options.depthAsRenderbuffer) {
-            var dt = gl.createRenderbuffer();
-            gl.bindRenderbuffer(gl.RENDERBUFFER, dt);
-            gl.renderbufferStorage(gl.RENDERBUFFER, depthFormat, width, height);
-            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
-            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, dt);
-
-            depthTarget.handle = dt;
-            depthTarget.isTexture = false;
-        } else {
-            //opt.generateMipmap = opt.generateDepthMipmap;
-            var dtex = this.shaderManager.createTex2DFromData(depthFormat, width, height,
-                                    gl.DEPTH_COMPONENT, gl.FLOAT, null, options);
-
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, dtex.handle, 0);
-
-            depthTarget.handle = dtex.handle;
-            depthTarget.isTexture = true;
-        }
-    }
-
-    var stencilTarget = { handle : null, isTexture : false };
-    if (stencilFormat) {
-        options.isDepth = false;
-        if (options.stencilAsRenderbuffer) {
-            var st = gl.createRenderbuffer();
-            gl.bindRenderbuffer(gl.RENDERBUFFER, st);
-            gl.renderbufferStorage(gl.RENDERBUFFER, stencilFormat, width, height);
-            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
-            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, st);
-
-            stencilTarget.handle = st;
-            stencilTarget.isTexture = false;
-        }
-        else {
-            //opt.generateMipmap = opt.generateStencilMipmap;
-            var stex = this.shaderManager.createTex2DFromData(stencilFormat, width, height,
-                                    gl.STENCIL_COMPONENT, gl.UNSIGNED_BYTE, null, options);
-
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.TEXTURE_2D, stex.handle, 0);
-
-            stencilTarget.handle = stex.handle;
-            stencilTarget.isTexture = true;
-        }
-    }
-
-    //Finalize framebuffer creation
-    var fbStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-
-    switch (fbStatus) {
-        case gl.FRAMEBUFFER_COMPLETE:
-            break;
-        case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-            XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
-            break;
-        case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-            XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
-            break;
-        case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-            XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_DIMENSIONS");
-            break;
-        case gl.FRAMEBUFFER_UNSUPPORTED:
-            XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_UNSUPPORTED");
-            break;
-        default:
-            XML3D.debug.logError("Incomplete framebuffer: " + fbStatus);
-    }
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    var fbo = {};
-    fbo.handle = handle;
-    fbo.valid = (fbStatus == gl.FRAMEBUFFER_COMPLETE);
-    fbo.width = width;
-    fbo.height = height;
-    fbo.colorTarget = colorTarget;
-    fbo.depthTarget = depthTarget;
-    fbo.stencilTarget = stencilTarget;
-    fbo.scale = scale;
-
-    return fbo;
-};
-
-XML3D.webgl.XML3DBufferHandler.prototype.destroyFrameBuffer = function(fbo) {
-    if (!fbo.handle)
-        return;
-
-    var gl = this.gl;
-    gl.deleteFramebuffer(fbo.handle);
-
-    if(fbo.colorTarget !== null) {
-        if (fbo.colorTarget.isTexture)
-            gl.deleteTexture(fbo.colorTarget.handle);
-        else
-            gl.deleteRenderBuffer(fbo.colorTarget.handle);
-    }
-    if(fbo.depthTarget !== null) {
-        if (fbo.depthTarget.isTexture)
-            gl.deleteTexture(fbo.depthTarget.handle);
-        else
-            gl.deleteRenderBuffer(fbo.depthTarget.handle);
-    }
-    if(fbo.stencilTarget !== null) {
-        if (fbo.stencilTarget.isTexture)
-            gl.deleteTexture(fbo.stencilTarget.handle);
-        else
-            gl.deleteRenderBuffer(fbo.stencilTarget.handle);
-    }
-
-};
-
-XML3D.webgl.XML3DBufferHandler.prototype.fillOptions = function(options) {
-    var gl = this.gl;
-    var opt =  {
-        wrapS                   : gl.CLAMP_TO_EDGE,
-        wrapT                 : gl.CLAMP_TO_EDGE,
-        minFilter             : gl.NEAREST,
-        magFilter             : gl.NEAREST,
-        depthMode             : gl.LUMINANCE,
-        depthCompareMode      : gl.COMPARE_R_TO_TEXTURE,
-        depthCompareFunc      : gl.LEQUAL,
-        colorsAsRenderbuffer  : false,
-        depthAsRenderbuffer   : false,
-        stencilAsRenderbuffer : false,
-        isDepth               : false
+    var GLCanvasTarget = function(context, width, height) {
+        this.context = context;
+        this.width = width;
+        this.height = height;
     };
 
-    for (var item in options) {
-        opt[item] = options[item];
-    }
-    return opt;
-};
+    var empty = function(){};
+
+    XML3D.extend(GLCanvasTarget.prototype, {
+        getWidth: function() { return this.width; },
+        getHeight: function() { return this.height; },
+        getScale: function() { return 1; },
+        bind: empty,
+        unbind: empty,
+        resize: empty
+    });
+
+    /**
+     * @param context
+     * @param opt
+     * @constructor
+     * @implements IRenderTarget
+     */
+    var GLRenderTarget = function (context, opt) {
+        this.context = context;
+        this.width = opt.width || 800;
+        this.height = opt.height || 600;
+        this.scale = opt.scale || 1;
+        this.opt = this.fillOptions(opt);
+        this.handle = null;
+        this.colorTarget = { handle: null, isTexture: false };
+        this.depthTarget = { handle: null, isTexture: false };
+        this.stencilTarget = { handle: null, isTexture: false };
+        this.valid = false;
+    };
+
+    XML3D.extend(GLRenderTarget.prototype, {
+        getWidth: function() {
+            return this.width;
+        },
+        getHeight: function() {
+            return this.height;
+        },
+        getScale: function() {
+            return this.scale;
+        },
+        bind: function () {
+            var created = false;
+            if (!this.handle) {
+                this.createFrameBuffer(this.opt.colorFormat, this.opt.depthFormat, this.opt.stencilFormat);
+                created = true;
+            }
+            if (this.valid) {
+                var gl = this.context.gl;
+                gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+                // Set default viewport
+                created && gl.viewport(0, 0, this.width, this.height);
+            }
+        },
+        unbind: function () {
+            var gl = this.context.gl;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        },
+        resize: function(width, height) {
+            this.dispose();
+            this.width = width;
+            this.height = height;
+            this.bind();
+        },
+        createFrameBuffer: function (colorFormat, depthFormat, stencilFormat) {
+            var gl = this.context.gl;
+
+            this.handle = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+            colorFormat && this.createColorTarget(colorFormat);
+            depthFormat && this.createDepthTarget(depthFormat);
+            stencilFormat && this.createStencilTarget(stencilFormat);
+            this.checkStatus();
+        },
+        createColorTarget: function (colorFormat) {
+            var gl = this.context.gl;
+            if (this.opt.colorAsRenderbuffer) {
+                var ct = gl.createRenderbuffer();
+                gl.bindRenderbuffer(gl.RENDERBUFFER, ct);
+                gl.renderbufferStorage(gl.RENDERBUFFER, colorFormat, this.width, this.height);
+                gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+                gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, ct);
+
+                this.colorTarget = {
+                    handle: ct,
+                    isTexture: false
+                };
+            } else {
+                //opt.generateMipmap = opt.generateColorsMipmap;
+                var ctex = new XML3D.webgl.GLTexture(gl);
+                ctex.createTex2DFromData(colorFormat, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this.opt);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, ctex.handle, 0);
+                this.colorTarget = {
+                    handle: ctex,
+                    isTexture: true
+                };
+            }
+        },
+        createDepthTarget: function (depthFormat) {
+            var gl = this.context.gl;
+            this.opt.isDepth = true;
+            if (this.opt.depthAsRenderbuffer) {
+                var dt = gl.createRenderbuffer();
+                gl.bindRenderbuffer(gl.RENDERBUFFER, dt);
+                gl.renderbufferStorage(gl.RENDERBUFFER, depthFormat, this.width, this.height);
+                gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+                gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, dt);
+
+                this.depthTarget = {
+                    handle: dt,
+                    isTexture: false
+                }
+            } else {
+                //opt.generateMipmap = opt.generateDepthMipmap;
+                var dtex = new XML3D.webgl.GLTexture(gl);
+                dtex.createTex2DFromData(depthFormat, this.width, this.height, gl.DEPTH_COMPONENT, gl.FLOAT, this.opt);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, dtex.handle, 0);
+
+                this.depthTarget = {
+                    handle: dtex,
+                    isTexture: true
+                }
+            }
+        },
+        createStencilTarget: function (stencilFormat) {
+            var gl = this.context.gl;
+            if (this.opt.stencilAsRenderbuffer) {
+                var st = gl.createRenderbuffer();
+                gl.bindRenderbuffer(gl.RENDERBUFFER, st);
+                gl.renderbufferStorage(gl.RENDERBUFFER, stencilFormat, this.width, this.height);
+                gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+                gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, st);
+
+                this.stencilTarget = {
+                    handle: st,
+                    isTexture: false
+                }
+            }
+            else {
+                //opt.generateMipmap = opt.generateStencilMipmap;
+                var stex = new XML3D.webgl.GLTexture(gl);
+                stex.createTex2DFromData(stencilFormat, this.width, this.height, gl.STENCIL_COMPONENT, gl.UNSIGNED_BYTE, this.opt);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.TEXTURE_2D, stex.handle, 0);
+
+                this.stencilTarget = {
+                    handle: stex,
+                    isTexture: true
+                }
+            }
+        },
+        checkStatus: function () {
+            var gl = this.context.gl;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+            //Finalize framebuffer creation
+            var fbStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+            switch (fbStatus) {
+                case gl.FRAMEBUFFER_COMPLETE:
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                    XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                    XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+                    XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_DIMENSIONS");
+                    break;
+                case gl.FRAMEBUFFER_UNSUPPORTED:
+                    XML3D.debug.logError("Incomplete framebuffer: FRAMEBUFFER_UNSUPPORTED");
+                    break;
+                default:
+                    XML3D.debug.logError("Incomplete framebuffer: " + fbStatus);
+            }
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            this.valid = (fbStatus == gl.FRAMEBUFFER_COMPLETE);
+            return this.valid;
+        },
+        fillOptions: function (options) {
+            var gl = this.context.gl;
+            var opt = {
+                wrapS: gl.CLAMP_TO_EDGE,
+                wrapT: gl.CLAMP_TO_EDGE,
+                minFilter: gl.NEAREST,
+                magFilter: gl.NEAREST,
+                depthMode: gl.LUMINANCE,
+                depthCompareMode: gl.COMPARE_R_TO_TEXTURE,
+                depthCompareFunc: gl.LEQUAL,
+                colorsAsRenderbuffer: false,
+                depthAsRenderbuffer: false,
+                stencilAsRenderbuffer: false,
+                isDepth: false
+            };
+
+            for (var item in options) {
+                opt[item] = options[item];
+            }
+            return opt;
+        },
+        dispose: function () {
+            if (!this.handle)
+                return;
+
+            var gl = this.context.gl;
+            gl.deleteFramebuffer(this.handle);
+
+            if (this.colorTarget !== null) {
+                if (this.colorTarget.isTexture)
+                    this.colorTarget.handle.dispose();
+                else
+                    gl.deleteRenderBuffer(this.colorTarget.handle);
+            }
+            if (this.depthTarget !== null) {
+                if (this.depthTarget.isTexture)
+                    this.depthTarget.handle.dispose();
+                else
+                    gl.deleteRenderBuffer(this.depthTarget.handle);
+            }
+            if (this.stencilTarget !== null) {
+                if (this.stencilTarget.isTexture)
+                    this.stencilTarget.handle.dispose();
+                else
+                    gl.deleteRenderBuffer(this.stencilTarget.handle);
+            }
+        }
+    });
+
+    var GLScaledRenderTarget = function(context, maxDimension, opt) {
+          GLRenderTarget.call(this, context, opt);
+          this.scaleToMaxDimension(maxDimension);
+    };
+
+    XML3D.createClass(GLScaledRenderTarget, GLRenderTarget);
+    XML3D.extend(GLScaledRenderTarget.prototype, {
+        scaleToMaxDimension: function(maxDimension) {
+            var hDiff = this.height - maxDimension;
+            var wDiff = this.width - maxDimension;
+
+            if (hDiff > 0 || wDiff > 0) {
+                var scale;
+                if (hDiff > wDiff) {
+                    scale = maxDimension / this.height;
+                } else {
+                    scale = maxDimension / this.width;
+                }
+                this.width = Math.floor(this.width * scale);
+                this.height = Math.floor(this.height * scale);
+                this.scale = scale;
+            }
+        }
+    });
+
+    webgl.GLCanvasTarget = GLCanvasTarget;
+    webgl.GLRenderTarget = GLRenderTarget;
+    webgl.GLScaledRenderTarget = GLScaledRenderTarget;
 
 
+}(XML3D.webgl));(function (webgl) {
 
-(function () {
+    /**
+     * @param {string} typeName
+     */
+    var getGLTypeFromString = function (typeName) {
+        var GL = window.WebGLRenderingContext;
+        if (typeName && typeName.toLoweGLase)
+            typeName = typeName.toLowerCase();
+        switch (typeName) {
+            case "triangles":
+                return GL.TRIANGLES;
+            case "tristrips":
+                return GL.TRIANGLE_STRIP;
+            case "points":
+                return GL.POINTS;
+            case "lines":
+                return GL.LINES;
+            case "linestrips":
+                return GL.LINE_STRIP;
+            default:
+                throw new Error("Unknown primitive type: " + typeName);
+        }
+    };
+
+    /**
+     *
+     * @param context
+     * @param type
+     * @constructor
+     */
+    var GLMesh = function (context, type) {
+        this.context = context;
+        this.glType = getGLTypeFromString(type);
+        this.buffers = {};
+        this.isIndexed = false;
+        this.vertexCount = null;
+        this.context.getStatistics().meshes++;
+    };
+
+    XML3D.extend(GLMesh.prototype, {
+        setBuffer: function (name, buffer) {
+            this.buffers[name] = buffer;
+            this.isIndexed = this.isIndexed || name == "index";
+        },
+        setVertexCount: function (vertexCount) {
+            this.vertexCount = vertexCount;
+        },
+        /**
+         * @returns {number}
+         */
+        getElementCount: function () {
+            try {
+                return this.buffers.index.length;
+            } catch (e) {
+                //XML3D.debug.logError("Could not calculate element count.", e);
+                return 0;
+            }
+        },
+        /**
+         * @returns {number}
+         */
+        getVertexCount: function () {
+            try {
+                return (this.vertexCount != null ? this.vertexCount : this.buffers.position.length / 3);
+            } catch (e) {
+                XML3D.debug.logError("Could not calculate vertex count.", e);
+                return 0;
+            }
+        },
+        /**
+         * @param {XML3D.webgl.GLProgram} program
+         * @returns {number}
+         */
+        draw: function (program) {
+            var gl = this.context.gl,
+                sAttributes = program.attributes,
+                buffers = this.buffers,
+                triCount = 0;
+
+            //Bind vertex buffers
+            for (var name in sAttributes) {
+                var shaderAttribute = sAttributes[name];
+                var buffer = buffers[name];
+                if (!buffer) {
+                    continue;
+                }
+                gl.enableVertexAttribArray(shaderAttribute.location);
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.vertexAttribPointer(shaderAttribute.location, buffer.tupleSize, buffer.glType, false, 0, 0);
+            }
+
+            //Draw the object
+            if (this.isIndexed) {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.index);
+
+                if (this.segments) {
+                    //This is a segmented mesh (eg. a collection of disjunct line strips)
+                    var offset = 0;
+                    var sd = this.segments.value;
+                    for (var j = 0; j < sd.length; j++) {
+                        gl.drawElements(this.glType, sd[j], gl.UNSIGNED_SHORT, offset);
+                        offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
+                    }
+                } else {
+                    gl.drawElements(this.glType, this.getElementCount(), gl.UNSIGNED_SHORT, 0);
+                }
+                triCount = this.getElementCount() / 3;
+            } else {
+                if (this.size) {
+                    var offset = 0;
+                    var sd = this.size.data;
+                    for (var j = 0; j < sd.length; j++) {
+                        gl.drawArrays(this.glType, offset, sd[j]);
+                        offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
+                    }
+                } else {
+                    // console.log("drawArrays: " + mesh.getVertexCount());
+                    gl.drawArrays(this.glType, 0, this.getVertexCount());
+                }
+                triCount = buffers.position ? buffers.position.length / 3 : 0;
+            }
+
+            //Unbind vertex buffers
+            for (var name in sAttributes) {
+                var shaderAttribute = sAttributes[name];
+                gl.disableVertexAttribArray(shaderAttribute.location);
+            }
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+            return triCount;
+        }
+
+
+    });
+
+    webgl.GLMesh = GLMesh;
+
+
+}(XML3D.webgl));
+(function (webgl) {
+    /**
+     * @interface
+     */
+    var IRenderer = function () {
+
+    };
+
+    IRenderer.prototype.renderToCanvas = function () {
+    };
+    IRenderer.prototype.handleResizeEvent = function (width, height) {
+    };
+    IRenderer.prototype.requestRedraw = function (reason) {
+    };
+    IRenderer.prototype.needsRedraw = function () {
+    };
+    IRenderer.prototype.getWorldSpaceNormalByPoint = function (obj, x, y) {
+    };
+    IRenderer.prototype.getWorldSpacePositionByPoint = function (obj, x, y) {
+    };
+    IRenderer.prototype.getRenderObjectFromPickingBuffer = function (x, y) {
+    };
+    IRenderer.prototype.generateRay = function (x, y) {
+    };
+    IRenderer.prototype.dispose = function () {
+    };
+
+    /**
+     * @implements {IRenderer}
+     * @constructor
+     */
+    var GLRenderer = function (context, scene, canvas) {
+        this.context = context;
+        this.scene = scene;
+        this.canvas = canvas;
+        this.width = canvas.clientWidth;
+        this.height = canvas.clientHeight;
+
+        /** @type {XML3D.webgl.RenderObject} */
+        this.pickedObject = null;
+
+        this.needsDraw = true;
+        this.needsPickingDraw = true;
+        this.context.requestRedraw = this.requestRedraw.bind(this);
+
+
+        this.initGL();
+        this.changeListener = new XML3D.webgl.DataChangeListener(this);
+
+        this.createRenderPasses(context);
+    };
+
+    // Just to satisfy jslint
+    GLRenderer.prototype.generateRay = function() {};
+
+    XML3D.extend(GLRenderer.prototype, {
+        initGL: function () {
+            var gl = this.context.gl;
+
+            gl.clearColor(0, 0, 0, 0);
+            gl.clearDepth(1);
+            gl.clearStencil(0);
+
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+
+            gl.frontFace(gl.CCW);
+            gl.cullFace(gl.BACK);
+            gl.disable(gl.CULL_FACE);
+
+            gl.blendEquation(gl.FUNC_ADD);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.disable(gl.BLEND);
+
+            gl.viewport(0, 0, this.width, this.height);
+
+            gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+
+        },
+        handleResizeEvent: function (width, height) {
+            this.width = width;
+            this.height = height;
+            this.context.handleResizeEvent(width, height);
+            this.createRenderPasses(this.context);
+            this.scene.handleResizeEvent(width, height);
+            this.needsDraw = this.needsPickingDraw = true;
+        },
+        createRenderPasses: function (context) {
+            this.mainPass = new webgl.ForwardRenderPass(context);
+            var pickingTarget = this.createPickingTarget();
+            this.pickObjectPass = new webgl.PickObjectRenderPass(context, { target: pickingTarget });
+            this.pickPositionPass = new webgl.PickPositionRenderPass(context, { target: pickingTarget });
+            this.pickNormalPass = new webgl.PickNormalRenderPass(context, { target: pickingTarget });
+        },
+        requestRedraw: function (reason) {
+            XML3D.debug.logDebug("Request redraw because:", reason);
+            this.needsDraw = true;
+            this.needsPickingDraw = true;
+        },
+        getWorldSpaceNormalByPoint: function (x, y, object) {
+            var obj = object || this.pickedObject;
+            if (!obj)
+                return null;
+            y = webgl.canvasToGlY(this.canvas, y);
+            this.pickNormalPass.renderObject(obj);
+            return this.pickNormalPass.readNormalFromPickingBuffer(x, y);
+        },
+        getWorldSpacePositionByPoint: function (x, y, object) {
+            var obj = object || this.pickedObject;
+            if (!obj)
+                return null;
+            y = webgl.canvasToGlY(this.canvas, y);
+            this.pickPositionPass.renderObject(obj);
+            return this.pickPositionPass.readPositionFromPickingBuffer(x, y);
+        },
+
+        needsRedraw: function () {
+            return this.needsDraw;
+        },
+        renderToCanvas: function () {
+            this.prepareRendering();
+            var stats = this.mainPass.renderScene(this.scene);
+            XML3D.debug.logDebug("Rendered to Canvas");
+            this.needsDraw = false;
+            return stats;
+        },
+        getRenderObjectFromPickingBuffer: function (x, y) {
+            y = webgl.canvasToGlY(this.canvas, y);
+            if(this.needsPickingDraw) {
+                this.prepareRendering();
+                this.pickObjectPass.renderScene(this.scene);
+                this.needsPickingDraw = false;
+            }
+            this.pickedObject = this.pickObjectPass.getRenderObjectFromPickingBuffer(x, y, this.scene);
+            return this.pickedObject;
+        },
+        prepareRendering: function () {
+            this.scene.update();
+        },
+        createPickingTarget: function () {
+            var gl = this.context.gl;
+
+            var target = new webgl.GLScaledRenderTarget(this.context, webgl.MAX_PICK_BUFFER_DIMENSION, {
+                width: this.width,
+                height: this.height,
+                colorFormat: gl.RGBA,
+                depthFormat: gl.DEPTH_COMPONENT16,
+                stencilFormat: null,
+                depthAsRenderbuffer: true
+            });
+            return target;
+        },
+        /**
+         * Uses gluUnProject() to transform the 2D screen point to a 3D ray.
+         * Not tested!!
+         *
+         * @param {number} canvasX
+         * @param {number} canvasY
+         */
+        generateRay: (function () {
+
+            var c_viewMatrix = XML3D.math.mat4.create();
+            var c_projectionMatrix = XML3D.math.mat4.create();
+
+            return function (canvasX, canvasY) {
+
+                var glY = XML3D.webgl.canvasToGlY(this.canvas, canvasY);
+
+                // setup input to unproject
+                var viewport = new Array();
+                viewport[0] = 0;
+                viewport[1] = 0;
+                viewport[2] = this.width;
+                viewport[3] = this.height;
+
+                // get view and projection matrix arrays
+                var view = this.scene.getActiveView();
+                view.getViewMatrix(c_viewMatrix);
+                view.getProjectionMatrix(c_projectionMatrix, viewport[2] / viewport[3]);
+
+                var ray = new window.XML3DRay();
+
+                var nearHit = new Array();
+                var farHit = new Array();
+
+                // do unprojections
+                if (false === GLU.unProject(canvasX, glY, 0, c_viewMatrix, c_projectionMatrix, viewport, nearHit)) {
+                    return ray;
+                }
+
+                if (false === GLU.unProject(canvasX, glY, 1, c_viewMatrix, c_projectionMatrix, viewport, farHit)) {
+                    return ray;
+                }
+
+                // calculate ray
+                XML3D.math.mat4.invert(c_viewMatrix, c_viewMatrix);
+                var viewPos = new window.XML3DVec3(c_viewMatrix[12], c_viewMatrix[13], c_viewMatrix[14]);
+
+                ray.origin.set(viewPos);
+                ray.direction.set(farHit[0] - nearHit[0], farHit[1] - nearHit[1], farHit[2] - nearHit[2]);
+                ray.direction.set(ray.direction.normalize());
+
+                return ray;
+            }
+        }()),
+        dispose: function () {
+            this.scene.clear();
+        }
+
+    })
+
+    webgl.GLRenderer = GLRenderer;
+
+}(XML3D.webgl));
+(function (webgl) {
 
     var StateMachine = window.StateMachine;
 
-    var RenderObjectHandler = function() {
-        this.remove = function(obj) {
-            var index = this.ready.indexOf(obj);
-            if (index == -1) {
-                index = this.queue.indexOf(obj);
-                this.queue.splice(index, 1);
-            } else
-                this.ready.splice(index, 1);
-        };
-        this.clear = function() {
-            this.ready = [];
-            this.queue = [];
-        };
-        this.moveFromQueueToReady = function(obj) {
-            var index = this.queue.indexOf(obj);
-            if (index != -1) {
-                this.queue.splice(index, 1);
-                this.ready.push(obj);
-            }
-        };
-        this.moveFromReadyToQueue = function(obj) {
-            var index = this.ready.indexOf(obj);
-            if (index != -1) {
-                this.ready.splice(index, 1);
-                this.queue.push(obj);
-            }
-        };
-        this.remove = function(obj) {
+    /**
+     *
+     * @param {GLContext} context
+     * @extends {Scene}
+     * @constructor
+     */
+    var GLScene = function (context) {
+        webgl.Scene.call(this);
+        this.context = context;
+        this.shaderFactory = new webgl.ShaderComposerFactory(context);
+        this.drawableFactory = new webgl.DrawableFactory(context);
+        this.firstOpaqueIndex = 0;
+        this.ready = [];
+        this.queue = [];
+        this.addListeners();
+    };
+    var EVENT_TYPE = webgl.Scene.EVENT_TYPE;
+
+    XML3D.createClass(GLScene, webgl.Scene);
+
+
+    XML3D.extend(GLScene.prototype, {
+        remove: function (obj) {
             var index = this.queue.indexOf(obj);
             if (index != -1) {
                 this.queue.splice(index, 1);
@@ -18207,961 +22583,1625 @@ XML3D.webgl.XML3DBufferHandler.prototype.fillOptions = function(options) {
             index = this.ready.indexOf(obj);
             if (index != -1) {
                 this.ready.splice(index, 1);
+                if (index < this.firstOpaqueIndex)
+                    this.firstOpaqueIndex--;
             }
-        };
-        this.consolidate = function() {
-            this.queue.slice().forEach(function(obj) {
-                while (obj.can('progress') && obj.progress() == StateMachine.Result.SUCCEEDED ) {};
-                if(obj.current == "NoMesh") {
-                    if (obj.dataComplete() !== StateMachine.Result.SUCCEEDED) {
-                        obj.dataNotComplete();
-                    }
+        },
+        clear: function () {
+            this.ready = [];
+            this.queue = [];
+        },
+        moveFromQueueToReady: function (obj) {
+            var index = this.queue.indexOf(obj);
+            if (index != -1) {
+                this.queue.splice(index, 1);
+                if (obj.hasTransparency()) {
+                    this.ready.unshift(obj);
+                    this.firstOpaqueIndex++;
                 }
-            });
-        }
-        this.updateLights = function(lights, shaderManager) {
-            if (lights.structureChanged) {
-                this.forEach(function(obj) { obj.lightsChanged(lights, shaderManager); }, this);
-                lights.structureChanged = false;
-            } else {
-                this.queue.forEach(function(obj) {
-                    if (obj.current == "NoLights")
-                        obj.lightsChanged(lights, shaderManager);
-                }, this);
+                else {
+                    this.ready.push(obj);
+                }
             }
-        }
-        this.forEach = function(func, that) {
+        },
+        moveFromReadyToQueue: function (obj) {
+            var index = this.ready.indexOf(obj);
+            if (index != -1) {
+                this.ready.splice(index, 1);
+                if (index < this.firstOpaqueIndex)
+                    this.firstOpaqueIndex--;
+                this.queue.push(obj);
+            }
+        },
+        update: function () {
+            this.updateObjectsForRendering();
+            this.updateShaders();
+        },
+
+        updateShaders: function() {
+            this.shaderFactory.update(this);
+        },
+
+        updateObjectsForRendering: function () {
+            var that = this;
+            this.forEach(function(obj) {
+                obj.updateForRendering();
+            });
+        },
+        forEach: function (func, that) {
             this.queue.slice().forEach(func, that);
             this.ready.slice().forEach(func, that);
+        },
+        updateReadyObjectsFromActiveView: (function () {
+            var c_viewMat_tmp = XML3D.math.mat4.create();
+            var c_projMat_tmp = XML3D.math.mat4.create();
+
+            return function (aspectRatio) {
+                this.getActiveView().getViewMatrix(c_viewMat_tmp);
+
+                this.ready.forEach(function (obj) {
+                    obj.updateModelViewMatrix(c_viewMat_tmp);
+                    obj.updateNormalMatrix();
+                });
+
+                this.updateBoundingBox();
+                this.getActiveView().getProjectionMatrix(c_projMat_tmp, aspectRatio);
+
+                this.ready.forEach(function (obj) {
+                    obj.updateModelViewProjectionMatrix(c_projMat_tmp);
+                });
+            }
+        }()),
+        addListeners: function() {
+            this.addEventListener( EVENT_TYPE.SCENE_STRUCTURE_CHANGED, function(event){
+                if(event.newChild !== undefined) {
+                    this.addChildEvent(event.newChild);
+                } else if (event.removedChild !== undefined) {
+                    this.removeChildEvent(event.removedChild);
+                }
+            });
+            this.addEventListener( EVENT_TYPE.VIEW_CHANGED, function(event){
+                this.context.requestRedraw("Active view changed.");
+            });
+            this.addEventListener( EVENT_TYPE.LIGHT_STRUCTURE_CHANGED, function(event){
+                this.shaderFactory.setLightStructureDirty();
+            });
+            this.addEventListener( EVENT_TYPE.LIGHT_VALUE_CHANGED, function(event){
+                this.shaderFactory.setLightValueChanged();
+                this.context.requestRedraw("Light value changed.");
+            });
+        },
+        addChildEvent: function(child) {
+            if(child.type == webgl.Scene.NODE_TYPE.OBJECT) {
+                this.queue.push(child);
+                this.context.requestRedraw("Object was added to scene.");
+            }
+        },
+        removeChildEvent: function(child) {
+            if(child.type == webgl.Scene.NODE_TYPE.OBJECT) {
+                this.remove(child);
+                child.dispose();
+                this.context.requestRedraw("Object was removed from scene.");
+            }
+        },
+        handleResizeEvent: function(width, height) {
+            this.getActiveView().setProjectionDirty();
+        },
+        createDrawable: function(obj) {
+            return this.drawableFactory.createDrawable(obj);
+        },
+        requestRedraw: function(reason) {
+            return this.context.requestRedraw(reason);
         }
-        this.clear();
-    };
+    });
+    webgl.GLScene = GLScene;
+
+}(XML3D.webgl));
+(function (webgl) {
+
     /**
-     * Represents a renderable object in the scene.
-     *
-     * This object holds references to a mesh and shader stored in their respective managers, or in the
-     * case of XFlow a local instance of these objects, since XFlow may be applied differently to different
-     * instances of the same <data> element. It also holds the current transformation matrix for the object,
-     * a flag to indicate visibility (not visible = will not be rendered), and a callback function to be used by
-     * any adapters associated with this object (eg. the mesh adapter) to propagate changes (eg. when the
-     * parent group's shader is changed).
+     * @contructor
+     */
+    var BaseRenderPass = function(context, opt) {
+        opt = opt || {};
+        this.context = context;
+        this.target = opt.target || context.canvasTarget;
+    };
+
+    XML3D.extend(BaseRenderPass.prototype, {
+        /**
+         * Reads pixels from the pass's target
+         *
+         * @param {number} glX OpenGL Coordinate in the target
+         * @param {number} glY OpenGL Coordinate in the target
+         * @returns {Uint8Array} pixel data
+         */
+        readPixelDataFromBuffer : (function() {
+            var c_data = new Uint8Array(8);
+
+            return function (glX, glY) {
+                var gl = this.context.gl;
+                var scale = this.target.getScale();
+                var x = glX * scale;
+                var y = glY * scale;
+
+                this.target.bind();
+                try {
+                    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, c_data);
+                    this.target.unbind();
+                    return c_data;
+                } catch (e) {
+                    XML3D.debug.logException(e);
+                    this.target.unbind();
+                    return null;
+                }
+            }
+        }())
+    });
+
+    webgl.BaseRenderPass = BaseRenderPass;
+
+}(XML3D.webgl));(function (webgl) {
+
+    /**
      *
      * @constructor
      */
-    var RenderObject = function (opt) {
-        this.handler = opt.handler;
-        this.meshAdapter = opt.meshAdapter;
-        this.shaderAdapter = null;
-        this.shader = opt.shader || null;
-        this.transform = opt.transform || RenderObject.IDENTITY_MATRIX;
-        this.visible = opt.visible !== undefined ? opt.visible : true;
-        this.meshAdapter.renderObject = this;
-        /** {Object?} **/
-        this.override = null;
-        this.create();
+    var ForwardRenderPass = function (context, opt) {
+        webgl.BaseRenderPass.call(this, context, opt);
+    };
+    XML3D.createClass(ForwardRenderPass, webgl.BaseRenderPass);
+
+    XML3D.extend(ForwardRenderPass.prototype, {
+        renderScene: (function () {
+
+            return function (scene) {
+                var gl = this.context.gl,
+                    target = this.target;
+
+                target.bind();
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+                gl.viewport(0, 0, target.getWidth(), target.getHeight());
+                gl.enable(gl.DEPTH_TEST);
+
+                scene.updateReadyObjectsFromActiveView(target.getWidth() / target.getHeight());
+
+                var count = { objects: 0, primitives: 0 };
+                //Sort objects by shader/transparency
+                var opaqueObjects = [];
+                var transparentObjects = [];
+                this.sortObjects(scene.ready, scene.firstOpaqueIndex, opaqueObjects, transparentObjects);
+
+                //Render opaque objects
+                for (var program in opaqueObjects) {
+                    this.renderObjectsToActiveBuffer(opaqueObjects[program], scene, { transparent: false, stats: count });
+                }
+
+                //Render transparent objects
+                for (var k = 0; k < transparentObjects.length; k++) {
+                    var objectArray = [transparentObjects[k]];
+                    this.renderObjectsToActiveBuffer(objectArray, scene, { transparent: true, stats: count });
+                }
+                scene.lights.changed = false;
+                return { count: count };
+            }
+        }()),
+        sortObjects: (function () {
+            var c_tmpModelMatrix = XML3D.math.mat4.create();
+            var c_bbox = XML3D.math.bbox.create();
+            var c_center = XML3D.math.vec3.create();
+
+            return function (sourceObjectArray, firstOpaque, opaque, transparent) {
+                var tempArray = [], obj;
+                for (var i = 0, l = sourceObjectArray.length; i < l; i++) {
+                    obj = sourceObjectArray[i];
+                    if (i < firstOpaque) {
+                        tempArray.push(obj);
+                    } else {
+                        opaque[obj.program.id] = opaque[obj.program.id] || [];
+                        opaque[obj.program.id].push(obj);
+                    }
+                }
+
+                //Sort transparent objects from back to front
+                var tlength = tempArray.length;
+                if (tlength > 1) {
+                    for (i = 0; i < tlength; i++) {
+                        obj = tempArray[i];
+
+                        obj.getObjectSpaceBoundingBox(c_bbox);
+                        XML3D.math.bbox.center(c_center, c_bbox);
+
+                        obj.getWorldMatrix(c_tmpModelMatrix);
+                        var center = XML3D.math.vec3.transformMat4(c_center, c_center, c_tmpModelMatrix);
+                        tempArray[i] = [ obj, center[2] ];
+                    }
+
+                    tempArray.sort(function (a, b) {
+                        return a[1] - b[1];
+                    });
+
+                    for (i = 0; i < tlength; i++) {
+                        transparent[i] = tempArray[i][0];
+                    }
+                } else if (tlength == 1) {
+                    transparent[0] = tempArray[0];
+                }
+                //console.log("Sorted: " + transparent.length);
+            }
+        }()),
+        renderObjectsToActiveBuffer: (function () {
+
+            var c_viewMat_tmp = XML3D.math.mat4.create();
+            var c_projMat_tmp = XML3D.math.mat4.create();
+            var tmpModelMatrix = XML3D.math.mat4.create();
+            var tmpModelView = XML3D.math.mat4.create();
+            var tmpModelViewProjection = XML3D.math.mat4.create();
+            var tmpNormalMatrix = XML3D.math.mat3.create();
+
+            return function (objectArray, scene, opts) {
+                var objCount = 0;
+                var primitiveCount = 0;
+                var parameters = {};
+                var stats = opts.stats || {};
+                var transparent = opts.transparent === true || false;
+                var gl = this.context.gl;
+
+                if (objectArray.length == 0) {
+                    return;
+                }
+
+                if (transparent) {
+                    gl.enable(gl.BLEND);
+                    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+                }
+
+                // At this point, we have to gurantee (via FSM), that the RenderObject has a valid shader
+                var program = objectArray[0].program;
+
+                program.bind();
+                //this.shaderManager.updateActiveShader(shader);
+                scene.getActiveView().getViewMatrix(c_viewMat_tmp);
+                scene.getActiveView().getProjectionMatrix(c_projMat_tmp, this.width / this.height);
+
+                parameters["viewMatrix"] = c_viewMat_tmp;
+                parameters["projectionMatrix"] = c_projMat_tmp;
+                //parameters["cameraPosition"] = this.camera.getWorldSpacePosition();
+                parameters["screenWidth"] = this.target.width;
+
+                //Set global data that is shared between all objects using this shader
+                program.setUniformVariables(parameters);
+                parameters = {};
+
+                for (var i = 0, n = objectArray.length; i < n; i++) {
+                    var obj = objectArray[i];
+                    if (!obj.isVisible())
+                        continue;
+
+                    var mesh = obj.mesh;
+                    XML3D.debug.assert(mesh, "We need a mesh at his point.");
+
+                    obj.getWorldMatrix(tmpModelMatrix);
+                    parameters["modelMatrix"] = tmpModelMatrix;
+
+                    obj.getModelViewMatrix(tmpModelView);
+                    parameters["modelViewMatrix"] = tmpModelView;
+
+                    obj.getModelViewProjectionMatrix(tmpModelViewProjection);
+                    parameters["modelViewProjectionMatrix"] = tmpModelViewProjection;
+
+                    obj.getNormalMatrix(tmpNormalMatrix);
+                    parameters["normalMatrix"] = tmpNormalMatrix;
+
+                    program.setUniformVariables(parameters);
+                    if (obj.override !== null) {
+                        program.setUniformVariableOverride(obj.override);
+                    }
+
+                    primitiveCount += mesh.draw(program);
+                    objCount++;
+
+                    if (obj.override !== null) {
+                        //TODO variable needs to be set back to the proper value instead of the default one
+                        program.undoUniformVariableOverride(obj.override);
+                    }
+                    if (transparent) {
+                        gl.disable(gl.BLEND);
+                    }
+
+                }
+
+                stats.objects += objCount;
+                stats.primitives += primitiveCount;
+                return stats;
+            }
+        }())
+
+    });
+
+
+    webgl.ForwardRenderPass = ForwardRenderPass;
+
+}(XML3D.webgl));
+(function (webgl) {
+
+
+    /**
+     *
+     * @param {XML3D.webgl.GLContext} context
+     * @param {number} width
+     * @param {number} height
+     * @constructor
+     */
+    var PickObjectRenderPass = function (context, opt) {
+        webgl.BaseRenderPass.call(this, context, opt);
+        this.program = context.programFactory.getPickingObjectIdProgram();
+        var gl = this.context.gl;
+        this.clearBits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT;
+    };
+    XML3D.createClass(PickObjectRenderPass, webgl.BaseRenderPass);
+
+    XML3D.extend(PickObjectRenderPass.prototype, {
+        renderScene: (function () {
+
+            var c_mvp = XML3D.math.mat4.create();
+
+            return function (scene) {
+                var gl = this.context.gl;
+                this.target.bind();
+
+                gl.enable(gl.DEPTH_TEST);
+                gl.disable(gl.CULL_FACE);
+                gl.disable(gl.BLEND);
+
+                gl.viewport(0, 0, this.target.getWidth(), this.target.getHeight());
+                gl.clear(this.clearBits);
+
+                scene.updateReadyObjectsFromActiveView(this.target.getWidth() / this.target.getHeight());
+
+
+                this.program.bind();
+                var objects = scene.ready;
+
+                for (var j = 0, n = objects.length; j < n; j++) {
+                    var obj = objects[j];
+                    var mesh = obj.mesh;
+
+                    if (!obj.isVisible())
+                        continue;
+
+                    var parameters = {};
+
+                    obj.getModelViewProjectionMatrix(c_mvp);
+
+                    var objId = j + 1;
+                    var c1 = objId & 255;
+                    objId = objId >> 8;
+                    var c2 = objId & 255;
+                    objId = objId >> 8;
+                    var c3 = objId & 255;
+
+                    parameters.id = [c3 / 255.0, c2 / 255.0, c1 / 255.0];
+                    parameters.modelViewProjectionMatrix = c_mvp;
+
+                    this.program.setUniformVariables(parameters);
+                    mesh.draw(this.program);
+                }
+                this.program.unbind();
+                this.target.unbind();
+            };
+        }()),
+
+        /**
+         * Reads pixels from the screenbuffer to determine picked object or normals.
+         *
+         * @param {number} x Screen Coordinate of color buffer
+         * @param {number} y Screen Coordinate of color buffer
+         * @param {XML3D.webgl.GLScene} scene Scene
+         * @returns {XML3D.webgl.RenderObject|null} Picked Object
+         */
+        getRenderObjectFromPickingBuffer: function (x, y, scene) {
+            var data = this.readPixelDataFromBuffer(x, y);
+
+            if (!data)
+                return null;
+
+            var result = null;
+            var objId = data[0] * 65536 + data[1] * 256 + data[2];
+
+            if (objId > 0) {
+                var pickedObj = scene.ready[objId - 1];
+                result = pickedObj;
+            }
+            return result;
+        }
+    });
+
+    webgl.PickObjectRenderPass = PickObjectRenderPass;
+
+}(XML3D.webgl));(function(webgl){
+
+    var PickPositionRenderPass = function(context, opt) {
+        webgl.BaseRenderPass.call(this, context, opt);
+        this.program = context.programFactory.getPickingPositionProgram();
+        this.objectBoundingBox = XML3D.math.bbox.create();
+    };
+    XML3D.createClass(PickPositionRenderPass, webgl.BaseRenderPass, {
+
+        renderObject: (function() {
+
+            var c_modelMatrix = XML3D.math.mat4.create();
+            var c_modelViewProjectionMatrix = XML3D.math.mat4.create();
+
+            return function(obj) {
+                var gl = this.context.gl;
+
+                this.target.bind();
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+                gl.enable(gl.DEPTH_TEST);
+                gl.disable(gl.CULL_FACE);
+                gl.disable(gl.BLEND);
+
+                obj.getWorldMatrix(c_modelMatrix);
+
+                obj.getObjectSpaceBoundingBox(this.objectBoundingBox);
+                XML3D.math.bbox.transform(this.objectBoundingBox, c_modelMatrix, this.objectBoundingBox);
+
+                this.program.bind();
+                obj.getModelViewProjectionMatrix(c_modelViewProjectionMatrix);
+
+                var parameters = {
+                    bbox : this.objectBoundingBox,
+                    modelMatrix : c_modelMatrix,
+                    modelViewProjectionMatrix : c_modelViewProjectionMatrix
+                };
+
+                this.program.setUniformVariables(parameters);
+                obj.mesh.draw(this.program);
+
+                this.program.unbind();
+                this.target.unbind();
+            };
+        }()),
+
+        readPositionFromPickingBuffer: (function() {
+
+            var c_vec3 = XML3D.math.vec3.create();
+
+            return function(x,y) {
+                var data = this.readPixelDataFromBuffer(x, y);
+                if(data){
+
+                    c_vec3[0] = data[0] / 255;
+                    c_vec3[1] = data[1] / 255;
+                    c_vec3[2] = data[2] / 255;
+
+                    var size = XML3D.math.bbox.size(XML3D.math.vec3.create(), this.objectBoundingBox);
+                    size = XML3D.math.vec3.mul(size, c_vec3, size);
+                    XML3D.math.vec3.add(size, this.objectBoundingBox, size);
+                    return size;
+                }
+                else{
+                    return null;
+                }
+            }
+        }())
+    });
+
+    webgl.PickPositionRenderPass = PickPositionRenderPass;
+
+}(XML3D.webgl));(function (webgl) {
+
+    var PickNormalRenderPass = function (context, opt) {
+        webgl.BaseRenderPass.call(this, context, opt);
+        this.program = context.programFactory.getPickingNormalProgram();
     };
 
-    RenderObject.IDENTITY_MATRIX = XML3D.math.mat4.identity(XML3D.math.mat4.create());
+    XML3D.createClass(PickNormalRenderPass, webgl.BaseRenderPass, {
+        renderObject: (function () {
+
+            var c_modelViewProjectionMatrix = XML3D.math.mat4.create();
+            var c_worldMatrix = XML3D.math.mat4.create();
+            var c_normalMatrix3 = XML3D.math.mat3.create();
+
+            return function (object) {
+                var gl = this.context.gl;
+                this.target.bind();
+
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+                gl.enable(gl.DEPTH_TEST);
+                gl.disable(gl.CULL_FACE);
+                gl.disable(gl.BLEND);
+
+                object.getModelViewProjectionMatrix(c_modelViewProjectionMatrix);
+                object.getWorldMatrix(c_worldMatrix);
+
+                if (XML3D.math.mat4.invert(c_worldMatrix, c_worldMatrix)) {
+                    XML3D.math.mat3.fromMat4(c_normalMatrix3, c_worldMatrix);
+                    XML3D.math.mat3.transpose(c_normalMatrix3, c_normalMatrix3);
+                } else {
+                    XML3D.math.mat3.identity(c_normalMatrix3);
+                }
+
+                var program = this.program;
+                program.bind();
+
+                var parameters = {
+                    modelViewProjectionMatrix: c_modelViewProjectionMatrix,
+                    normalMatrix: c_normalMatrix3
+                };
+                program.setUniformVariables(parameters);
+                object.mesh.draw(program);
+
+                program.unbind();
+                this.target.unbind();
+            }
+        }()),
+        /**
+         * Read normal from picking buffer
+         * @param {number} glX OpenGL Coordinate of color buffer
+         * @param {number} glY OpenGL Coordinate of color buffer
+         * @returns {Object} Vector with normal data
+         */
+        readNormalFromPickingBuffer: (function () {
+            var c_pickVector = XML3D.math.vec3.create();
+            var c_one = XML3D.math.vec3.fromValues(1, 1, 1);
+
+            return function (glX, glY) {
+                var data = this.readPixelDataFromBuffer(glX, glY);
+                if (!data) {
+                    return null;
+                }
+                c_pickVector[0] = data[0] / 254;
+                c_pickVector[1] = data[1] / 254;
+                c_pickVector[2] = data[2] / 254;
+
+                // TODO: Optimize (2 Float arrays created)
+                return XML3D.math.vec3.subtract(XML3D.math.vec3.create(), XML3D.math.vec3.scale(XML3D.math.vec3.create(), c_pickVector, 2.0), c_one);
+            }
+        }())
+    });
 
 
-    RenderObject.prototype = {
-        onenterReady:function () {
-            //console.log("Entering Ready state");
-            this.handler.moveFromQueueToReady(this);
-        },
-        onleaveReady:function () {
-            //console.log("Leaving Ready state");
-            this.handler.moveFromReadyToQueue(this);
-        },
-        onafterlightsChanged:function (name, from, to, lights, shaderManager) {
-            if (lights) {
-                var shaderHandle = this.meshAdapter.getShaderHandle();
-                this.shaderAdapter = shaderHandle && shaderHandle.getAdapter();
-                this.shader = shaderManager.createShader(this.shaderAdapter, lights);
+    webgl.PickNormalRenderPass = PickNormalRenderPass;
+
+}(XML3D.webgl));(function (webgl) {
+
+    var ProgramFactory = function (context) {
+        this.context = context;
+        this.programs = {
+            fallback: null,
+            picking: {
+                id: null,
+                normal: null,
+                position: null
             }
-        },
-        onbeforedataComplete:function (name, from, to) {
-            //console.log("Before data complete");
-            if(!this.meshAdapter.finishMesh()) {
-                return false;
-            }
-            return true;
-        },
-        onbeforeprogress:function (name, from, to) {
-            //console.log("Before progress", arguments);
-            switch (to) {
-                case "NoMaterial":
-                    return this.shader != null;
-            }
-            switch (from) {
-                case "DirtyMeshData":
-                    this.meshAdapter.createMeshData();
-            }
-        },
-        onenterNoMesh:function () {
-            // Trigger the creation of the mesh now
-            // this.meshAdapter.createMesh();
-            return true;
-        },
-        onenterDisposed:function () {
-            this.handler.remove(this);
-        },
-        onchangestate:function (name, from, to) {
-            XML3D.debug.logInfo("Changed: ", name, from, to);
         }
+    };
+
+    XML3D.extend(ProgramFactory.prototype, {
+
+        getProgramByName: function (name) {
+            var scriptDescriptor = XML3D.shaders.getScript(name);
+            if (!scriptDescriptor || !scriptDescriptor.vertex) {
+                XML3D.debug.logError("Unknown shader: ", name);
+                return null;
+            }
+            var descriptor = new webgl.ShaderDescriptor();
+            XML3D.extend(descriptor, scriptDescriptor);
+            descriptor.fragment = XML3D.webgl.addFragmentShaderHeader(descriptor.fragment);
+            var shader = new webgl.ShaderClosure(this.context, descriptor);
+            shader.createSources({}, null, null);
+            shader.compile();
+            return shader;
+        },
+        getFallbackProgram: function () {
+            if (!this.programs.fallback) {
+                var descriptor = new webgl.ShaderDescriptor();
+                XML3D.extend(descriptor, XML3D.shaders.getScript("matte"));
+                descriptor.fragment = XML3D.webgl.addFragmentShaderHeader(descriptor.fragment);
+                var shader = new webgl.ShaderClosure(this.context, descriptor, function() { return {diffuseColor:[1,0,0]} });
+                shader.createSources({}, null, null);
+                shader.compile();
+                this.programs.fallback = shader;
+                this.programs.fallback.bind();
+                this.programs.fallback.setUniformVariables({diffuseColor : [ 1, 0, 0 ]});
+                this.programs.fallback.unbind();
+            }
+            return this.programs.fallback;
+        },
+        getPickingObjectIdProgram: function () {
+            var picking = this.programs.picking;
+            if (!picking.id) {
+                picking.id = this.getProgramByName("pickobjectid");
+            }
+            return picking.id;
+        },
+        getPickingPositionProgram: function () {
+            var picking = this.programs.picking;
+            if (!picking.position) {
+                picking.position = this.getProgramByName("pickedposition");
+            }
+            return picking.position;
+        },
+        getPickingNormalProgram: function () {
+            var picking = this.programs.picking;
+            if (!picking.normal) {
+                picking.normal = this.getProgramByName("pickedNormals");
+            }
+            return picking.normal;
+        }
+
+    });
+
+    webgl.ProgramFactory = ProgramFactory;
+
+}(XML3D.webgl));(function(webgl){
+
+    /**
+     * @param {GLContext} context
+     * @constructor
+     */
+    var DrawableFactory = function(context) {
+        this.context = context;
+
+    };
+
+    XML3D.extend(DrawableFactory.prototype, {
+        createDrawable: function(obj) {
+            XML3D.debug.logDebug("DrawableFactory::createDrawable", obj);
+            var result = new webgl.MeshClosure(this.context, obj.getType(), obj.getDataNode(), { boundingBoxChanged: obj.setObjectSpaceBoundingBox.bind(obj)});
+            obj.mesh = result.getMesh();
+            return result;
+        }
+    });
+
+    webgl.DrawableFactory = DrawableFactory;
+
+
+}(XML3D.webgl));
+(function (webgl) {
+
+    /**
+     * @interface
+     */
+    var IShaderComposer = function () {
     };
 
     /**
-     * @param {Xflow.Result} result
+     * @enum
      */
-    RenderObject.prototype.setOverride = function(result) {
-        if(!result.outputNames.length)
-            return;
-
-        var prog = this.meshAdapter.factory.renderer.shaderManager.getShaderById(this.shader);
-        this.override = Object.create(null);
-        for(var name in prog.uniforms) {
-            var entry = result.getOutputData(name);
-            if (entry && entry.getValue())
-                this.override[name] = entry.getValue();
-        }
-        XML3D.debug.logInfo("Shader attribute override", result, this.override);
+    IShaderComposer.UpdateState = {
+        SHADER_UPDATED: 1,
+        SHADER_COMPILED: 2,
+        SHADER_UNCHANGED: 3
     };
 
-    StateMachine.create({
-        target:RenderObject.prototype,
-        events:[
-            { name:'create', from:'none', to:'NoLights'   },
-            // batch processing
-            { name:'progress', from:'NoLights', to:'NoMaterial'   },
-            { name:'progress', from:'NoMaterial', to:'NoMesh'   },
-            { name:'dataNotComplete', from:'NoMesh', to:'NoMeshData' },
-            { name:'dataComplete', from:'NoMesh', to:'Ready' },
-            { name:'progress', from:'DirtyMeshData', to:'Ready' },
-            // events
-            { name:'lightsChanged', from: ['NoLights','NoMaterial', 'NoMesh', 'Ready', 'NoMeshData', 'DirtyMeshData'], to:'NoLights' },
-            { name:'materialChanged', from: ['NoMaterial', 'NoMesh', 'Ready', 'NoMeshData', 'DirtyMeshData'], to:'NoMaterial' },
-            { name:'dataStructureChanged', from: ['NoMesh', 'Ready', 'NoMeshData', 'DirtyMeshData'], to:'NoMesh' },
-            { name:'dataValueChanged', from: ['Ready', 'DirtyMeshData'], to:'DirtyMeshData' },
-            { name:'dispose', from:'*', to:'Disposed' }
-        ]});
+    IShaderComposer.State = {
+        OK: 1,
+        NO_SCRIPT: 2,
+        NO_PROGRAM: 3
+    };
 
-    // Export
-    XML3D.webgl.RenderObject = RenderObject;
-    XML3D.webgl.RenderObjectHandler = RenderObjectHandler;
-}());
+    /**
+     * @param {XML3D.webgl.scene} scene
+     * @returns {IShaderComposer.UpdateState}
+     */
+    IShaderComposer.prototype.update = function (scene, opt) {
+        return IShaderComposer.UpdateState.SHADER_UNCHANGED;
+    };
+
+    //TODO Do we still need this?
+    /**
+     * @returns {boolean}
+     */
+    IShaderComposer.prototype.isValid = function () {
+        return false;
+    };
+
+    /**
+     *
+     * @returns XML3D.webgl.ShaderClosure|null
+     */
+    IShaderComposer.prototype.getShaderClosure = function (scene) {
+        return null;
+    };
+
+    /**
+     * @param {XML3D.webgl.GLContext} context
+     * @constructor
+     */
+    var ShaderComposerFactory = function (context) {
+        this.context = context;
+        /** @type {Object.<number, IShaderComposer>} */
+        this.composers = {};
+        this.needsCompileCheck = true;
+        this.defaultComposer = new DefaultComposer(context);
+    };
+
+    ShaderComposerFactory.EVENT_TYPE = {
+        MATERIAL_STRUCTURE_CHANGED: "material_structure_changed"
+    };
+
+    XML3D.extend(ShaderComposerFactory.prototype, {
+        /**
+         *
+         * @param {XML3D.webgl.ShaderInfo} shaderInfo
+         * @returns {IShaderComposer}
+         */
+        createComposerForShaderInfo: function (shaderInfo) {
+            if (!shaderInfo) {
+                return this.defaultComposer;
+            }
+            var result = this.composers[shaderInfo.id];
+            if (!result) {
+                result = new MaterialShaderComposer(this.context, shaderInfo);
+                this.composers[shaderInfo.id] = result;
+                this.context.getStatistics().materials++;
+            }
+            return result;
+        },
+        getDefaultComposer: function () {
+            return this.defaultComposer;
+        },
+        getTemplateById: function (id) {
+            return this.composers[id];
+        },
+        update: function (scene) {
+            for (var i in this.composers) {
+                this.composers[i].update(scene, { evaluateShader: this.needsCompileCheck, updateLightValues: this.lightValuesDirty });
+            }
+            this.needsCompileCheck = this.lightValuesDirty = false;
+        },
+        setLightStructureDirty: function() {
+            XML3D.debug.logWarning("Light structure changes not yet supported.");
+            this.needsCompileCheck = true;
+        },
+        setLightValueChanged: function() {
+            this.lightValuesDirty = true;
+        }
+
+    });
+
+    webgl.ShaderComposerFactory = ShaderComposerFactory;
+
+    /**
+     * @implements IShaderComposer
+     * @constructor
+     */
+    var DefaultComposer = function (context) {
+        this.context = context;
+    };
+
+    XML3D.createClass(DefaultComposer, XML3D.util.EventDispatcher, {
+        update: function () {
+        },
+        isValid: function () {
+            return true;
+        },
+        getShaderClosure: function () {
+            return this.context.programFactory.getFallbackProgram();
+        },
+        getShaderAttributes: function() {
+            return {color: null, normal: null /* for picking */};
+        },
+        getRequestFields: function() {
+            return ["diffuseColor", "useVertexColor"];
+        }
+
+    });
+
+    /**
+     * @param {string} path
+     * @returns {*}
+     */
+    var getShaderDescriptor = function (path) {
+        var shaderName = path.substring(path.lastIndexOf(':') + 1);
+        return XML3D.shaders.getScript(shaderName);
+    };
+
+
+    var ShaderDescriptor = function() {
+        this.uniforms = {};
+        this.samplers = {};
+        this.attributes = {};
+        this.name = "";
+        this.fragment = "";
+        this.vertex =  "";
+    };
+    ShaderDescriptor.prototype.addDirectives = function() {};
+    ShaderDescriptor.prototype.hasTransparency = function() { return false; };
+
+    webgl.ShaderDescriptor = ShaderDescriptor;
+
+
+    /**
+     * @implements {IShaderComposer}
+     * @constructor
+     */
+    var MaterialShaderComposer = function (context, shaderInfo) {
+        this.context = context;
+        this.shaderClosures = [];
+        this.obsoleteClosures = [];
+        this.descriptor = new ShaderDescriptor();
+        this.dataChanged = false;
+        this.structureChanged = false;
+        this.setShaderInfo(shaderInfo);
+    };
+
+    XML3D.createClass(MaterialShaderComposer, XML3D.util.EventDispatcher, {
+        /**
+         *
+         * @param {XML3D.webgl.ShaderInfo} shaderInfo
+         */
+        setShaderInfo: function (shaderInfo) {
+            var shaderScriptURI = shaderInfo.getScript();
+            this.setShaderScript(shaderScriptURI);
+
+            var that = this;
+            if (this.descriptor) {
+                this.request = new Xflow.ComputeRequest(shaderInfo.getData(), this.getRequestFields(), function (request, changeType) {
+                    that.dataChanged = true;
+                    that.context.requestRedraw("Shader data changed");
+                });
+                //TODO Build this into the XML3D.webgl.getScript function? It's needed everywhere anyway...
+                this.descriptor.fragment = XML3D.webgl.addFragmentShaderHeader(this.descriptor.fragment);
+                this.structureChanged = true;
+            }
+        },
+
+        setShaderScript: function (uri) {
+            // Pesimistic approach
+            this.state = IShaderComposer.State.NO_SCRIPT;
+
+            if (!uri) {
+                XML3D.debug.logError("Shader has no script attached: ", this.adapter.node);
+                return;
+            }
+            if (uri.scheme != "urn") {
+                XML3D.debug.logError("Shader script reference should start with an URN: ", this.adapter.node);
+                return;
+            }
+            var descriptor = getShaderDescriptor(uri.path);
+            if (!descriptor) {
+                XML3D.debug.logError("No Shader registered for urn:", uri);
+                return;
+            }
+
+            XML3D.extend(this.descriptor, descriptor);
+            this.state = IShaderComposer.State.OK;
+        },
+
+        getRequestFields: function () {
+            return Object.keys(this.descriptor.uniforms).concat(Object.keys(this.descriptor.samplers));
+        },
+
+        /**
+         * Get the attributes required by the shader
+         * @returns {Object<string, *>}
+         */
+        getShaderAttributes: function () {
+            return this.descriptor.attributes;
+        },
+
+
+        update: function (scene, opt) {
+            opt = opt || {};
+            var that = this;
+
+            if(!this.shaderClosures.length)
+                return;
+
+            if(opt.evaluateShader || this.structureChanged) {
+                this.handleShaderStructureChanged(scene);
+                this.dataChanged = true;
+                opt.updateLightValues = true;
+            }
+
+            if (opt.updateShaderData || this.dataChanged) {
+                var result = this.request.getResult();
+                this.shaderClosures.forEach(function(shader) {
+                    that.updateClosureFromComputeResult(shader, result, opt);
+                });
+                this.dataChanged = false;
+            }
+
+            if (opt.updateLightValues) {
+                var lightParameters = this.createLightParameters(scene.lights);
+                this.shaderClosures.forEach(function(shader) {
+                    that.updateClosureFromLightParameters(shader, lightParameters);
+                });
+            }
+        },
+
+        /**
+         * @param {webgl.ShaderClosure} shaderClosure
+         * @param {Xflow.ComputeResult} result
+         * @param {Object?} opt
+         */
+        updateClosureFromComputeResult: function (shaderClosure, result, opt) {
+            if (!result.getOutputMap) {
+                return;
+            }
+            shaderClosure.bind();
+            shaderClosure.updateUniformsFromComputeResult(result, opt);
+            shaderClosure.updateSamplersFromComputeResult(result, opt);
+            //shaderClosure.descriptor.parametersChanged(result.getOutputMap());
+        },
+
+        updateClosureFromLightParameters: function (shaderClosure, lightParameters) {
+            shaderClosure.bind();
+            shaderClosure.setUniformVariables(lightParameters);
+        },
+
+        createLightParameters: function(lights) {
+            var parameters = {};
+            var pointLightData = { position: [], attenuation: [], intensity: [], on: [] };
+            lights.point.forEach(function(light, index) {
+                light.getLightData(pointLightData, index);
+            });
+            parameters["pointLightPosition"] = pointLightData.position;
+            parameters["pointLightAttenuation"] = pointLightData.attenuation;
+            parameters["pointLightIntensity"] = pointLightData.intensity;
+            parameters["pointLightOn"] = pointLightData.on;
+
+            var directionalLightData = { direction: [], intensity: [], on: [] };
+            lights.directional.forEach(function(light, index) {
+                light.getLightData(directionalLightData, index);
+            });
+            parameters["directionalLightDirection"] = directionalLightData.direction;
+            parameters["directionalLightIntensity"] = directionalLightData.intensity;
+            parameters["directionalLightOn"] = directionalLightData.on;
+
+            var spotLightData = { position: [], attenuation: [], direction: [], intensity: [], on: [], softness: [], falloffAngle: [] };
+            lights.spot.forEach(function(light, index) {
+                light.getLightData(spotLightData, index);
+            });
+            parameters["spotLightAttenuation"] = spotLightData.attenuation;
+            parameters["spotLightPosition"] = spotLightData.position;
+            parameters["spotLightIntensity"] = spotLightData.intensity;
+            parameters["spotLightDirection"] = spotLightData.direction;
+            parameters["spotLightOn"] = spotLightData.on;
+            parameters["spotLightSoftness"] = spotLightData.softness;
+            parameters["spotLightCosFalloffAngle"] = spotLightData.falloffAngle.map(Math.cos);
+
+            var softFalloffAngle = spotLightData.softness.slice();
+            for (var i = 0; i < softFalloffAngle.length; i++)
+                softFalloffAngle[i] = softFalloffAngle[i] * (1.0 - spotLightData.softness[i]);
+            parameters["spotLightCosSoftFalloffAngle"] = softFalloffAngle.map(Math.cos);
+
+            return parameters;
+        },
+
+        getShaderClosure: function (scene, objectData, opt) {
+            var shaderData = this.request.getResult();
+            var shader = new webgl.ShaderClosure(this.context, this.descriptor, this.getShaderParameters.bind(this));
+            shader.createSources(scene, shaderData, objectData);
+            for (var i=0; i < this.shaderClosures.length; i++) {
+                if (this.shaderClosures[i].equals(shader))
+                    return this.shaderClosures[i];
+            }
+            this.initializeShaderClosure(shader, scene, objectData);
+            return shader;
+        },
+
+        initializeShaderClosure: function(shaderClosure, scene, objectData) {
+            shaderClosure.compile();
+            var result = this.request.getResult();
+            //TODO Merge compute results
+            this.updateClosureFromComputeResult(shaderClosure, result, {force : true});
+            //this.updateClosureFromComputeResult(shaderClosure, objectData, {force : true});
+            this.updateClosureFromLightParameters(shaderClosure, this.createLightParameters(scene.lights));
+            this.shaderClosures.push(shaderClosure);
+        },
+
+        handleShaderStructureChanged: function(scene) {
+            this.obsoleteClosures = this.shaderClosures.splice(0);
+            this.shaderClosures = [];
+            this.dispatchEvent({type: webgl.ShaderComposerFactory.EVENT_TYPE.MATERIAL_STRUCTURE_CHANGED});
+            this.structureChanged = false;
+            this.obsoleteClosures = [];
+        },
+
+        getShaderAfterStructureChanged: function(shaderClosure, scene, objectData) {
+            var index = this.obsoleteClosures.indexOf(shaderClosure);
+            if (index >= 0) {
+                var newShader = new webgl.ShaderClosure(this.context, this.descriptor, this.getShaderParameters.bind(this));
+                var shaderData = this.request.getResult();
+                newShader.createSources(scene, shaderData, objectData);
+                if (newShader.equals(shaderClosure)) {
+                    this.shaderClosures.push(shaderClosure);
+                } else {
+                    newShader.compile();
+                    this.updateClosureFromComputeResult(newShader, objectData, {force:true});
+                    this.shaderClosures.push(newShader);
+                    return newShader;
+                }
+            } else {
+                XML3D.debug.logWarning("After structure change the shader was not found in list of obsolete closures");
+            }
+            return shaderClosure;
+        },
+
+        isValid: function () {
+            return true;
+        },
+
+        getShaderParameters: function() {
+            return this.request.getResult().getOutputMap();
+        }
+
+    });
+
+
+}(XML3D.webgl));
+(function (webgl) {
+
+    /**
+     * A ShaderClosure connects a mesh-specific GLProgram with it's Xflow data
+     * @param {GLContext} context
+     * @param descriptor
+     * @param dataCallback
+     * @constructor
+     */
+    var ShaderClosure = function(context, descriptor, dataCallback) {
+        this.descriptor = descriptor;
+        this.getShaderParameters = dataCallback || function(){ {} };
+        this.source = {};
+
+        /**
+         * @private
+         * @type {GLProgramObject|null}
+         */
+        this.program = null;
+
+        this.context = context;
+        this.id = "";
+        this.isTransparent = false;
+    };
+
+    Object.defineProperties(ShaderClosure.prototype, {
+            attributes: {
+                writeable: false,
+                get: function() {
+                    return this.program ? this.program.attributes : {}
+                }
+            },
+            uniforms: {
+                writeable: false,
+                get: function() {
+                    return this.program ? this.program.uniforms : {}
+                }
+            },
+            samplers: {
+                writeable: false,
+                get: function() {
+                    return this.program ? this.program.samplers : {}
+                }
+            }
+        }
+    );
+    XML3D.extend(ShaderClosure.prototype, {
+
+        equals: function(that) {
+            return this.source.vertex === that.source.vertex && this.source.fragment === that.source.fragment;
+        },
+
+        hasTransparency: function() {
+            return this.isTransparent;
+        },
+
+        compile: function () {
+            if (!this.source.fragment)
+                return;
+            if (!this.source.vertex)
+                return;
+
+            var programObject = new XML3D.webgl.GLProgramObject(this.context.gl, this.source);
+            if (programObject.isValid()) {
+                programObject.setUniformVariables(this.descriptor.uniforms);
+            }
+            this.program = programObject;
+            this.id = programObject.id;
+        },
+
+        bind: function() {
+            this.program.bind();
+        },
+
+        unbind: function() {
+            this.program.unbind();
+        },
+
+        setUniformVariables: function(uniforms) {
+            this.program.setUniformVariables(uniforms);
+        },
+
+        isValid: function() {
+            return this.program.isValid();
+        },
+
+        createSources: function(scene, shaderData, objectData) {
+            var directives = [];
+            //TODO add object data to directives
+            this.descriptor.addDirectives(directives, scene.lights || {}, shaderData ? shaderData.getOutputMap() : {});
+            this.source = {
+                fragment: this.addDirectivesToSource(directives, this.descriptor.fragment),
+                vertex: this.addDirectivesToSource(directives, this.descriptor.vertex)
+            };
+        },
+
+        convertToJSArray: function(value) {
+            var jsArray = [value.length];
+            for (var i=0; i<value.length; i++) {
+                jsArray[i] = value[i];
+            }
+            return jsArray;
+        },
+
+        /**
+         * @param {Xflow.data.ComputeResult} result
+         * @param {Object?} options
+         */
+        updateUniformsFromComputeResult: function (result, options) {
+            var dataMap = result.getOutputMap();
+            var uniforms = this.program.uniforms;
+
+            var opt = options || {};
+            var force = opt.force || false;
+
+            for (var name in uniforms) {
+                var entry = dataMap[name];
+                if (!entry)
+                    continue;
+
+                var webglData = this.context.getXflowEntryWebGlData(entry);
+                if (force || webglData.changed) {
+                    if (uniforms[name].glType === this.context.gl.BOOL) {
+                        //TODO Can we get Xflow to return boolean arrays as normal JS arrays? WebGL doesn't accept Uint8Arrays here...
+                        //TODO Alternatively we could set boolean uniforms using uniform1fv together with Float32Arrays, which apparently works too
+                        webgl.setUniform(this.context.gl, uniforms[name], this.convertToJSArray(entry.getValue()));
+                    } else {
+                        webgl.setUniform(this.context.gl, uniforms[name], entry.getValue());
+                    }
+                    webglData.changed = 0;
+                }
+            }
+            this.isTransparent = this.descriptor.hasTransparency(dataMap);
+        },
+
+        /**
+         *
+         * @param {Xflow.data.ComputeResult} result
+         * @param {Object} options
+         */
+        updateSamplersFromComputeResult: function (result, options) {
+            var samplers = this.program.samplers;
+
+            var opt = options || {};
+            var force = opt.force || false;
+
+            for (var name in samplers) {
+                var sampler = samplers[name];
+                var entry = result.getOutputData(name);
+
+                if (!entry) {
+                    sampler.texture.failed();
+                    continue;
+                }
+
+                var webglData = this.context.getXflowEntryWebGlData(entry);
+
+                if (force || webglData.changed) {
+                    sampler.texture.updateFromTextureEntry(entry);
+                    webglData.changed = 0;
+                }
+            }
+        },
+
+        addDirectivesToSource: function (directives, source) {
+            var header = "";
+            directives.forEach(function (v) {
+                header += "#define " + v + "\n";
+            });
+            return header + "\n" + source;
+        },
+
+        setUniformVariableOverride: function(override) {
+            this.program.setUniformVariables(override);
+        },
+
+        undoUniformVariableOverride: function(override) {
+            var previousValues = {};
+            var shaderData = this.getShaderParameters();
+            for (var name in override) {
+                var value = shaderData[name] ? shaderData[name] : this.descriptor.uniforms[name];
+                previousValues[name] = value.getValue ? value.getValue() : value;
+            }
+            this.program.setUniformVariables(previousValues);
+        }
+});
+
+    webgl.ShaderClosure = ShaderClosure;
+
+}(XML3D.webgl));
+(function (webgl) {
+
+    var DrawableClosure = function (context, type) {
+        this.context = context;
+        this._type = type;
+        this._valid = false;
+    };
+
+    DrawableClosure.TYPES = {
+        MESH: "mesh",
+        VOLUME: "volume"
+    };
+
+    DrawableClosure.READY_STATE = {
+        COMPLETE: "complete",
+        INCOMPLETE: "incomplete"
+    };
+
+    XML3D.createClass(DrawableClosure, XML3D.util.EventDispatcher, {
+        getType: function () {
+            return this._type;
+        },
+        isValid: function () {
+            return this._valid;
+        }
+    });
+
+    webgl.DrawableClosure = DrawableClosure;
+
+}(XML3D.webgl));(function (webgl) {
+
+    var CHANGE_STATE = {
+        NOTHING_CHANGED : 0,
+        TYPE_STRUCTURE_CHANGED : 1,
+        TYPE_DATA_CHANGED : 2,
+        TYPE_CHANGED: 3,
+        ATTRIBUTE_STRUCTURE_CHANGED : 8,
+        ATTRIBUTE_DATA_CHANGED : 16,
+        ATTRIBUTE_CHANGED: 24
+    };
+
+    var READY_STATE = webgl.DrawableClosure.READY_STATE;
+
+
+    var MESH_PARAMETERS = {};
+    MESH_PARAMETERS[WebGLRenderingContext.TRIANGLES] = { position: { required: true }, index: true };
+    MESH_PARAMETERS[WebGLRenderingContext.LINE_STRIP] = { position: { required: true }, index: true };
+    MESH_PARAMETERS[WebGLRenderingContext.LINES] = { position: { required: true }, index: true };
+    MESH_PARAMETERS[WebGLRenderingContext.POINTS] = { position: { required: true }, index: true };
+
+    var TYPE_FILTER = {};
+    for (var param in MESH_PARAMETERS) {
+        TYPE_FILTER[param] = Object.keys(MESH_PARAMETERS[param]);
+    }
+
+
+    var getGLTypeFromArray = function(array) {
+        var GL = window.WebGLRenderingContext;
+        if (array instanceof Int8Array)
+            return GL.BYTE;
+        if (array instanceof Uint8Array)
+            return GL.UNSIGNED_BYTE;
+        if (array instanceof Int16Array)
+            return GL.SHORT;
+        if (array instanceof Uint16Array)
+            return GL.UNSIGNED_SHORT;
+        if (array instanceof Int32Array)
+            return GL.INT;
+        if (array instanceof Uint32Array)
+            return GL.UNSIGNED_INT;
+        if (array instanceof Float32Array)
+            return GL.FLOAT;
+        return GL.FLOAT;
+    };
+    /**
+     * @param {WebGLRenderingContext} gl
+     * @param {number} type
+     * @param {Object} data
+     */
+    var createBuffer = function(gl, type, data) {
+        var buffer = gl.createBuffer();
+        gl.bindBuffer(type, buffer);
+        gl.bufferData(type, data, gl.STATIC_DRAW);
+        buffer.length = data.length;
+        buffer.glType = getGLTypeFromArray(data);
+        return buffer;
+    };
+
+    /**
+     *
+     * @param {webgl.GLContext} context
+     * @param {string} type
+     * @param {Xflow.DataNode} data
+     * @extends {DrawableClosure}
+     * @constructor
+     */
+    var MeshClosure = function (context, type, data, opt) {
+        webgl.DrawableClosure.call(this, context, webgl.DrawableClosure.TYPES.MESH);
+        opt = opt || {};
+        this.mesh = new webgl.GLMesh(context, type);
+        this.data = data;
+
+        /**
+         * Attributes required to create the GLMesh
+         * @type {Xflow.ComputeRequest}
+         */
+        this.typeRequest = null;
+
+        /**
+         * Are all attributes required by drawable available?
+         * @type {boolean}
+         */
+        this.typeDataValid = false;
+
+        /**
+         * Attributes required for the attached shader
+         * @type {Xflow.ComputeRequest}
+         */
+        this.attributeRequest = null;
+
+        /**
+         * Are all attributes required by shader available?
+         * @type {boolean}
+         */
+        this.attributeDataValid = true;
+
+        /**
+         * Bitfield that records the changes reported by Xflow
+         * @private
+         * @type {number}
+         */
+        this.changeState = CHANGE_STATE.TYPE_STRUCTURE_CHANGED;
+
+        /**
+         * Do we have to calculate the bounding box of this mesh?
+         * @type {boolean}
+         */
+        this.boundingBoxRequired = true;
+
+        /**
+         * Callback if bounding box has changed. Gets only called if
+         * this.boundingBoxRequired is true.
+         * @type {*|function(Float32Array)}
+         */
+        this.boundingBoxChanged = opt.boundingBoxChanged || function() {};
+
+        this.initialize();
+    };
+
+    XML3D.createClass(MeshClosure, webgl.DrawableClosure, {
+        initialize: function () {
+            var typeFilter = TYPE_FILTER[this.getMeshType()];
+            if (!typeFilter) {
+                XML3D.debug.logError("Unsupported Mesh request: ", this.mesh);
+                this.typeDataValid = false;
+                return;
+            }
+            this.typeRequest = new Xflow.ComputeRequest(this.data, typeFilter, this.typeDataChanged.bind(this));
+            this.typeDataChanged(this.typeRequest, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        },
+        setBoundingBoxRequired: function(required) {
+            this.boundingBoxRequired = required;
+            this.calculateBoundingBox();
+        },
+        calculateBoundingBox: (function() {
+            var c_empty = XML3D.math.bbox.create();
+
+            return function() {
+                if(!this.boundingBoxRequired)
+                    return;
+
+                // compute bounding box from positions and indices, if present
+                var dataResult = this.typeRequest.getResult();
+                var positionEntry = dataResult.getOutputData("position");
+                if(!positionEntry)   {
+                    this.boundingBoxChanged(c_empty);
+                    return;
+                }
+                var indexEntry = dataResult.getOutputData("index");
+                this.boundingBoxChanged(XML3D.webgl.calculateBoundingBox(positionEntry.getValue(), indexEntry ? indexEntry.getValue() : null));
+            }
+        }()),
+        /**
+         *
+         * @param {Xflow.ComputeRequest} request
+         * @param {Xflow.RESULT_STATE} state
+         */
+        typeDataChanged: function (request, state) {
+            this.changeState |= state == Xflow.RESULT_STATE.CHANGED_STRUCTURE ? CHANGE_STATE.TYPE_STRUCTURE_CHANGED : CHANGE_STATE.TYPE_DATA_CHANGED;
+            this.context.requestRedraw("Mesh Type Data Change");
+            XML3D.debug.logInfo("MeshClosure: Type data changed", request, state, this.changeState);
+        },
+        getMesh: function () {
+            return this.mesh;
+        },
+        getMeshType: function () {
+            return this.mesh.glType;
+        },
+        update: function () {
+
+            if(this.changeState === CHANGE_STATE.NOTHING_CHANGED) {
+                return;
+            }
+            XML3D.debug.logDebug("Update mesh closure", this.changeState);
+
+            var oldValid = this.attributeDataValid && this.typeDataValid;
+
+            if (this.changeState & CHANGE_STATE.TYPE_CHANGED) {
+                this.updateTypeData();
+            }
+            if (this.changeState & CHANGE_STATE.ATTRIBUTE_CHANGED) {
+                this.updateAttributeData();
+            }
+
+            var newValid = this.attributeDataValid && this.typeDataValid;
+
+            if(oldValid != newValid) {
+                this.dispatchEvent({
+                    type: webgl.Scene.EVENT_TYPE.DRAWABLE_STATE_CHANGED,
+                    newState: newValid ? READY_STATE.COMPLETE : READY_STATE.INCOMPLETE,
+                    oldState: oldValid ? READY_STATE.COMPLETE : READY_STATE.INCOMPLETE
+                });
+            }
+
+
+            this.changeState = CHANGE_STATE.NOTHING_CHANGED;
+        },
+        /**
+         * @param {Object<string,*>} attributes
+         * @param {Xflow.ComputeResult} dataResult
+         * @param {function(string)} missingCB
+         * @returns boolean true, if all required attributes were set
+         */
+        updateMeshFromResult: function (attributes, dataResult, missingCB) {
+            var complete = true;
+            for (var name in attributes) {
+                var param = attributes[name] || {};
+                var entry = dataResult.getOutputData(name);
+                if (!entry || !entry.getValue()) {
+                    if (param.required) {
+                        // If required and loading has finished, give a call
+                        dataResult.loading || missingCB(name);
+                        complete = false;
+                    }
+                    continue;
+                }
+                if (name == "vertexCount") {
+                    continue;
+                }
+                switch (entry.type) {
+                    case Xflow.DATA_TYPE.TEXTURE:
+                        XML3D.debug.logError("Texture as mesh parameter is not yet supported");
+                        break;
+                    default:
+                        this.handleBuffer(name, param, entry, this.mesh);
+                }
+            }
+            return complete;
+        },
+        updateAttributeData: function() {
+            if (!this.attributeDataValid && !(this.changeState & CHANGE_STATE.ATTRIBUTE_STRUCTURE_CHANGED)) {
+                return; // if only the data has changed, it can't get valid after update
+            }
+            var dataResult = this.attributeRequest.getResult();
+            var attributes = this.attributes;
+            var complete = this.updateMeshFromResult(attributes, dataResult, function(name) {
+                XML3D.debug.logError("Required shader attribute", name, "is missing for mesh");
+            });
+
+            this.attributeDataValid = complete;
+        },
+
+        updateTypeData: function () {
+            if (!this.typeDataValid && !(this.changeState & CHANGE_STATE.TYPE_STRUCTURE_CHANGED)) {
+                return; // only if structure has changed, it can't get valid after update
+            }
+            var dataResult = this.typeRequest.getResult();
+            var meshParams = MESH_PARAMETERS[this.getMeshType()];
+            XML3D.debug.assert(meshParams, "At this point, we need parameters for the type");
+
+            var vertexCount = 0;
+            var complete = this.updateMeshFromResult(meshParams, dataResult, function(name) {
+                XML3D.debug.logError("Required mesh attribute ", name, "is missing for mesh");
+            });
+
+            this.calculateBoundingBox();
+            var entry = dataResult.getOutputData("vertexCount");
+            this.mesh.setVertexCount(entry && entry.getValue() ? entry.getValue()[0] : null);
+            this.typeDataValid = complete;
+        },
+        /**
+         * @param {string} name
+         * @param {Object} attr
+         * @param {Xflow.BufferEntry} entry
+         * @param {GLMesh} mesh
+         */
+        handleBuffer: function (name, attr, entry, mesh) {
+            var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, this.context.id);
+            var buffer = webglData.buffer;
+            var gl = this.context.gl;
+
+            switch (webglData.changed) {
+                case Xflow.DATA_ENTRY_STATE.CHANGED_VALUE:
+                    var bufferType = name == "index" ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
+
+                    gl.bindBuffer(bufferType, buffer);
+                    gl.bufferSubData(bufferType, 0, entry.getValue());
+                    break;
+                case Xflow.DATA_ENTRY_STATE.CHANGED_NEW:
+                case Xflow.DATA_ENTRY_STATE.CHANGED_SIZE:
+                    if (name == "index") {
+                        buffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(entry.getValue()));
+                    } else {
+                        buffer = createBuffer(gl, gl.ARRAY_BUFFER, entry.getValue());
+                    }
+                    buffer.tupleSize = entry.getTupleSize();
+                    webglData.buffer = buffer;
+                    break;
+            }
+            // In every case, set the buffer, because other meshes might have already
+            // performed one or more of the tasks above
+            mesh.setBuffer(name, buffer);
+
+            webglData.changed = 0;
+        },
+        /**
+         *
+         * @param {Object.<string, *>} attributes
+         */
+        setAttributeRequest: function(attributes) {
+            this.attributes = attributes;
+            this.attributeRequest = new Xflow.ComputeRequest(this.data, Object.keys(attributes), this.attributeDataChanged.bind(this));
+            this.attributeDataChanged(this.attributeRequest, Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+        },
+        /**
+         * @param {Xflow.ComputeRequest} request
+         * @param {Xflow.RESULT_STATE} state
+         */
+        attributeDataChanged: function (request, state) {
+            this.changeState |= state == Xflow.RESULT_STATE.CHANGED_STRUCTURE ? CHANGE_STATE.ATTRIBUTE_STRUCTURE_CHANGED : CHANGE_STATE.ATTRIBUTE_DATA_CHANGED;
+            this.context.requestRedraw("Mesh Attribute Data Changed");
+            XML3D.debug.logInfo("MeshClosure: Attribute data changed", request, state, this.changeState);
+        },
+
+        /**
+         * Returns a compute request for custom mesh parameters
+         * @param {Array.<string>} filter
+         * @param {function(Xflow.ComputeRequest, Xflow.RESULT_STATE)} callback
+         */
+        getRequest: function(filter, callback) {
+            return new Xflow.ComputeRequest(this.data, filter, callback);
+        }
+    });
+
+    webgl.MeshClosure = MeshClosure;
+
+}(XML3D.webgl));
 // renderer/renderer.js
+(function (webgl) {
+
+    webgl.renderers = [];
+
+    var RendererFactory = function () {
+        this.createRenderer = function (context, scene, canvas) {
+            return new webgl.GLRenderer(context, scene, canvas);
+        }
+    };
+    webgl.rendererFactory = new RendererFactory();
+
+})(XML3D.webgl);
+
+
+
+
+
 
 (function() {
-
-XML3D.webgl.renderers = [];
-
-/**
- * Constructor for the Renderer.
- *
- * The renderer is responsible for drawing the scene and determining which object was
- * picked when the user clicks on elements of the canvas.
- * @constructor
- * @param handler The canvas handler
- * @param {WebGLRenderingContext} context Initial width of renderer areas
- * @param {dimensions} width and height of renderer areas
- */
-var Renderer = function(handler, context, dimensions) {
-    this.handler = handler;
-    this.gl = context;
-    XML3D.webgl.renderers[handler.id] = this;
-
-    this.setGlobalGLStates();
-
-    this.currentView = null;
-    this.xml3dNode = handler.xml3dElem;
-    this.width = dimensions.width;
-    this.height = dimensions.height;
-
-    this.renderObjects = new XML3D.webgl.RenderObjectHandler();
-
-    this.initialize();
-};
-
-Renderer.prototype.initialize = function() {
-    this.shaderManager = new XML3D.webgl.XML3DShaderManager(this, this.handler.id);
-    this.bufferHandler = new XML3D.webgl.XML3DBufferHandler(this.gl, this, this.shaderManager);
-    this.changeListener = new XML3D.webgl.DataChangeListener(this);
-    this.camera = this.initCamera();
-    this.fbos = this.initFrameBuffers(this.gl);
-
-    this.initializeScenegraph();
-};
-
-Renderer.prototype.initializeScenegraph = function() {
-    this.lights = {
-        changed : true,
-        structureChanged : true,
-        point: { length: 0, adapter: [], intensity: [], position: [], attenuation: [], visibility: [] },
-        directional: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [] },
-            spot: { length: 0, adapter: [], intensity: [], direction: [], attenuation: [], visibility: [], position: [], falloffAngle: [], softness: [] }
-    };
-    this.recursiveBuildScene(this.xml3dNode, this.renderObjects.queue, null);
-    if (this.lights.length < 1) {
-        XML3D.debug.logWarning("No lights were found. The scene will be rendered without lighting!");
-    }
-};
-
-
-/**
- *
- */
-Renderer.prototype.setGlobalGLStates = function() {
-    var gl = this.gl;
-
-    gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
-};
-
-Renderer.prototype.getAdapter = function(node){
-    return XML3D.base.resourceManager.getAdapter(node, XML3D.webgl, this.handler.id);
-}
-
-Renderer.prototype.initCamera = function() {
-    var av = XML3D.util.getOrCreateActiveView(this.xml3dNode);
-
-    this.currentView = av;
-    return this.getAdapter(av);
-};
-
-var TraversalState = function(parent) {
-    parent = parent || {};
-    this.visible = parent.visible !== undefined ? parent.visible : true;
-    this.pickable = parent.pickable !== undefined ? parent.visible : true;
-    this.transform = parent.transform ? XML3D.math.mat4.copy(XML3D.math.mat4.create(), parent.transform) : XML3D.math.mat4.identity(XML3D.math.mat4.create());
-    this.shader = parent.shader || null;
-};
-
-Renderer.prototype.recursiveBuildScene = function(currentNode, renderObjectArray, parent) {
-    var adapter = this.getAdapter(currentNode);
-
-    parent = parent || new TraversalState();
-    var downstream = new TraversalState(parent);
-
-    switch(currentNode.nodeName) {
-    case "group":
-        adapter.parentVisible = parent.visible;
-        adapter.parentTransform = XML3D.math.mat4.copy(XML3D.math.mat4.create(), parent.transform);
-        adapter.parentShaderHandle = parent.shader;
-
-        downstream.visible = parent.visible && currentNode.visible;
-        if (currentNode.onmouseover || currentNode.onmouseout)
-            this.handler.setMouseMovePicking(true);
-
-        var shaderHandle = adapter.getShaderHandle();
-        if (shaderHandle)
-            downstream.shader = shaderHandle;
-
-        downstream.transform = adapter.applyTransformMatrix(XML3D.math.mat4.identity(XML3D.math.mat4.create()));
-        break;
-
-    case "mesh":
-        adapter.parentVisible = parent.visible;
-
-        if (currentNode.onmouseover || currentNode.onmouseout)
-            this.handler.setMouseMovePicking(true);
-
-        var meshAdapter = this.getAdapter(currentNode);
-        if (!meshAdapter)
-            break; //TODO: error handling
-
-        adapter.setShaderHandle(parent.shader);
-
-        // Add a new RenderObject to the scene
-        var newObject = new XML3D.webgl.RenderObject({
-            handler: this.renderObjects,
-            meshAdapter : adapter,
-            visible: parent.visible && currentNode.visible,
-            transform: parent.transform,
-            pickable: parent.pickable
-        });
-        renderObjectArray.push(newObject);
-        break;
-
-    case "light":
-        adapter.transform = XML3D.math.mat4.copy(XML3D.math.mat4.create(), parent.transform);
-        adapter.visible = parent.visible && currentNode.visible;
-		adapter.addLight(this.lights);
-
-        break;
-
-    case "view":
-        adapter.parentTransform = XML3D.math.mat4.copy(XML3D.math.mat4.create(), parent.transform);
-        adapter.updateViewMatrix();
-        break;
-    default:
-        break;
-    }
-
-    var child = currentNode.firstElementChild;
-    while (child) {
-        this.recursiveBuildScene(child, renderObjectArray, downstream);
-        child = child.nextElementSibling;
-    }
-};
-
-Renderer.prototype.initFrameBuffers = function(gl) {
-    var fbos = {};
-
-    fbos.picking = this.bufferHandler.createPickingBuffer(this.width, this.height);
-    fbos.vectorPicking = this.bufferHandler.createPickingBuffer(this.width, this.height);
-    if (!fbos.picking.valid || !fbos.vectorPicking.valid)
-        this.handler._pickingDisabled = true;
-
-    return fbos;
-};
-
-Renderer.prototype.recompileShader = function(shaderAdapter) {
-    this.shaderManager.recompileShader(shaderAdapter, this.lights);
-    this.handler.redraw("A shader was recompiled");
-};
-
-
-/**
- *
- * @param {string} lightType
- * @param {string} field
- * @param {number} offset
- * @param {Array.<number>} newValue
- * @return
- */
-Renderer.prototype.changeLightData = function(lightType, field, offset, newValue) {
-    var data = this.lights[lightType][field];
-    if (!data) return;
-    if(field=="falloffAngle" || field=="softness") offset/=3; //some parameters are scalar
-    Array.set(data, offset, newValue);
-    this.lights.changed = true;
-};
-
-/**
- * Propogates a change in the WebGL context to everyone who needs to know
- **/
-Renderer.prototype.setGLContext = function(gl) {
-    this.shaderManager.setGLContext(gl);
-    this.meshManager.setGLContext(gl);
-};
-
-Renderer.prototype.resizeCanvas = function (width, height) {
-    this.width = width;
-    this.height = height;
-	this.fbos = this.initFrameBuffers(this.gl);
-    this.camera && (this.camera.projMatrix = null);
-};
-
-Renderer.prototype.activeViewChanged = function () {
-    this._projMatrix = null;
-    this._viewMatrix = null;
-    this.camera = this.initCamera();
-    this.requestRedraw("Active view changed", true);
-};
-
-Renderer.prototype.requestRedraw = function(reason, forcePickingRedraw) {
-    this.handler.redraw(reason, forcePickingRedraw);
-};
-
-Renderer.prototype.sceneTreeAddition = function(evt) {
-    var target = evt.wrapped.target;
-    var adapter = this.getAdapter(target);
-
-    //If no adapter is found the added node must be a text node, or something else
-    //we're not interested in
-    if (!adapter)
-        return;
-
-    var shaderHandle = adapter.getShaderHandle ? adapter.getShaderHandle() : null;
-    if(adapter.updateTransformAdapter)
-        adapter.updateTransformAdapter();
-
-    var visible = target.visible;
-
-    var parentNode = target.parentElement;
-    var parentTransform = XML3D.math.mat4.identity(XML3D.math.mat4.create());
-    if(parentNode && parentNode.nodeName == "group")
-    {
-        var parentAdapter = this.getAdapter(parentNode);
-        parentTransform = parentAdapter.applyTransformMatrix(parentTransform);
-        if (!shaderHandle)
-    		shaderHandle = parentAdapter.getShaderHandle();
-		visible = parentNode.visible && parentAdapter.parentVisible;
-    }
-
-    //Build any new objects and add them to the scene
-    var state = new TraversalState({ visible: visible, pickable: true, transform: parentTransform, shader: shaderHandle });
-    this.recursiveBuildScene(evt.wrapped.target, this.renderObjects.queue, state);
-    this.requestRedraw("A node was added.");
-};
-
-Renderer.prototype.sceneTreeRemoval = function (evt) {
-    var currentNode = evt.wrapped.target;
-    var adapter = this.getAdapter(currentNode);
-    if (adapter && adapter.destroy)
-        adapter.destroy();
-
-    this.requestRedraw("A node was removed.");
-};
-
-Renderer.prototype.prepareRendering = function() {
-    var renderObjects = this.renderObjects;
-    renderObjects.updateLights(this.lights, this.shaderManager);
-    renderObjects.consolidate();
-};
-
-/**
- *
- * @returns {Array}
- */
-Renderer.prototype.render = function() {
-    var gl = this.gl;
-	var sp = null;
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-    gl.viewport(0, 0, this.width, this.height);
-    gl.enable(gl.DEPTH_TEST);
-
-    // Check if we still don't have a camera.
-    if (!this.camera)
-        return [0, 0];
-
-    var xform = {};
-    xform.view = this.camera.viewMatrix;
-    xform.proj = this.camera.getProjectionMatrix(this.width / this.height);
-
-    var stats = { objCount : 0, triCount : 0 };
-	// Update mesh objects
-	var objects = this.renderObjects.ready;
-	for (var i = 0, l = objects.length; i < l; i++)
-    {
-	    var o = objects[i];
-	    o && o.mesh && o.mesh.update();
-    }
-    //Sort objects by shader/transparency
-    var opaqueObjects = {};
-    var transparentObjects = [];
-    this.sortObjects(objects, opaqueObjects, transparentObjects, xform);
-
-    //Render opaque objects
-    for (var shaderName in opaqueObjects) {
-        var objectArray = opaqueObjects[shaderName];
-		this.drawObjects(objectArray, shaderName, xform, this.lights, stats);
-    }
-
-	if (transparentObjects.length > 0) {
-        //Render transparent objects
-        //gl.depthMask(gl.FALSE);
-        gl.enable(gl.BLEND);
-		gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        for (var k=0; k < transparentObjects.length; k++) {
-            var objectArray = [transparentObjects[k]];
-			this.drawObjects(objectArray, objectArray[0].shader, xform, this.lights, stats);
-        }
-        gl.disable(gl.BLEND);
-        //gl.depthMask(gl.TRUE);
-    }
-
-	this.lights.changed = false;
-
-    return [stats.objCount, stats.triCount];
-};
-
-Renderer.prototype.sortObjects = function(sourceObjectArray, opaque, transparent, xform) {
-    var tempArray = [];
-    for (var i = 0, l = sourceObjectArray.length; i < l; i++) {
-        var obj = sourceObjectArray[i];
-        var shaderName = obj.shader;
-        var shader = this.shaderManager.getShaderById(shaderName);
-
-        if (shader.hasTransparency) {
-            tempArray.push(obj);
-        } else {
-            opaque[shaderName] = opaque[shaderName] || [];
-            opaque[shaderName].push(obj);
-        }
-    }
-
-    //Sort transparent objects from back to front
-    var tlength = tempArray.length;
-    if (tlength > 1) {
-        for (i = 0; i < tlength; i++) {
-            var obj = tempArray[i];
-            var trafo = obj.transform;
-            var center = obj.mesh.bbox.center()._data;
-            center = XML3D.math.vec4.transformMat4(XML3D.math.vec4.create(), [center[0], center[1], center[2], 1.0], trafo);
-            center = XML3D.math.vec4.transformMat4(XML3D.math.vec4.create(), [center[0], center[1], center[2], 1.0], xform.view);
-            tempArray[i] = [ obj, center[2] ];
-        }
-
-        tempArray.sort(function(a, b) {
-            return a[1] - b[1];
-        });
-
-        for (var i=0; i < tlength; i++) {
-            transparent[i] = tempArray[i][0];
-        }
-    } else if (tlength == 1) {
-        transparent[0] = tempArray[0];
-    }
-
-};
-
-var tmpModelView = XML3D.math.mat4.create();
-var tmpModelViewProjection = XML3D.math.mat4.create();
-var identMat3 = XML3D.math.mat3.identity(XML3D.math.mat3.create());
-var identMat4 = XML3D.math.mat4.identity(XML3D.math.mat4.create());
-
-
-Renderer.prototype.drawObjects = function(objectArray, shaderId, xform, lights, stats) {
-    var objCount = 0;
-    var triCount = 0;
-    var parameters = {};
-
-    shaderId = shaderId || objectArray[0].shader || "defaultShader";
-    var shader = this.shaderManager.getShaderById(shaderId);
-
-    if(shader.needsLights || lights.changed) {
-        parameters["pointLightPosition"] = lights.point.position;
-        parameters["pointLightAttenuation"] = lights.point.attenuation;
-        parameters["pointLightVisibility"] = lights.point.visibility;
-        parameters["pointLightIntensity"] = lights.point.intensity;
-        parameters["directionalLightDirection"] = lights.directional.direction;
-        parameters["directionalLightVisibility"] = lights.directional.visibility;
-        parameters["directionalLightIntensity"] = lights.directional.intensity;
-        parameters["spotLightAttenuation"] = lights.spot.attenuation;
-        parameters["spotLightPosition"] = lights.spot.position;
-        parameters["spotLightIntensity"] = lights.spot.intensity;
-        parameters["spotLightVisibility"] = lights.spot.visibility;
-        parameters["spotLightDirection"] = lights.spot.direction;
-        parameters["spotLightCosFalloffAngle"] = lights.spot.falloffAngle.map(Math.cos);
-
-        var softFalloffAngle = lights.spot.falloffAngle.slice();
-        for(var i = 0; i < softFalloffAngle.length; i++)
-            softFalloffAngle[i] = softFalloffAngle[i] * (1.0 - lights.spot.softness[i]);
-        parameters["spotLightCosSoftFalloffAngle"] = softFalloffAngle.map(Math.cos);
-
-        parameters["spotLightSoftness"] = lights.spot.softness;
-        shader.needsLights = false;
-    }
-
-
-
-    this.shaderManager.bindShader(shader);
-    this.shaderManager.updateActiveShader(shader);
-
-    parameters["viewMatrix"] = this.camera.viewMatrix;
-    parameters["cameraPosition"] = this.camera.getWorldSpacePosition();
-
-    //Set global data that is shared between all objects using this shader
-    this.shaderManager.setUniformVariables(shader, parameters);
-    parameters = {};
-
-    for (var i = 0, n = objectArray.length; i < n; i++) {
-        var obj = objectArray[i];
-        var transform = obj.transform;
-        var mesh = obj.mesh;
-
-		if (!mesh || !mesh.valid || !obj.visible)
-            continue;
-
-        xform.model = transform;
-        xform.modelView = XML3D.math.mat4.multiply(tmpModelView, this.camera.viewMatrix, xform.model);
-        parameters["modelMatrix"] = xform.model;
-        parameters["modelViewMatrix"] = xform.modelView;
-        parameters["modelViewProjectionMatrix"] = XML3D.math.mat4.multiply(tmpModelViewProjection, this.camera.projMatrix, xform.modelView);
-        var normalMatrix = XML3D.math.mat4.invert(XML3D.math.mat4.create(), xform.modelView);
-        normalMatrix = normalMatrix ? XML3D.math.mat4.transpose(normalMatrix, normalMatrix) : identMat4;
-        parameters["normalMatrix"] = XML3D.math.mat3.copy(XML3D.math.mat3.create(),
-          [normalMatrix[0], normalMatrix[1], normalMatrix[2],
-          normalMatrix[4], normalMatrix[5], normalMatrix[6],
-          normalMatrix[8], normalMatrix[9], normalMatrix[10]]);
-
-        this.shaderManager.setUniformVariables(shader, parameters);
-        if(obj.override !== null) { // TODO: Set back to default after rendering
-            this.shaderManager.setUniformVariables(shader, obj.override);
-        }
-
-        triCount += this.drawObject(shader, mesh);
-        objCount++;
-
-        if(obj.override !== null) {
-            this.shaderManager.resetUniformVariables(obj.shaderAdapter, shader, Object.keys(obj.override));
-        }
-
-    }
-
-    stats.objCount += objCount;
-    stats.triCount += triCount;
-
-};
-
-/**
- *
- * @param shader
- * @param {MeshInfo} meshInfo
- * @return {*}
- */
-Renderer.prototype.drawObject = function(shader, meshInfo) {
-    var sAttributes = shader.attributes;
-    var gl = this.gl;
-    var triCount = 0;
-    var vbos = meshInfo.vbos;
-
-    if(!meshInfo.complete)
-        return;
-
-    var numBins = meshInfo.isIndexed ? vbos.index.length : (vbos.position ? vbos.position.length : 1);
-
-    for (var i = 0; i < numBins; i++) {
-    //Bind vertex buffers
-    for (var name in sAttributes) {
-        var shaderAttribute = sAttributes[name];
-
-        if (!vbos[name]) {
-            //XML3D.debug.logWarning("Missing required mesh data [ "+name+" ], the object may not render correctly.");
-            continue;
-        }
-
-        var vbo;
-        if (vbos[name].length > 1)
-            vbo = vbos[name][i];
-        else
-            vbo = vbos[name][0];
-
-        //console.log("bindBuffer: ", name , vbo);
-        gl.enableVertexAttribArray(shaderAttribute.location);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.vertexAttribPointer(shaderAttribute.location, vbo.tupleSize, vbo.glType, false, 0, 0);
-    }
-
-    //Draw the object
-    if (meshInfo.isIndexed) {
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vbos.index[i]);
-
-        if (meshInfo.segments) {
-            //This is a segmented mesh (eg. a collection of disjunct line strips)
-            var offset = 0;
-            var sd = meshInfo.segments.value;
-            for (var j = 0; j < sd.length; j++) {
-                gl.drawElements(meshInfo.glType, sd[j], gl.UNSIGNED_SHORT, offset);
-                offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
-            }
-        } else {
-            gl.drawElements(meshInfo.glType, meshInfo.getVertexCount(), gl.UNSIGNED_SHORT, 0);
-        }
-
-        triCount = meshInfo.getVertexCount() / 3;
-    } else {
-        if (meshInfo.size) {
-            var offset = 0;
-            var sd = meshInfo.size.data;
-            for (var j = 0; j < sd.length; j++) {
-                gl.drawArrays(meshInfo.glType, offset, sd[j]);
-                offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
-            }
-        } else {
-                //console.log("drawArrays: " + meshInfo.getVertexCount());
-                gl.drawArrays(meshInfo.glType, 0, meshInfo.getVertexCount());
-        }
-        triCount = vbos.position ? vbos.position[i].length / 3 : 0;
-    }
-
-    //Unbind vertex buffers
-        for (var name in sAttributes) {
-            var shaderAttribute = sAttributes[name];
-
-            gl.disableVertexAttribArray(shaderAttribute.location);
-        }
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-
-    return triCount;
-};
-
-
-/**
- * Render the scene using the picking shader.
- * Modifies current picking buffer.
- */
-Renderer.prototype.renderSceneToPickingBuffer = function() {
-    var gl = this.gl;
-    var fbo = this.fbos.picking;
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.handle);
-
-    gl.enable(gl.DEPTH_TEST);
-    gl.disable(gl.CULL_FACE);
-    gl.disable(gl.BLEND);
-
-    gl.viewport(0, 0, fbo.width, fbo.height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-
-    var viewMatrix = this.camera.viewMatrix;
-    var projMatrix = this.camera.getProjectionMatrix(fbo.width / fbo.height);
-    var mvp = XML3D.math.mat4.create();
-
-    var shader = this.shaderManager.getShaderById("pickobjectid");
-    this.shaderManager.bindShader(shader);
-    var objects = this.renderObjects.ready;
-
-    for ( var j = 0, n = objects.length; j < n; j++) {
-        var obj = objects[j];
-        var transform = obj.transform;
-        var mesh = obj.mesh;
-
-        if (!mesh.valid  || !obj.visible)
-            continue;
-
-        var parameters = {};
-
-        XML3D.math.mat4.multiply(mvp, viewMatrix, transform);
-        XML3D.math.mat4.multiply(mvp, projMatrix, mvp);
-
-        var objId = j+1;
-        var c1 = objId & 255;
-        objId = objId >> 8;
-        var c2 = objId & 255;
-        objId = objId >> 8;
-        var c3 = objId & 255;
-
-        parameters.id = [c3 / 255.0, c2 / 255.0, c1 / 255.0];
-        parameters.modelViewProjectionMatrix = mvp;
-
-        this.shaderManager.setUniformVariables(shader, parameters);
-        this.drawObject(shader, mesh);
-    }
-    this.shaderManager.unbindShader(shader);
-
-    gl.disable(gl.DEPTH_TEST);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-};
-
-/**
- * Render the picked object using the normal picking shader
- *
- * @param {Object} pickedObj
- */
-Renderer.prototype.renderPickedPosition = function(pickedObj) {
-    var gl = this.gl;
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.vectorPicking.handle);
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-    gl.disable(gl.CULL_FACE);
-    gl.disable(gl.BLEND);
-
-    this.bbMax = new window.XML3DVec3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE)._data;
-    this.bbMin = new window.XML3DVec3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)._data;
-    XML3D.webgl.adjustMinMax(pickedObj.mesh.bbox, this.bbMin, this.bbMax, pickedObj.transform);
-
-    var shader = this.shaderManager.getShaderById("pickedposition");
-    this.shaderManager.bindShader(shader);
-
-    var xform = {};
-    xform.model = pickedObj.transform;
-    xform.modelView = this.camera.getModelViewMatrix(xform.model);
-
-    var parameters = {
-    	min : this.bbMin,
-    	max : this.bbMax,
-        modelMatrix : xform.model,
-        modelViewProjectionMatrix : this.camera.getModelViewProjectionMatrix(xform.modelView)
-    };
-
-    this.shaderManager.setUniformVariables(shader, parameters);
-    this.drawObject(shader, pickedObj.mesh);
-
-    this.shaderManager.unbindShader(shader);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-};
-
-/**
- * Render the picked object using the normal picking shader and return the
- * normal at the point where the object was clicked.
- *
- * @param pickedObj
- * @param screenX
- * @param screenY
- * @return
- */
-Renderer.prototype.renderPickedNormals = function(pickedObj) {
-    var gl = this.gl;
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos.vectorPicking.handle);
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-    gl.disable(gl.CULL_FACE);
-    gl.disable(gl.BLEND);
-
-    var transform = pickedObj.transform;
-    var mesh = pickedObj.mesh;
-
-    var shader = this.shaderManager.getShaderById("pickedNormals");
-    this.shaderManager.bindShader(shader);
-
-    var xform = {};
-    xform.model = transform;
-    xform.modelView = this.camera.getModelViewMatrix(xform.model);
-
-    var normalMatrix = XML3D.math.mat4.invert(XML3D.math.mat4.create(), transform);
-    normalMatrix = XML3D.math.mat3.copy(XML3D.math.mat3.create(),
-      [normalMatrix[0], normalMatrix[1], normalMatrix[2],
-      normalMatrix[4], normalMatrix[5], normalMatrix[6],
-      normalMatrix[8], normalMatrix[9], normalMatrix[10]]);
-
-    var parameters = {
-        modelViewMatrix : transform,
-        modelViewProjectionMatrix : this.camera.getModelViewProjectionMatrix(xform.modelView),
-        normalMatrix : normalMatrix ? XML3D.math.mat3.transpose(normalMatrix, normalMatrix) : identMat3
-    };
-
-    this.shaderManager.setUniformVariables(shader, parameters);
-    this.drawObject(shader, mesh);
-
-    this.shaderManager.unbindShader(shader);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-};
-
-var pickVector = XML3D.math.vec3.create();
-var data = new Uint8Array(8);
-
-/**
- * Reads pixels from the screenbuffer to determine picked object or normals.
- *
- * @param {number} screenX Screen Coordinate of color buffer
- * @param {number} screenY Screen Coordinate of color buffer
- * @returns {Element|null} Picked Object
- *
- */
-Renderer.prototype.getRenderObjectFromPickingBuffer = function(screenX, screenY) {
-    var data = this.readPixelDataFromBuffer(screenX, screenY, this.fbos.picking);
-
-    if (!data)
-        return null;
-
-    var result = null;
-    var objId = data[0] * 65536 + data[1] * 256 + data[2];
-
-    if (objId > 0) {
-        var pickedObj = this.renderObjects.ready[objId - 1];
-        result = pickedObj;
-    }
-    return result;
-};
-
-/**
- * Reads pixels from the provided buffer
- *
- * @param {number} glX OpenGL Coordinate of color buffer
- * @param {number} glY OpenGL Coordinate of color buffer
- * @param {Object} buffer Buffer to read pixels from
- * @returns {Uint8Array} pixel data
- */
-Renderer.prototype.readPixelDataFromBuffer = function(glX, glY, buffer){
-    var fbo = buffer;
-    var scale = fbo.scale;
-    var x = glX * scale;
-    var y = glY * scale;
-    var gl = this.gl;
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.handle);
-    try {
-        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return data;
-    } catch (e) {
-        XML3D.debug.logException(e);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        return null;
-    }
-};
-
-/**
- * Read normal from picking buffer
- * @param {number} glX OpenGL Coordinate of color buffer
- * @param {number} glY OpenGL Coordinate of color buffer
- * @returns {Object} Vector with normal data
- */
-Renderer.prototype.readNormalFromPickingBuffer = function(glX, glY){
-    var data = this.readPixelDataFromBuffer(glX, glY, this.fbos.vectorPicking);
-    if(data){
-        pickVector[0] = data[0] / 254;
-        pickVector[1] = data[1] / 254;
-        pickVector[2] = data[2] / 254;
-
-        pickVector = XML3D.math.vec3.subtract(XML3D.math.vec3.create(), XML3D.math.vec3.scale(XML3D.math.vec3.create(), pickVector, 2.0), [ 1, 1, 1 ]);
-
-        return pickVector;
-    }
-    else{
-        return null;
-    }
-};
-
-/**
- * Read position from picking buffer
- * @param {number} glX OpenGL Coordinate of color buffer
- * @param {number} glY OpenGL Coordinate of color buffer
- * @returns {vec3} The world position at the given coordinates
- */
-Renderer.prototype.readPositionFromPickingBuffer = function(glX, glY){
-    var data = this.readPixelDataFromBuffer(glX, glY, this.fbos.vectorPicking);
-    if(data){
-        pickVector[0] = data[0] / 255;
-        pickVector[1] = data[1] / 255;
-        pickVector[2] = data[2] / 255;
-
-        var result = XML3D.math.vec3.subtract(XML3D.math.vec3.create(), this.bbMax, this.bbMin);
-        result = XML3D.math.vec3.fromValues(pickVector[0]*result[0], pickVector[1]*result[1], pickVector[2]*result[2]);
-        XML3D.math.vec3.add(result, this.bbMin, result);
-
-        return result;
-    }
-    else{
-        return null;
-    }
-};
-
-
-/**
- * Frees all resources
- * @return
- */
-Renderer.prototype.dispose = function() {
-    this.renderObjects.clear();
-};
-
-/**
- * Requests a redraw from the handler
- * @return
- */
-Renderer.prototype.notifyDataChanged = function() {
-    this.handler.redraw("Unspecified data change.");
-};
-
-    // Export
-    XML3D.webgl.Renderer = Renderer;
-})();
-
-
-
-
-
-
-// Misc adapters
-(function() {
-    var listenerID = 0;
 
     XML3D.webgl.RenderAdapter = function(factory, node) {
         XML3D.base.NodeAdapter.call(this, factory, node);
@@ -19174,239 +24214,134 @@ Renderer.prototype.notifyDataChanged = function() {
 
     XML3D.webgl.RenderAdapter.prototype.getAdapterHandle = function(uri) {
         return XML3D.base.resourceManager.getAdapterHandle(this.node.ownerDocument, uri,
-            XML3D.webgl, this.factory.handler.id);
+            XML3D.webgl, this.factory.canvasId);
     };
 
-    XML3D.webgl.RenderAdapter.prototype.applyTransformMatrix = function(
-            transform) {
+    XML3D.webgl.RenderAdapter.prototype.getParentRenderAdapter = function() {
+        return this.factory.getAdapter(this.node.parentElement, XML3D.webgl.RenderAdapter);
+    };
+
+    /**
+     * @param element
+     */
+    XML3D.webgl.RenderAdapter.prototype.initElement = function(element) {
+        this.factory.getAdapter(element);
+        this.initChildElements(element);
+    };
+
+    /**
+     * @param element
+     */
+    XML3D.webgl.RenderAdapter.prototype.initChildElements = function(element) {
+        this.traverse(this.factory.getAdapter);
+    };
+
+
+    XML3D.webgl.RenderAdapter.prototype.applyTransformMatrix = function(transform) {
         return transform;
     };
 
-
-    //Adapter for <defs>
-    XML3D.webgl.DefsRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
+    XML3D.webgl.RenderAdapter.prototype.getScene = function() {
+        return this.factory.renderer.scene;
     };
-    XML3D.createClass(XML3D.webgl.DefsRenderAdapter, XML3D.webgl.RenderAdapter);
-
-    //Adapter for <img>
-    XML3D.webgl.ImgRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.textureAdapter = factory.getAdapter(node.parentNode);
-    };
-    XML3D.createClass(XML3D.webgl.ImgRenderAdapter, XML3D.webgl.RenderAdapter);
-
-    XML3D.webgl.ImgRenderAdapter.prototype.notifyChanged = function(evt) {
-        this.textureAdapter.notifyChanged(evt);
-    };
-
-    var staticAttributes = ["position", "direction", "intensity", "attenuation", "softness", "falloffAngle"];
 
     /**
-     * Adapter for <lightshader>
-     * @constructor
-     * @param {RenderAdapterFactory} factory
-     * @param {Element} node
+     * @param {Array.<string>} customAttributes
      */
-    XML3D.webgl.LightShaderRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
-        this.computeRequest = this.dataAdapter.getComputeRequest(staticAttributes, this.dataChanged.bind(this));
-        this.offsets = [];
-        this.listeners = [];
-    };
-    XML3D.createClass(XML3D.webgl.LightShaderRenderAdapter, XML3D.webgl.RenderAdapter);
-
-    /** @const */
-    var LIGHT_DEFAULT_INTENSITY = XML3D.math.vec3.fromValues(1,1,1);
-    /** @const */
-    var LIGHT_DEFAULT_ATTENUATION = XML3D.math.vec3.fromValues(0,0,1);
-    /** @const */
-    var SPOTLIGHT_DEFAULT_FALLOFFANGLE = Math.PI / 4.0;
-    /** @const */
-    var SPOTLIGHT_DEFAULT_SOFTNESS = 0.0;
-
-    /**
-     *
-     * @param {Object} point
-     * @param {number} i
-     * @param {number} offset
-     */
-    XML3D.webgl.LightShaderRenderAdapter.prototype.fillPointLight = function(point, i, offset) {
-        this.callback = point.dataChanged;
-        this.offsets.push(offset);
-        var dataTable = this.computeRequest.getResult().getOutputMap();
-
-        var intensity = dataTable["intensity"] ? dataTable["intensity"].getValue() : LIGHT_DEFAULT_INTENSITY;
-        var attenuation = dataTable["attenuation"] ? dataTable["attenuation"].getValue() : LIGHT_DEFAULT_ATTENUATION;
-
-        Array.set(point.intensity, offset, [intensity[0]*i, intensity[1]*i, intensity[2]*i]);
-        Array.set(point.attenuation, offset, attenuation);
-    };
-
-    /**
-    *
-    * @param {Object} directional
-    * @param {number} i
-    * @param {number} offset
-    */
-    XML3D.webgl.LightShaderRenderAdapter.prototype.fillDirectionalLight = function(directional, i, offset) {
-        this.callback = directional.dataChanged;
-        this.offsets.push(offset);
-        var dataTable = this.computeRequest.getResult().getOutputMap();
-        var intensity = dataTable["intensity"] ? dataTable["intensity"].getValue() : LIGHT_DEFAULT_INTENSITY;
-
-        Array.set(directional.intensity, offset, [intensity[0]*i, intensity[1]*i, intensity[2]*i]);
-    };
-
-    /**
-    *
-    * @param {Object} directional
-    * @param {number} i
-    * @param {number} offset
-    */
-    XML3D.webgl.LightShaderRenderAdapter.prototype.fillSpotLight = function(spot, i, offset) {
-        this.callback = spot.dataChanged;
-        this.offsets.push(offset);
-        var dataTable = this.computeRequest.getResult().getOutputMap();
-        var intensity = dataTable["intensity"] ? dataTable["intensity"].getValue() : LIGHT_DEFAULT_INTENSITY;
-        var attenuation = dataTable["attenuation"] ? dataTable["attenuation"].getValue() : LIGHT_DEFAULT_ATTENUATION;
-        var falloffAngle = dataTable["falloffAngle"] ? dataTable["falloffAngle"].getValue() : [SPOTLIGHT_DEFAULT_FALLOFFANGLE];
-        var softness = dataTable["softness"] ? dataTable["softness"].getValue() : [SPOTLIGHT_DEFAULT_SOFTNESS];
-
-        Array.set(spot.intensity, offset, [intensity[0]*i, intensity[1]*i, intensity[2]*i]);
-        Array.set(spot.attenuation, offset, attenuation);
-        Array.set(spot.falloffAngle, offset/3, falloffAngle);
-        Array.set(spot.softness, offset/3, softness);
-    };
-
-    XML3D.webgl.LightShaderRenderAdapter.prototype.removeLight = function(type, lights, offset) {
-        var lo = lights[type];
-        if (!lo)
-            return;
-
-        switch (type) {
-        case "point":
-            lo.intensity.splice(offset, 3);
-            lo.attenuation.splice(offset, 3);
-            break;
-
-        case "directional":
-            lo.intensity.splice(offset, 3);
-            break;
-
-        case "spot":
-            lo.intensity.splice(offset, 3);
-            lo.attenuation.splice(offset, 3);
-            lo.beamWidth.splice(offset/3, 1);
-            lo.cutOffAngle.splice(offset/3, 1);
-            break;
-        }
-
-        lights.changed = true;
-    }
-
-    /**
-     *
-     * @param {Xflow.data.Request} request
-     * @param {Xflow.RESULT_STATE} notification
-     */
-    XML3D.webgl.LightShaderRenderAdapter.prototype.dataChanged = function(request, notification) {
-        var dataTable = request.getResult();
-
-        for (var i=0; i<staticAttributes.length; i++) {
-            var attr = dataTable.getOutputData(staticAttributes[i]);
-            var webglData = XML3D.webgl.getXflowEntryWebGlData(attr, this.factory.canvasId);
-
-            if (attr && webglData && webglData.changed) {
-                var value = attr.getValue();
-                for(var j=0; j<this.listeners.length; j++)
-                    this.listeners[j].func(staticAttributes[i], value);
-                webglData.changed = 0;
-            }
-        }
-    };
-
-    XML3D.webgl.LightShaderRenderAdapter.prototype.notifyChanged = function(evt) {
-        if (evt.type == XML3D.events.NODE_REMOVED) {
-            return;
-        } else if (evt.type == XML3D.events.THIS_REMOVED) {
-            this.notifyOppositeAdapters();
-            return;
-        }
-
-    };
-
-    /**
-     *
-     * @param {Function} func
-     */
-    XML3D.webgl.LightShaderRenderAdapter.prototype.registerLightListener = function(func) {
-        listenerID++;
-        this.listeners.push({id : listenerID, func : func});
-        return listenerID;
-    };
-    XML3D.webgl.LightShaderRenderAdapter.prototype.removeLightListener = function(idToRemove) {
-        for (var i=0; i<this.listeners.length; i++) {
-            if (this.listeners[i].id == idToRemove) {
-                this.listeners.splice(i, 1);
-                return;
-            }
-        }
-    };
-
-    XML3D.webgl.LightShaderRenderAdapter.prototype.destroy = function() {
-        this.notifyOppositeAdapters();
-    };
-
-    /**
-     *
-     * @param {string} name
-     */
-    XML3D.webgl.LightShaderRenderAdapter.prototype.requestParameter = function(name) {
-        return this.computeRequest.getResult().getOutputData(name);
-    };
-
-}());
-// Adapter for <xml3d>
-(function() {
-    var XML3DRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.factory = factory;
-        this.processListeners();
-    };
-    XML3D.createClass(XML3DRenderAdapter, XML3D.webgl.RenderAdapter);
-
-    XML3DRenderAdapter.prototype.notifyChanged = function(evt) {
-        if (evt.type == XML3D.events.NODE_INSERTED) {
-            this.factory.renderer.sceneTreeAddition(evt);
-        } else if (evt.type == XML3D.events.NODE_REMOVED) {
-            this.factory.renderer.sceneTreeRemoval(evt);
-        }
-
-        var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
-
-        if (target == "activeView") {
-            this.factory.renderer.activeViewChanged();
-        }
-    };
-
-    XML3DRenderAdapter.prototype.processListeners = function() {
+    XML3D.webgl.RenderAdapter.prototype.initializeEventAttributes = function(customAttributes) {
         var attributes = this.node.attributes;
-        for ( var index in attributes) {
+        customAttributes = customAttributes || [];
+
+        for (var index in attributes) {
             var att = attributes[index];
             if (!att.name)
                 continue;
 
             var type = att.name;
-            if (type.match(/onmouse/) || type == "onclick" || type == "ondblclick") {
+            if (type.substring(2,0) == "on")  {
                 var eventType = type.substring(2);
-                this.node.addEventListener(eventType, new Function("evt", att.value), false);
+                if (XML3D.webgl.events.available.indexOf(eventType) != -1 || customAttributes.indexOf(eventType) != -1) {
+                    this.node.addEventListener(eventType, new Function("event", att.value), false);
+                }
             }
-            if (type == "onload") {
-                var eventType = type.substring(2);
-                this.node.addEventListener(eventType, new Function("evt", att.value), false);
+        }
+    };
+})();
+(function(webgl) {
+
+    var TransformableAdapter = function(factory, node) {
+        webgl.RenderAdapter.call(this, factory, node);
+        this.renderNode = null;
+    };
+    XML3D.createClass(TransformableAdapter, webgl.RenderAdapter);
+
+    XML3D.extend(TransformableAdapter.prototype, {
+        onConfigured : function() {},
+        getRenderNode : function() {
+            if (!this.renderNode) {
+                this.renderNode = this.createRenderNode ? this.createRenderNode() : null;
             }
+            return this.renderNode;
+        }
+    })
+    webgl.TransformableAdapter = TransformableAdapter;
+})(XML3D.webgl);(function() {
+    //Adapter for <defs>
+    XML3D.webgl.DefsRenderAdapter = function(factory, node) {
+        XML3D.webgl.RenderAdapter.call(this, factory, node);
+    };
+    XML3D.createClass(XML3D.webgl.DefsRenderAdapter, XML3D.webgl.RenderAdapter);
+})();
+// Adapter for <xml3d>
+(function() {
+    var XML3DRenderAdapter = function(factory, node) {
+        XML3D.webgl.RenderAdapter.call(this, factory, node);
+        this.initializeEventAttributes(["load"]);
+    };
+    XML3D.createClass(XML3DRenderAdapter, XML3D.webgl.RenderAdapter);
+
+    XML3D.extend(XML3DRenderAdapter.prototype, {
+        updateActiveViewAdapter: function () {
+            var href = this.node.getAttribute("activeView");
+            if(href) {
+                this.connectAdapterHandle("activeView", this.getAdapterHandle(href));
+            } else {
+                this.disconnectAdapterHandle("activeView");
+            }
+        },
+        setViewAdapter: function(adapter) {
+            adapter = adapter || this.getConnectedAdapter("activeView");
+            if(!(adapter && adapter.getRenderNode)) {
+                var viewElement = XML3D.util.getOrCreateActiveView(this.node);
+                adapter = this.factory.getAdapter(viewElement);
+            }
+            this.factory.getScene().setActiveView(adapter.getRenderNode());
+        },
+        dispose: function() {
+            this.clearAdapterHandles();
+        }
+    })
+
+    XML3DRenderAdapter.prototype.notifyChanged = function(evt) {
+
+        switch(evt.type) {
+            case XML3D.events.ADAPTER_HANDLE_CHANGED:
+                this.setViewAdapter(evt.adapter);
+                return;
+            case XML3D.events.NODE_INSERTED:
+                this.initElement(evt.wrapped.target);
+                this.initChildElements(evt.wrapped.target);
+                return;
+            case XML3D.events.NODE_REMOVED:
+                // Handled in removed node
+                return;
+        }
+
+        var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
+
+        if (target == "activeView") {
+            this.updateActiveViewAdapter();
+            this.setViewAdapter();
         }
     };
 
@@ -19416,6 +24351,9 @@ Renderer.prototype.notifyDataChanged = function() {
      * This function is called when scene DOM is loaded and all adapters are attached
      */
     XML3DRenderAdapter.prototype.onConfigured = function() {
+        this.updateActiveViewAdapter();
+        this.setViewAdapter();
+
         // emit load event when all resources currently loading are completed
         var callback = (function (node, nodeCanvasId) {
             var counter = 2; // we fire load event when callback is called twice
@@ -19428,12 +24366,12 @@ Renderer.prototype.notifyDataChanged = function() {
             }
 
             return handler;
-        })(this.node, this.factory.handler.id);
+        })(this.node, this.factory.canvasId);
 
         // register callback for canvasId == 0 i.e. global resources
         XML3D.base.resourceManager.addLoadCompleteListener(0, callback);
         // register callback for canvasId of this node
-        XML3D.base.resourceManager.addLoadCompleteListener(this.factory.handler.id, callback);
+        XML3D.base.resourceManager.addLoadCompleteListener(this.factory.canvasId, callback);
     }
 
     XML3DRenderAdapter.prototype.getBoundingBox = function() {
@@ -19447,18 +24385,19 @@ Renderer.prototype.notifyDataChanged = function() {
 
     XML3DRenderAdapter.prototype.getElementByPoint = function(x, y, hitPoint, hitNormal) {
         var relativeMousePos = XML3D.webgl.convertPageCoords(this.node, x, y);
+
         var relX = relativeMousePos.x;
         var relY = relativeMousePos.y;
 
-        var handler = this.factory.handler;
-        var object = handler.updatePickObjectByPoint(relX, relY);
+        var renderer = this.factory.getRenderer();
+        var object = renderer.getRenderObjectFromPickingBuffer(relX, relY);
         if(object){
             if(hitPoint){
-                var vec = handler.getWorldSpacePositionByPoint(object, relX, relY);
+                var vec = renderer.getWorldSpacePositionByPoint(relX, relY, object);
                 hitPoint.set(vec[0],vec[1],vec[2]);
             }
             if(hitNormal){
-                var vec = handler.getWorldSpaceNormalByPoint(object, relX, relY);
+                var vec = renderer.getWorldSpaceNormalByPoint(relX, relY, object);
                 hitNormal.set(vec[0],vec[1],vec[2]);
             }
         }
@@ -19466,13 +24405,12 @@ Renderer.prototype.notifyDataChanged = function() {
             if(hitPoint) hitPoint.set(NaN, NaN, NaN);
             if(hitNormal) hitNormal.set(NaN, NaN, NaN);
         }
-        return object ? object.meshAdapter.node : null;
+        return object ? object.node : null;
     };
 
     XML3DRenderAdapter.prototype.generateRay = function(x, y) {
         var relativeMousePos = XML3D.webgl.convertPageCoords(this.node, x, y);
-
-        return this.factory.handler.generateRay(relativeMousePos.x, relativeMousePos.y);
+        return this.factory.getRenderer().generateRay(relativeMousePos.x, relativeMousePos.y);
     };
     XML3D.webgl.XML3DRenderAdapter = XML3DRenderAdapter;
 
@@ -19544,7 +24482,6 @@ Renderer.prototype.notifyDataChanged = function() {
     p.notifyChanged = function(e) {
         if (e.type == 1) {
 			this.needsUpdate = true;
-            this.factory.renderer.requestRedraw("Transformation changed.", true);
         } else if (e.type == 2) {
             this.dispose();
         }
@@ -19601,7 +24538,6 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     p.dataChanged = function(request, changeType){
-        this.factory.renderer.requestRedraw("Transformation changed.", true);
         for(var type in this.requests){
             if(this.requests[type] == request)
                 delete this.matrixReady[type];
@@ -19629,232 +24565,190 @@ Renderer.prototype.notifyDataChanged = function() {
 // Adapter for <view>
 (function() {
     var ViewRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.zFar = 100000;
-        this.zNear = 0.1;
-        this.parentTransform = null;
-        this.viewMatrix = XML3D.math.mat4.create();
-        this.projMatrix = null;
-        this.worldPosition = [0,0,0];
-        this.updateViewMatrix();
+        XML3D.webgl.TransformableAdapter.call(this, factory, node);
+        connectProjectionAdapter(this);
+        this.createRenderNode();
     };
-    XML3D.createClass(ViewRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(ViewRenderAdapter, XML3D.webgl.TransformableAdapter);
     var p = ViewRenderAdapter.prototype;
 
-    var tmp = XML3D.math.mat4.create(),
-        tmp2 = XML3D.math.mat4.create();
+    p.createRenderNode = function() {
+        var parent = this.factory.getAdapter(this.node.parentElement, XML3D.webgl.RenderAdapter);
+        var parentNode = parent.getRenderNode ? parent.getRenderNode() : this.factory.renderer.scene.createRootNode();
 
-    p.updateViewMatrix = function() {
-        // Create local matrix
-        var pos = this.node.position._data;
-        var orient = this.node.orientation.toMatrix()._data;
-
-        // tmp = T
-        XML3D.math.mat4.identity(tmp);
-        tmp[12] = pos[0];
-        tmp[13] = pos[1];
-        tmp[14] = pos[2];
-
-        // tmp = T * O
-        XML3D.math.mat4.multiply(tmp, tmp, orient);
-
-        var p = this.factory.getAdapter(this.node.parentNode);
-        this.parentTransform = p.applyTransformMatrix(XML3D.math.mat4.identity(tmp2));
-
-        if (this.parentTransform) {
-            XML3D.math.mat4.multiply(tmp, this.parentTransform, tmp);
-        }
-        this.worldPosition = [tmp[12], tmp[13], tmp[14]];
-        XML3D.math.mat4.copy(this.viewMatrix, XML3D.math.mat4.invert(tmp, tmp));
-
-        connectProjectionAdapater(this);
-    };
-
-    p.getProjectionMatrix = function(aspect) {
-        if (this.projMatrix == null) {
-            var adapter = this.getConnectedAdapter("perspective");
-            if(adapter){
-                this.projMatrix = adapter.getMatrix("perspective");
-            }
-            else{
-                var fovy = this.node.fieldOfView;
-                var zfar = this.zFar;
-                var znear = this.zNear;
-                var f = 1 / Math.tan(fovy / 2);
-                this.projMatrix = XML3D.math.mat4.copy(XML3D.math.mat4.create(), [ f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (znear + zfar) / (znear - zfar), -1, 0, 0,
-                    2 * znear * zfar / (znear - zfar), 0 ]);
-
-            }
-        }
-        return this.projMatrix;
+        this.renderNode = this.factory.renderer.scene.createRenderView({
+            position : this.node.position._data,
+            orientation : this.node.orientation.toMatrix()._data,
+            fieldOfView : this.node.fieldOfView,
+            parent : parentNode,
+            projectionAdapter : this.getConnectedAdapter("perspective")
+        });
     };
 
     /* Interface method */
     p.getViewMatrix = function() {
         var m = new window.XML3DMatrix();
-        m._data.set(this.viewMatrix);
+        this.renderNode.getViewMatrix(m._data);
         return m;
     };
 
     /**
-     * @return {XML3DMatrix} returns the inverse of the view matrix, since now we
+     * returns the inverse of the view matrix, since now we
      * want to go world2view and not view2world
+     * @return {window.XML3DMatrix}
      */
     p.getWorldMatrix = function() {
         var m = new window.XML3DMatrix();
-        var tmp = XML3D.math.mat4.create();
-        XML3D.math.mat4.invert(tmp, this.viewMatrix);
-        m._data.set(tmp);
+        this.renderNode.getViewMatrix(m._data);
+        XML3D.math.mat4.invert(m._data, m._data);
         return m;
     };
 
+    p.notifyChanged = function (evt) {
+        switch (evt.type) {
+            case XML3D.events.THIS_REMOVED:
+                this.dispose();
+                break;
+            case XML3D.events.VALUE_MODIFIED:
+                var target = evt.wrapped.attrName;
 
-    p.getModelViewMatrix = function(model) {
-        return XML3D.math.mat4.multiply(XML3D.math.mat4.create(), this.viewMatrix, model);
-    };
+                switch (target) {
+                    case "orientation":
+                        this.renderNode.updateOrientation(this.node.orientation.toMatrix()._data);
+                        break;
+                    case "position":
+                        this.renderNode.updatePosition(this.node.position._data);
+                        break;
+                    case "fieldOfView":
+                        this.renderNode.updateFieldOfView(this.node.fieldOfView);
+                        break;
+                    default:
+                        XML3D.debug.logWarning("Unhandled value changed event in view adapter for attribute:" + target);
+                }
+                break;
+            case XML3D.events.ADAPTER_HANDLE_CHANGED:
+                switch (evt.key) {
+                    case "perspective":
+                        connectProjectionAdapter(this);
+                        this.renderNode.setProjectionAdapter(this.getConnectedAdapter("perspective"));
+                        break;
 
-    p.getModelViewProjectionMatrix = function(modelViewMatrix) {
-        return XML3D.math.mat4.multiply(XML3D.math.mat4.create(), this.projMatrix, modelViewMatrix);
-    };
-
-    p.getWorldSpacePosition = function() {
-    	return this.worldPosition;
-    };
-
-    p.notifyChanged = function(evt) {
-
-        if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED) && !evt.internalType){
-            // The connected transform node changed;
-            this.projMatrix = null;
+                    default:
+                        XML3D.debug.logWarning("Unhandled adapter handle changed event in view adapter for parameter " + target);
+                        break;
+                }
         }
-        else{
-            var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
-
-            switch (target) {
-                case "parenttransform":
-                    this.parentTransform = evt.newValue;
-                    this.updateViewMatrix();
-                    break;
-
-                case "orientation":
-                case "position":
-                    this.updateViewMatrix();
-                    break;
-                case "perspective":
-                case "fieldOfView":
-                    connectProjectionAdapater(this);
-                    this.projMatrix = null;
-                    break;
-
-                default:
-                    XML3D.debug.logWarning("Unhandled event in view adapter for parameter " + target);
-                    break;
-            }
-        }
-
-        this.factory.handler.redraw("View changed");
+        this.factory.getRenderer().requestRedraw("View changed");
     };
 
-    function connectProjectionAdapater(adapter){
+    function connectProjectionAdapter(adapter){
         var href = adapter.node.getAttribute("perspective");
-        if(href){
+        if(href) {
             adapter.connectAdapterHandle("perspective", adapter.getAdapterHandle(href));
-        }
-        else{
+        } else {
             adapter.disconnectAdapterHandle("perspective");
         }
-
     }
 
+    p.dispose = function() {
+        this.getRenderNode().remove();
+        this.clearAdapterHandles();
+    }
 
     // Export to XML3D.webgl namespace
     XML3D.webgl.ViewRenderAdapter = ViewRenderAdapter;
 
 }());
 // Adapter for <shader>
-(function() {
+(function (webgl) {
 
-    var ShaderRenderAdapter = function(factory, node) {
+    /**
+     * @param factory
+     * @param {Element} node
+     * @extends RenderAdapter
+     * @constructor
+     */
+    var ShaderRenderAdapter = function (factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.renderer = this.factory.renderer;
-
         this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
-        this.computeRequest;
+        /** @type webgl.ShaderInfo **/
+        this.shaderInfo = this.createShaderInfo();
+        this.templateId = this.shaderInfo.id;
     };
 
     XML3D.createClass(ShaderRenderAdapter, XML3D.webgl.RenderAdapter);
-    var p = ShaderRenderAdapter.prototype;
-
-    p.notifyChanged = function(evt) {
-        if (evt.type == XML3D.events.NODE_INSERTED) {
-            this.factory.renderer.sceneTreeAddition(evt);
-            return;
-        } else if (evt.type == XML3D.events.NODE_REMOVED) {
-            this.factory.renderer.sceneTreeRemoval(evt);
-            return;
-        } else if (evt.type == XML3D.events.THIS_REMOVED) {
-            var target = evt.wrapped.target;
-            if (target && target.nodeName == "texture") {
-                // A texture was removed completely, so this shader has to be
-                // recompiled
-                this.renderer.recompileShader(this);
-            }
-            return;
-        }
-
-        var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
-
-        switch (target) {
-        case "script":
-            this.renderer.recompileShader(this);
-            break;
-
-        default:
-            XML3D.debug.logWarning("Unhandled mutation event in shader adapter for parameter '" + target + "'");
-            break;
-
-        }
-
-    };
-
-    p.requestData = function(parameters) {
-        if (!this.computeRequest) {
-            var that = this;
-            this.computeRequest = this.dataAdapter.getComputeRequest(parameters, function(request, changeType) {
-                that.notifyDataChanged(request, changeType);
+    XML3D.extend(ShaderRenderAdapter.prototype, {
+        createShaderInfo: function () {
+            return this.getScene().createShaderInfo({
+                script: this.getShaderScriptURI(),
+                data: this.getDataAdapter().getXflowNode()
             });
+        },
+        getShaderInfo: function () {
+            return this.shaderInfo;
+        },
+        getShaderScriptURI: function () {
+            return new XML3D.URI(this.node.getAttribute("script"));
+        },
+        getDataAdapter: function () {
+            return this.dataAdapter;
+        },
+        notifyChanged: function (evt) {
+            switch (evt.type) {
+                case XML3D.events.NODE_INSERTED:
+                case XML3D.events.NODE_REMOVED:
+                    return;    // Not handled here
+                case XML3D.events.THIS_REMOVED:
+                    this.dispose();
+                    return;
+            }
+
+            var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
+
+            switch (target) {
+                case "script":
+                    this.getShaderInfo().setScriptURI(this.getShaderScriptURI());
+                    break;
+                case "id":
+                    this.notifyOppositeAdapters();
+                    break;
+                default:
+                    XML3D.debug.logWarning("Unhandled mutation event in shader adapter for parameter '" + target + "'");
+                    break;
+
+            }
+        },
+        dispose: function () {
+
         }
-        return this.computeRequest.getResult();
-    };
-
-    p.notifyDataChanged = function(request, changeType) {
-        this.renderer.shaderManager.shaderDataChanged(this, request, changeType);
-    };
-
-    p.destroy = function() {
-        Array.forEach(this.textures, function(t) {
-            t.adapter.destroy();
-        });
-        if (this.computeRequest)
-            this.computeRequest.clear();
-    };
+    });
 
     // Export to XML3D.webgl namespace
-    XML3D.webgl.ShaderRenderAdapter = ShaderRenderAdapter;
+    webgl.ShaderRenderAdapter = ShaderRenderAdapter;
 
-}());
+}(XML3D.webgl));
+(function() {
+    //Adapter for <img>
+    XML3D.webgl.ImgRenderAdapter = function(factory, node) {
+        XML3D.webgl.RenderAdapter.call(this, factory, node);
+        this.textureAdapter = factory.getAdapter(node.parentNode);
+    };
+    XML3D.createClass(XML3D.webgl.ImgRenderAdapter, XML3D.webgl.RenderAdapter);
+
+    XML3D.webgl.ImgRenderAdapter.prototype.notifyChanged = function(evt) {
+        this.textureAdapter.notifyChanged(evt);
+    };
+})();
 //Adapter for <texture>
 (function() {
 
     var TextureRenderAdapter = function(factory, node) {
         XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.gl = factory.renderer.handler.gl;
-        this.factory = factory;
-        this.node = node;
         this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
     };
 
     XML3D.createClass(TextureRenderAdapter, XML3D.webgl.RenderAdapter);
+
     TextureRenderAdapter.prototype.notifyChanged = function(evt) {
         var shaderAdapter = this.factory.getAdapter(this.node.parentElement);
         if (shaderAdapter)
@@ -19866,13 +24760,7 @@ Renderer.prototype.notifyDataChanged = function() {
     };
 
     TextureRenderAdapter.prototype.destroy = function() {
-        if (!this.info || this.info.handle === null)
-            return;
 
-        this.gl.deleteTexture(this.info.handle);
-        this.info = null;
-        this.bind = function(texUnit) { return; };
-        this.unbind = function(texUnit) { return; };
     };
 
     TextureRenderAdapter.prototype.dispose = function(evt) {
@@ -19884,651 +24772,241 @@ Renderer.prototype.notifyDataChanged = function() {
 XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
 //Adapter for <mesh>
-(function() {
-    var eventTypes = {onclick:1, ondblclick:1,
-        ondrop:1, ondragenter:1, ondragleave:1};
-
-    var bboxAttributes = ["boundingBox"];
+(function (webgl) {
 
     /**
      * @constructor
      */
-    var MeshInfo = function(type) {
-        this.vbos = {};
-        this.isIndexed = false;
-        this.complete = false;
-        this.glType = getGLTypeFromString(type);
-        this.bbox = new window.XML3DBox();
+    var MeshRenderAdapter = function (factory, node) {
+        webgl.TransformableAdapter.call(this, factory, node);
 
-        this.getVertexCount = function() {
-            try {
-                return this.isIndexed ? this.vbos.index[0].length : (this.vertexCount !== undefined ? this.vertexCount[0] : this.vbos.position[0].length);
-            } catch(e) {
-                return 0;
-            }
-        }
-        this.update = emptyFunction;
-    }
-
-    /**
-     * @constructor
-     */
-    var MeshRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-
-        this.processListeners();
-        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
-        this.parentVisible = true;
-        this.renderObject = null; // This is set by renderObject itself
-
-        this.requestObject = {};
-        this.computeRequest = null;
-        this.bboxComputeRequest = null;
+        this.initializeEventAttributes();
+        this.createRenderNode();
     };
 
-    XML3D.createClass(MeshRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(MeshRenderAdapter, webgl.TransformableAdapter, {
 
-    var p = MeshRenderAdapter.prototype;
+        createRenderNode: function () {
+            var dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
 
-    p.applyTransformMatrix = function(m) {
+            var parent = this.getParentRenderAdapter();
+            var parentNode = parent.getRenderNode && parent.getRenderNode();
 
-        if (this.renderObject.transform)
-            XML3D.math.mat4.multiply(m, m, this.renderObject.transform);
-
-        return m;
-    };
-
-    /**
-     *
-     */
-    p.processListeners  = function() {
-        var attributes = this.node.attributes;
-        for (var index in attributes) {
-            var att = attributes[index];
-            if (!att.name)
-                continue;
-
-            var type = att.name;
-            if (type.match(/onmouse/) || eventTypes[type]) {
-                var eventType = type.substring(2);
-                this.node.addEventListener(eventType,  new Function("evt", att.value), false);
-            }
-        }
-    };
-
-    /**
-     * @param {XML3D.events.Notification} evt
-     */
-    p.notifyChanged = function(evt) {
-        if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED ) && !evt.internalType ){
-            if(evt.key == "shader"){
-                this.updateShader(evt.adapter);
-                if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
-                    XML3D.debug.logWarning("Missing shader with id '" + evt.url + "', falling back to default shader.");
-                }
-            }
-            return;
-        } else if (evt.type == XML3D.events.NODE_INSERTED)
-        // Node insertion is handled by the CanvasRenderAdapter
-            return;
-        else if (evt.type == XML3D.events.NODE_REMOVED)
-            return this.factory.renderer.sceneTreeRemoval(evt);
-        else if (evt.type == XML3D.events.THIS_REMOVED) {
-            this.clearAdapterHandles();
-            return;
-        }
-
-        var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
-
-        switch (target) {
-            case "parenttransform":
-                this.renderObject.transform = evt.newValue;
-                break;
-
-            case "parentshader":
-                var adapterHandle = evt.newValue;
-                this.setShaderHandle(adapterHandle);
-                this.updateShader(adapterHandle ? adapterHandle.getAdapter() : null);
-                break;
-
-            case "parentvisible":
-                this.renderObject.visible = evt.newValue && this.node.visible;
-                break;
-
-            case "visible":
-                this.renderObject.visible = (evt.wrapped.newValue == "true") && this.node.parentNode.visible;
-                break;
-
-            case "src":
-                // Handled by data component
-                break;
-
-            case "type":
-                var newGLType = this.getGLTypeFromString(evt.wrapped.newValue);
-                this.renderObject.mesh.glType = newGLType;
-                break;
-
-            default:
-                XML3D.debug.logWarning("Unhandled mutation event in mesh adapter for parameter '"+target+"'", evt);
-                break;
-        }
-
-    };
-
-    p.getShaderHandle = function(){
-        return this.getConnectedAdapterHandle("shader");
-    }
-
-    p.setShaderHandle = function(newHandle){
-        this.connectAdapterHandle("shader", newHandle);
-        if(newHandle && newHandle.status == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
-            XML3D.debug.logError("Could not find <shader> element of url '" + newHandle.url);
-        }
-    };
-    p.updateShader = function(adapter){
-        var shaderName = this.factory.renderer.shaderManager.createShader(adapter,
-            this.factory.renderer.lights);
-        this.renderObject.shader = shaderName;
-        XML3D.debug.logInfo("New shader, clearing requests: ", shaderName);
-        this.clearRequests(); // New shader, new requests
-        this.renderObject.materialChanged();
-        this.factory.renderer.requestRedraw("Shader changed.", false);
-    }
-
-
-    /**
-     * @param {WebGLRenderingContext} gl
-     * @param {number} type
-     * @param {Object} data
-     */
-    var createBuffer = function(gl, type, data) {
-        var buffer = gl.createBuffer();
-        gl.bindBuffer(type, buffer);
-        gl.bufferData(type, data, gl.STATIC_DRAW);
-        buffer.length = data.length;
-        buffer.glType = getGLTypeFromArray(data);
-        return buffer;
-    };
-
-    /**
-     *
-     * @param {Array<String>} meshRequests
-     * @param {Array<String>} objectRequests
-     */
-    p.createRequests = function(meshRequests, objectRequests) {
-        var that = this;
-        this.computeRequest = this.computeRequest || this.dataAdapter.getComputeRequest(meshRequests,
-            function(request, changeType) {
-                that.dataChanged(request, changeType);
-        });
-        this.objectRequest = this.objectRequest || this.dataAdapter.getComputeRequest(objectRequests,
-            function(request, changeType) {
-                XML3D.debug.logInfo("Per object shader attributes changes not handled yet", request, changeType);
+            this.renderNode = this.getScene().createRenderMesh({
+                parent: parentNode,
+                node: this.node,
+                object: {
+                    data: dataAdapter.getXflowNode(),
+                    type: this.getMeshType()
+                },
+                name: this.node.id,
+                visible: !this.node.visible ? false : undefined
             });
-        this.bboxComputeRequest = this.bboxComputeRequest || this.dataAdapter.getComputeRequest(bboxAttributes);
-    };
+        var bbox = XML3D.math.bbox.create();
+        this.renderNode.setObjectSpaceBoundingBox(bbox);
 
-    p.clearRequests = function() {
-        this.computeRequest && this.computeRequest.clear();
-        this.objectRequest && this.objectRequest.clear();
-        this.computeRequest = this.objectRequest = null;
-    }
+        },
 
-    p.finishMesh = function() {
-        var prog = this.factory.renderer.shaderManager.getShaderById(this.renderObject.shader);
+        getMeshType: function() {
+            return this.node.hasAttribute("type") ? this.node.getAttribute("type") : "triangles";
+        },
 
-        this.requestObject = prog.material.meshRequest;
-
-        this.createRequests(Object.keys(this.requestObject), Object.keys(prog.uniforms));
-
-        this.createMeshData();
-        this.createPerObjectData();
-        return this.renderObject.mesh.valid;
-    }
-
-    var emptyFunction = function() {};
-
-
-    /**
-     * @param {Xflow.data.Request} request
-     * @param {Xflow.RESULT_STATE} state
-     */
-    p.dataChanged = function(request, state) {
-        var obj = this.renderObject;
-        switch(state) {
-            case Xflow.RESULT_STATE.CHANGED_STRUCTURE:
-                XML3D.debug.logInfo("Mesh structure changed", arguments);
-                if(this.renderObject.can("dataStructureChanged"))
-                    this.renderObject.dataStructureChanged();
-                this.factory.renderer.requestRedraw("Mesh structure changed.");
-                break;
-            case Xflow.RESULT_STATE.CHANGED_DATA:
-                XML3D.debug.logInfo("Mesh values changed", arguments);
-                if(this.renderObject.can("dataValueChanged"))
-                    this.renderObject.dataValueChanged();
-                this.factory.renderer.requestRedraw("Mesh values changed.");
-                break;
-            default:
-                XML3D.debug.logInfo("Unknown state: " + state);
-        }
-    };
-
-    p.createPerObjectData = function() {
-        var perObjectData = this.objectRequest.getResult();
-        this.renderObject.setOverride(perObjectData);
-    };
-
-    /**
-     *
-     */
-    p.createMeshData = function() {
-        var obj = this.renderObject;
-        obj.mesh = obj.mesh || new MeshInfo(this.node.type);
-
-        var dataResult =  this.computeRequest.getResult();
-
-        obj.mesh.valid = obj.mesh.complete = true; // Optimistic appraoch
-        for ( var name in this.requestObject) {
-            var attr = this.requestObject[name] || {};
-            var entry = dataResult.getOutputData(name);
-            /*if (entry == undefined) {
-                if(attr.required) {
-                    // This needs a structural change before we get the required signature
-                    console.log("Invalid", name);
-                    obj.mesh.valid = false;
+        /**
+         * @param {XML3D.events.Notification} evt
+         */
+        notifyChanged: function (evt) {
+            switch(evt.type) {
+                case XML3D.events.ADAPTER_HANDLE_CHANGED:
+                    if (evt.key == "shader") {
+                        this.updateShader(evt.adapter);
+                        if (evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND) {
+                            XML3D.debug.logWarning("Missing shader with id '" + evt.url + "', falling back to default shader.");
+                        }
+                    }
                     return;
-                }
-                continue;
-            }*/
-            if(!entry || !entry.getValue()) {
-                if(attr.required) {
-                    XML3D.debug.logInfo("Mesh not complete, missing: ", name, entry);
-                    obj.mesh.complete = false;
-                }
-                continue;
+                case  XML3D.events.NODE_INSERTED:
+                    return;
+                case XML3D.events.THIS_REMOVED:
+                    this.dispose();
+                    return;
+                case XML3D.events.NODE_REMOVED:
+                    // this.createPerObjectData();
+                    return;
+                case XML3D.events.VALUE_MODIFIED:
+                    this.valueChanged(evt.wrapped);
             }
+        },
+        /**
+         * @param {MutationEvent} evt
+         */
+        valueChanged: function(evt) {
+            var target = evt.attrName;
 
-            if (name == "vertexCount") {
-                obj.mesh.vertexCount = entry.getValue();
-                continue;
-            }
-
-            switch(entry.type) {
-                case Xflow.DATA_TYPE.TEXTURE:
-                    this.handleTexture(name, entry, obj.shader, obj.mesh);
+            switch (target) {
+                case "visible":
+                    this.renderNode.setLocalVisible(evt.newValue === "true");
                     break;
+
+                case "src":
+                    // Handled by data component
+                    break;
+
+                case "type":
+                    this.renderNode.setType(evt.newValue);
+                    break;
+
                 default:
-                    this.handleBuffer(name, attr, entry, obj.mesh);
-            };
+                    XML3D.debug.logWarning("Unhandled mutation event in mesh adapter for parameter '" + target + "'", evt);
+                    break;
+            }
+
+        },
+        dispose: function () {
+            this.getRenderNode().remove();
+            this.clearAdapterHandles();
         }
-        var bbox = this.calcBoundingBox();
-        if(bbox)
-            obj.mesh.bbox.set(bbox);
-
-        obj.mesh.valid = true;
-    };
-
-    /**
-     * @param {string} name
-     * @param {Object} attr
-     * @param {Xflow.BufferEntry} entry
-     * @param {MeshInfo} meshInfo
-     */
-    p.handleBuffer = function(name, attr, entry, meshInfo) {
-        var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, this.factory.canvasId);
-        var buffer = webglData.buffer;
-        var gl = this.factory.renderer.gl;
+    });
 
 
-        switch(webglData.changed) {
-            case Xflow.DATA_ENTRY_STATE.CHANGED_VALUE:
-                var bufferType = name == "index" ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
 
-                gl.bindBuffer(bufferType, buffer);
-                gl.bufferSubData(bufferType, 0, entry.getValue());
-                break;
-            case Xflow.DATA_ENTRY_STATE.CHANGED_NEW:
-            case Xflow.DATA_ENTRY_STATE.CHANGE_SIZE:
-                if (name == "index") {
-                    buffer = createBuffer(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(entry.getValue()));
-                } else {
-                    buffer = createBuffer(gl, gl.ARRAY_BUFFER, entry.getValue());
-                }
-                buffer.tupleSize = entry.getTupleSize();
-                webglData.buffer = buffer;
-                break;
-            default:
-                break;
+    // Interface methods
+
+    XML3D.extend(MeshRenderAdapter.prototype, {
+        /**
+         * @return {window.XML3DBox}
+         */
+        getBoundingBox: function () {
+            if (this.renderNode) {
+            var bbox = new XML3D.math.bbox.create();
+            this.renderNode.getObjectSpaceBoundingBox(bbox);
+            return XML3D.math.bbox.asXML3DBox(bbox);
+            }
+
+            return new window.XML3DBox();
+        },
+
+        /**
+         * @return {window.XML3DMatrix}
+         */
+        getWorldMatrix: function () {
+            var m = new window.XML3DMatrix(),
+                obj = this.renderNode;
+            if (obj) {
+                obj.getWorldMatrix(m._data);
+            }
+            return m;
         }
-
-        meshInfo.vbos[name] = [];
-        meshInfo.vbos[name][0] = buffer;
-        meshInfo.isIndexed = meshInfo.isIndexed || name == "index";
-        //if(meshInfo.isIndexed)
-            //console.error("Indexed");
-
-        webglData.changed = 0;
-    }
-    /**
-     * @param {string} name
-     * @param {Xflow.TextureEntry} entry
-     * @param {string} shaderId
-     * @param {MeshInfo} meshInfo
-     */
-    p.handleTexture = function(name, entry, shaderId, meshInfo) {
-        var prog = this.factory.renderer.shaderManager.getShaderById(shaderId);
-        meshInfo.sampler = meshInfo.sampler || {};
-        var webglData = XML3D.webgl.getXflowEntryWebGlData(entry, this.factory.canvasId);
-
-        if(webglData.changed && (name in prog.samplers)) {
-            this.factory.renderer.shaderManager.createTextureFromEntry(entry, prog.samplers[name]);
-        }
-        webglData.changed = 0;
-    }
-
-    /**
-     *
-     */
-    p.destroy = function() {
-        this.renderObject.dispose();
-        if (this.computeRequest)
-            this.computeRequest.clear();
-        if (this.bboxComputeRequest)
-            this.bboxComputeRequest.clear();
-        this.clearAdapterHandles();
-    };
-
-    /**
-     * @return {window.XML3DBox}
-     */
-    p.getBoundingBox = function() {
-        return new window.XML3DBox(this.renderObject.mesh.bbox);
-    };
-
-    /**
-     * @return {window.XML3DMatrix}
-     */
-    p.getWorldMatrix = function() {
-
-        var m = new window.XML3DMatrix();
-
-        var obj = this.renderObject;
-        if(obj)
-            m._data.set(obj.transform);
-
-        return m;
-    };
-
-    /**
-     * @private
-     * @return {window.XML3DBox} the calculated bounding box of this mesh.
-     */
-    p.calcBoundingBox = function() {
-
-        var bbox = new window.XML3DBox();
-
-        // try to compute bbox using the boundingbox property of xflow
-        var bboxResult = this.bboxComputeRequest.getResult();
-        var bboxOutData = bboxResult.getOutputData("boundingBox");
-        if (bboxOutData)
-        {
-            var bboxVal = bboxOutData.getValue();
-            bbox.extend(bboxVal[0]);
-            bbox.extend(bboxVal[1]);
-
-            return bbox;
-        }
-
-        // compute bounding box from positions and indices, if present
-        var dataResult = this.computeRequest.getResult();
-        var posData = dataResult.getOutputData("position");
-        if(!posData)
-            return bbox;
-
-        var positions = posData.getValue();
-
-        var idxOutData = dataResult.getOutputData("index");
-        var indices = idxOutData ? idxOutData.getValue() : null;
-
-        return XML3D.webgl.calculateBoundingBox(positions, indices);
-    };
-
-    var getGLTypeFromArray = function(array) {
-        var GL = window.WebGLRenderingContext;
-        if (array instanceof Int8Array)
-            return GL.BYTE;
-        if (array instanceof Uint8Array)
-            return GL.UNSIGNED_BYTE;
-        if (array instanceof Int16Array)
-            return GL.SHORT;
-        if (array instanceof Uint16Array)
-            return GL.UNSIGNED_SHORT;
-        if (array instanceof Int32Array)
-            return GL.INT;
-        if (array instanceof Uint32Array)
-            return GL.UNSIGNED_INT;
-        if (array instanceof Float32Array)
-            return GL.FLOAT;
-        return GL.FLOAT;
-    };
-
-    /**
-     * @param {string} typeName
-     */
-    function getGLTypeFromString(typeName) {
-        var GL = window.WebGLRenderingContext;
-        if (typeName && typeName.toLoweGLase)
-            typeName = typeName.toLowerCase();
-        switch (typeName) {
-            case "triangles":
-                return GL.TRIANGLES;
-            case "tristrips":
-                return GL.TRIANGLE_STRIP;
-            case "points":
-                return GL.POINTS;
-            case "lines":
-                return GL.LINES;
-            case "linestrips":
-                return GL.LINE_STRIP;
-            default:
-                return GL.TRIANGLES;
-        }
-    };
+    });
 
     // Export to XML3D.webgl namespace
-    XML3D.webgl.MeshRenderAdapter = MeshRenderAdapter;
+    webgl.MeshRenderAdapter = MeshRenderAdapter;
 
-}());// Adapter for <group>
+}(XML3D.webgl));
+// Adapter for <group>
 (function() {
 
-	var eventTypes = {onclick:1, ondblclick:1,
-			ondrop:1, ondragenter:1, ondragleave:1};
-
     var GroupRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.processListeners();
+        XML3D.webgl.TransformableAdapter.call(this, factory, node);
+        this.initializeEventAttributes();
         this.factory = factory;
-        this.parentTransform = null;
-        this.parentShaderHandle = null;
-        this.parentVisible = true;
-        this.isValid = true;
         this.updateTransformAdapter();
+        this.createRenderNode();
     };
 
-    XML3D.createClass(GroupRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(GroupRenderAdapter, XML3D.webgl.TransformableAdapter);
 
     var p = GroupRenderAdapter.prototype;
 
-    /** It is assumed that this method uses the world matrix! */
-    p.applyTransformMatrix = function(m) {
-        if (this.parentTransform !== null)
-            XML3D.math.mat4.multiply(m, this.parentTransform,  m);
-
-        var matrix = this.getLocalMatrixInternal();
-        if (matrix)
-            XML3D.math.mat4.multiply(m, m, matrix);
-
-        return m;
+    p.createRenderNode = function() {
+        //TODO: Shouldn't have to go through the renderer...
+        var parent = this.getParentRenderAdapter();
+        var parentNode = parent.getRenderNode && parent.getRenderNode();
+        this.renderNode = this.getScene().createRenderGroup({
+            parent: parentNode,
+            shaderHandle: this.getShaderHandle(),
+            visible: this.node.visible,
+            name: this.node.id
+        });
+        this.updateLocalMatrix();
+        var bbox = XML3D.math.bbox.create();
+        this.renderNode.setWorldSpaceBoundingBox(bbox);
     };
 
-    p.getLocalMatrixInternal = function()
-    {
-        var cssMatrix = XML3D.css.getCSSMatrix(this.node);
-        if(cssMatrix){
-            return XML3D.css.convertCssToMat4(cssMatrix);
-        }
-
-        var handle = this.getConnectedAdapter("transform");
-        if (handle)
-            return handle.getMatrix("transform");
-
-        return null;
-    }
+    p.updateLocalMatrix = (function () {
+        var IDENTITY = XML3D.math.mat4.create();
+        return function () {
+            var result = IDENTITY;
+            var cssMatrix = XML3D.css.getCSSMatrix(this.node);
+            if (cssMatrix) {
+                result = XML3D.css.convertCssToMat4(cssMatrix);
+            } else {
+                var handle = this.getConnectedAdapter("transform");
+                if (handle) {
+                    result = handle.getMatrix("transform");
+                }
+            }
+            this.renderNode.setLocalMatrix(result);
+        };
+    }());
 
     p.updateTransformAdapter = function() {
         var transformHref = this.node.transform;
         this.connectAdapterHandle("transform", this.getAdapterHandle(transformHref));
     };
 
-    p.processListeners  = function() {
-        var attributes = this.node.attributes;
-        for (var index in attributes) {
-            var att = attributes[index];
-            if (!att.name)
-                continue;
-
-            var type = att.name;
-	        if (type.match(/onmouse/) || eventTypes[type]) {
-                var eventType = type.substring(2);
-                this.node.addEventListener(eventType, new Function("evt", att.value), false);
-            }
-        }
-    };
-
     p.notifyChanged = function(evt) {
-        if (evt.type == XML3D.events.NODE_INSERTED) {
-            this.factory.renderer.sceneTreeAddition(evt);
-            return;
+        if (evt.type !== XML3D.events.VALUE_MODIFIED) {
+            return this.handleConnectedAdapterEvent(evt);
         }
-        else if (evt.type == XML3D.events.NODE_REMOVED) {
-            this.factory.renderer.sceneTreeRemoval(evt);
-            return;
-        } else if (evt.type == XML3D.events.THIS_REMOVED) {
-            //Clear all references to shader and transform adapters
-            this.clearAdapterHandles();
-            return;
-        }
-        else if( (evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED) && !evt.internalType){
-            // The connected transform node changed;
-            this.propagateTransform(evt);
-            return;
-        }
-
-        var target = evt.internalType || evt.attrName || evt.wrapped.attrName;
+        var target = evt.attrName || evt.wrapped.attrName;
 
         switch (target) {
         case "shader":
-            evt.internalType = "parentshader";
-            evt.newValue = this.getShaderHandle();
-            this.notifyChildren(evt);
-            this.factory.renderer.requestRedraw("Group shader changed.", false);
-            break;
-
-        case "parentshader":
-            this.parentShaderHandle = null;
-            if (!this.getShaderHandle()) { // This node's shader would override parent shaders
-                this.notifyChildren(evt);
-            }
-            this.parentShaderHandle = evt.newValue;
+            this.disconnectAdapterHandle("shader");
+            this.renderNode.setLocalShaderHandle(this.getShaderHandle());
+            this.factory.renderer.requestRedraw("Group shader changed.");
             break;
 
         case "transform":
             //This group is now linked to a different transform node. We need to notify all
             //of its children with the new transformation matrix
             this.updateTransformAdapter();
-
-            this.propagateTransform(evt);
-
-            break;
-
-        //TODO: this will change once the wrapped events are sent to all listeners of a node
-        case "parenttransform":
-            var parentValue = downstreamValue = evt.newValue;
-            this.parentTransform = evt.newValue;
-
-            var downstreamValue;
-            var matrix = this.getLocalMatrixInternal();
-            if (matrix)
-                downstreamValue = XML3D.math.mat4.multiply(XML3D.math.mat4.create(), parentValue, matrix);
-
-            evt.newValue = downstreamValue;
-            this.notifyChildren(evt);
-            // Reset event value
-            evt.newValue = parentValue;
+            this.updateLocalMatrix();
             break;
 
         case "visible":
-            //TODO: improve visibility handling
-            //If this node is set visible=false then it overrides the parent node
-            if (this.parentVisible == false)
-                break;
-            else {
-                evt.internalType = "parentvisible";
-                evt.newValue = evt.wrapped.newValue == "true";
-                this.notifyChildren(evt);
-                delete evt.internalType;
-                delete evt.newValue;
-                this.factory.renderer.requestRedraw("Group visibility changed.", true);
-            }
-            break;
-
-        case "parentvisible":
-            this.parentVisible = evt.newValue;
-            //If this node is set visible=false then it overrides the parent node
-            if (this.node.visible == false)
-                break;
-            else
-                this.notifyChildren(evt);
-
+            this.renderNode.setLocalVisible(evt.wrapped.newValue === "true");
+            this.factory.renderer.requestRedraw("Group visibility changed.");
             break;
 
         default:
             XML3D.debug.logWarning("Unhandled mutation event in group adapter for parameter '"+target+"'");
             break;
         };
-
     };
 
-    p.notifyChildren = function(evt) {
-        var child = this.node.firstElementChild;
-        while (child) {
-            var adapter = this.factory.getAdapter(child);
-            adapter && adapter.notifyChanged(evt);
-            child = child.nextElementSibling;
+    p.handleConnectedAdapterEvent = function(evt) {
+        switch(evt.type) {
+            case XML3D.events.NODE_INSERTED:
+                this.initElement(evt.wrapped.target);
+                this.initChildElements(evt.wrapped.target);
+                break;
+            case XML3D.events.THIS_REMOVED:
+                this.dispose();
+                break;
+            case XML3D.events.ADAPTER_HANDLE_CHANGED:
+                if (evt.key === "transform") {
+                    this.updateTransformAdapter();
+                    this.updateLocalMatrix();
+                } else if (evt.key === "shader") {
+                    var handle = this.getShaderHandle();
+                    this.renderNode.setLocalShaderHandle(handle);
+                }
+                break;
+            default:
+                XML3D.debug.logWarning("Unhandled connected adapter event for "+evt.key+" in shader adapter");
         }
     };
-
-    p.propagateTransform = function(evt){
-        var downstreamValue;
-        var matrix = this.getLocalMatrixInternal();
-        if (matrix)
-            downstreamValue = matrix;
-        else if (this.parentTransform)
-            downstreamValue = XML3D.math.mat4.identity(XML3D.math.mat4.create());
-        else
-            downstreamValue = null;
-
-        if(this.parentTransform)
-            downstreamValue = XML3D.math.mat4.multiply(XML3D.math.mat4.create(), this.parentTransform, downstreamValue);
-
-        evt.internalType = "parenttransform";
-        evt.newValue = downstreamValue;
-
-        this.notifyChildren(evt);
-        delete evt.internalType;
-        delete evt.newValue;
-        this.factory.renderer.requestRedraw("Group transform changed.", true);
-    }
 
     p.getShaderHandle = function()
     {
@@ -20543,44 +25021,32 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                     shaderHref = result[1];
             }
         }
-        if(shaderHref)
-            return this.getAdapterHandle(shaderHref);
-        else
-            return this.parentShaderHandle;
-
+        if(shaderHref) {
+            this.connectAdapterHandle("shader", this.getAdapterHandle(shaderHref));
+            return this.getConnectedAdapterHandle("shader");
+        }
     };
 
-    p.destroy = function() {
-        var child = this.node.firstElementChild;
-        while (child) {
-            var adapter = this.factory.getAdapter(child);
+    p.dispose = function() {
+        // Dispose all children as well
+        this.traverse(function(adapter) {
             if (adapter && adapter.destroy)
-                adapter.destroy();
-            child = child.nextElementSibling;
-        }
-
-        this.isValid = false;
+                adapter.dispose();
+        });
+        this.getRenderNode().remove();
+        this.clearAdapterHandles();
     };
 
     /* Interface methods */
     p.getBoundingBox = function() {
-        var bbox = new window.XML3DBox();
-        Array.prototype.forEach.call(this.node.childNodes, function(c) {
-            if(c.getBoundingBox)
-                bbox.extend(c.getBoundingBox());
-        });
-        var matrix = this.getLocalMatrixInternal();
-        if (matrix) {
-            XML3D.webgl.transformAABB(bbox, matrix);
-        }
-        return bbox;
+        var bbox = XML3D.math.bbox.create();
+        this.renderNode.getWorldSpaceBoundingBox(bbox);
+        return XML3D.math.bbox.asXML3DBox(bbox);
     };
 
     p.getLocalMatrix = function() {
         var m = new window.XML3DMatrix();
-        var matrix = this.getLocalMatrixInternal();
-        if (matrix)
-            m._data.set(matrix);
+        this.renderNode.getLocalMatrix(m._data);
         return m;
     };
 
@@ -20588,16 +25054,54 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     p.getWorldMatrix = function() {
         var m = new window.XML3DMatrix();
-
-        XML3D.math.mat4.identity(tmpIdMat);
-        m._data.set(this.applyTransformMatrix(tmpIdMat));
-
+        this.renderNode.getWorldMatrix(m._data);
         return m;
     };
 
     XML3D.webgl.GroupRenderAdapter = GroupRenderAdapter;
 }());
-(function() {
+(function (webgl) {
+
+    /**
+     * Adapter for <lightshader>
+     * @constructor
+     * @param {RenderAdapterFactory} factory
+     * @param {Element} node
+     */
+    var LightShaderRenderAdapter = function (factory, node) {
+        XML3D.webgl.RenderAdapter.call(this, factory, node);
+        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
+    };
+    XML3D.createClass(LightShaderRenderAdapter, webgl.RenderAdapter, {
+        getDataNode: function () {
+            return this.dataAdapter.getXflowNode();
+        },
+        getLightType: function () {
+            var script = this.node.getAttribute("script");
+            if (script.indexOf("urn:xml3d:lightshader:") === 0) {
+                return script.substring(22, script.length);
+            } else {
+                XML3D.debug.logError("Unsupported light type " + script);
+                return null;
+            }
+        },
+        notifyChanged: function (evt) {
+            switch (evt.type) {
+                case XML3D.events.THIS_REMOVED:
+                    this.notifyOppositeAdapters();
+                    break;
+                case XML3D.events.VALUE_MODIFIED:
+                    this.notifyOppositeAdapters(XML3D.events.ADAPTER_VALUE_CHANGED);
+                    break;
+            }
+        }
+    });
+
+    // Export
+    webgl.LightShaderRenderAdapter = LightShaderRenderAdapter;
+
+})(XML3D.webgl);
+(function(webgl) {
 
     /**
      * Adapter for <light>
@@ -20606,197 +25110,67 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      * @param {Element} node
      */
     var LightRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-
-        this.visible = true;
-        this.transform = null;
-        this.lightShader = null;
-        this.renderer = factory.renderer;
-
-        this.offset = 0;
-        this.lightType = "point";
+        webgl.TransformableAdapter.call(this, factory, node);
         this.updateLightShader();
-        this.listenerID = -1;
-
+        this.createRenderNode();
     };
-    XML3D.createClass(LightRenderAdapter, XML3D.webgl.RenderAdapter);
+    XML3D.createClass(LightRenderAdapter, webgl.TransformableAdapter);
+
+    LightRenderAdapter.prototype.createRenderNode = function () {
+        var parentAdapter = this.getParentRenderAdapter();
+        var parentNode = parentAdapter.getRenderNode && parentAdapter.getRenderNode();
+        var lightShader = this.getLightShader();
+        this.renderNode = this.factory.getScene().createRenderLight({
+            light: {
+                type: lightShader ? lightShader.getLightType() : null,
+                data: lightShader ? lightShader.getDataNode() : null
+            },
+            parent: parentNode,
+            shader: lightShader,
+            visible: !this.node.visible ? false : undefined,
+            localIntensity: this.node.intensity
+        });
+    };
 
     LightRenderAdapter.prototype.notifyChanged = function(evt) {
-        if (evt.type == XML3D.events.NODE_REMOVED) {
-            this.destroy();
-            return;
-        } else if (evt.type == XML3D.events.THIS_REMOVED) {
-            return;
-        }
-        else if( evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED){
-            // The connected transform node changed;
+        switch (evt.type) {
+            case XML3D.events.NODE_REMOVED:
+                return;
+            case XML3D.events.THIS_REMOVED:
+                this.dispose();
+                return;
+            case XML3D.events.ADAPTER_HANDLE_CHANGED:
             if (evt.key == "shader") {
-                var lights = this.renderer.lights;
-                this.removeLight(lights);
+                //The lightshader was destroyed, so this light is now invalid
+                this.renderNode.remove();
                 return;
             }
+                break;
+            case XML3D.events.VALUE_MODIFIED:
+                this.valueModified(evt.wrapped.attrName, evt.wrapped.newValue);
+                break;
+            case XML3D.events.ADAPTER_VALUE_CHANGED:
+                this.renderNode.setLightType(evt.adapter.getLightType());
         }
-
-        var target = evt.internalType || evt.wrapped.attrName;
-
-        switch(target) {
-        case "visible":
-            this.visible = (evt.wrapped.newValue == "true") && this.node.parentNode.visible;
-            this.renderer.changeLightData(this.lightType, "visibility", this.offset, this.visible ? [1,1,1] : [0,0,0]);
-            break;
-        case "parentvisible":
-            this.visible = evt.newValue && this.node.visible;
-            this.renderer.changeLightData(this.lightType, "visibility", this.offset, this.visible ? [1,1,1] : [0,0,0]);
-            break;
-        case "intensity":
-            var i = this.intensity = evt.wrapped.newValue;
-            var lsIntensity = this.lightShader.requestParameter("intensity");
-            if (lsIntensity)
-                lsIntensity = lsIntensity.getValue();
-            else
-                return;
-
-            this.renderer.changeLightData(this.lightType, "intensity", this.offset, [lsIntensity[0]*i, lsIntensity[1]*i, lsIntensity[2]*i]);
-
-            break;
-        case "parenttransform":
-            this.transform = evt.newValue;
-            if (this.lightType == "directional") {
-                this.renderer.changeLightData(this.lightType, "direction", this.offset, this.applyTransformDir(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION));
-            } else if (this.lightType == "spot") {
-                this.renderer.changeLightData(this.lightType, "direction", this.offset, this.applyTransformDir(XML3D_SPOTLIGHT_DEFAULT_DIRECTION));
-                this.renderer.changeLightData(this.lightType, "position", this.offset, this.applyTransform([0,0,0]));
-            } else {
-                this.renderer.changeLightData(this.lightType, "position", this.offset, this.applyTransform([0,0,0]));
-            }
-
-            break;
-        case "shader":
-            var lights = this.renderer.lights;
-            this.removeLight(lights);
-            //this.disconnectAdapterHandle("shader");
-            this.updateLightShader();
-            this.addLight(lights);
-            break;
-        }
-
-        this.factory.handler.redraw("Light attribute changed.");
     };
 
-    /** @const */
-    var XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION = XML3D.math.vec3.fromValues(0,0,-1), tmpDirection = XML3D.math.vec3.create();
-    /** @const */
-    var XML3D_SPOTLIGHT_DEFAULT_DIRECTION = XML3D.math.vec3.fromValues(0,0,1);
-
-
-	LightRenderAdapter.prototype.applyTransform = function(vec) {
-	    if (this.transform) {
-            var t = this.transform;
-            var newVec = XML3D.math.vec4.transformMat4(XML3D.math.vec4.create(), [vec[0], vec[1], vec[2], 1], t);
-            return [newVec[0]/newVec[3], newVec[1]/newVec[3], newVec[2]/newVec[3]];
-	    }
-	    return vec;
-	};
-
-	LightRenderAdapter.prototype.applyTransformDir = function(vec) {
-	    if (this.transform) {
-            var t = this.transform;
-            var newVec = XML3D.math.vec4.transformMat4(XML3D.math.vec4.create(), [vec[0], vec[1], vec[2], 0], t);
-            return [newVec[0], newVec[1], newVec[2]];
-	    }
-	    return vec;
-	};
-
-	/**
-	 *
-	 * @param {Object} lights
-	 */
-	LightRenderAdapter.prototype.addLight = function(lights) {
-	    this.callback = lights.dataChanged;
-	    var shader = this.getLightShader();
-        if (!shader)
-            return;
-
-        var lo;
-        this.listenerID = shader.registerLightListener(this.dataChanged.bind(this));
-        var script = shader.node.script;
-        var pos = script.indexOf("urn:xml3d:lightshader:");
-        if(pos === 0) {
-            var urnfrag = script.substring(22, script.length);
-            switch(urnfrag) {
-                case "point":
-                    lo = lights.point;
-                    this.offset = lo.length * 3;
-                    this.lightType = "point";
-
-                    Array.set(lo.position, this.offset, this.applyTransform([0,0,0]));
-                    Array.set(lo.visibility, this.offset, this.visible ? [1,1,1] : [0,0,0]);
-                    shader.fillPointLight(lo, this.node.intensity, this.offset);
-                    lo.length++;
-                    break;
-                case "directional":
-                    lo = lights.directional;
-                    this.offset = lo.length * 3;
-                    this.lightType = "directional";
-
-                    Array.set(lo.direction, this.offset, this.applyTransformDir(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION));
-                    Array.set(lo.visibility, this.offset, this.visible ? [1,1,1] : [0,0,0]);
-                    shader.fillDirectionalLight(lo, this.node.intensity, this.offset);
-                    lo.length++;
-                    break;
-                case "spot":
-                    lo = lights.spot;
-                    this.offset = lo.length * 3;
-                    this.lightType = "spot";
-
-                    Array.set(lo.position, this.offset, this.applyTransform([0,0,0]));
-                    Array.set(lo.direction, this.offset, this.applyTransformDir(XML3D_SPOTLIGHT_DEFAULT_DIRECTION));
-                    Array.set(lo.visibility, this.offset, this.visible ? [1,1,1] : [0,0,0]);
-                    shader.fillSpotLight(lo, this.node.intensity, this.offset);
-                    lo.length++;
-                    break;
-                default:
-                    XML3D.debug.logWarning("Unsupported lightshader type: " + script);
-            }
+    LightRenderAdapter.prototype.valueModified = function(name, newValue) {
+        switch(name) {
+        case "visible":
+            this.renderNode.setLocalVisible(newValue === "true");
+            break;
+        case "intensity":
+            this.renderNode.setLocalIntensity(newValue);
+            break;
+        case "shader":
+            this.renderNode.remove();
+            this.updateLightShader();
+            this.createRenderNode();
+            break;
         }
-
-        lights.changed = true;
-        lights.structureChanged = true;
-	};
-
-	LightRenderAdapter.prototype.removeLight = function(lights) {
-	    var lo = lights[this.lightType];
-	    var shader = this.getLightShader();
-
-	    if (shader) {
-    	    switch(this.lightType) {
-    	    case "point":
-    	        lo.position.splice(this.offset, 3);
-    	        break;
-
-    	    case "directional":
-    	        lo.direction.splice(this.offset, 3);
-    	        break;
-
-    	    case "spot":
-    	        lo.position.splice(this.offset, 3);
-    	        lo.direction.splice(this.offset, 3);
-    	        break;
-    	    }
-
-    	    lo.visibility.splice(this.offset, 3);
-
-            shader.removeLight(this.lightType, lights, this.offset);
-            shader.removeLightListener(this.listenerID);
-
-    	    lo.length--;
-    	    lights.changed = true;
-    	    lights.structureChanged = true;
-	    }
-	};
+    };
 
     LightRenderAdapter.prototype.updateLightShader = function(){
-       // this.disconnectAdapterHandle("shader");
         var shaderHref = this.node.shader;
         if(!shaderHref)
         {
@@ -20811,53 +25185,31 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         this.connectAdapterHandle("shader", this.getAdapterHandle(shaderHref));
     };
 
-	/**
-	 *
-	 */
+    /**
+     *
+     */
     LightRenderAdapter.prototype.getLightShader = function() {
         return this.getConnectedAdapter("shader");
     };
+
     LightRenderAdapter.prototype.dispose = function() {
-        this.isValid = false;
+        this.getRenderNode().remove();
+        this.clearAdapterHandles();
     };
-    
-    LightRenderAdapter.prototype.destroy = function() {
-    	this.clearAdapterHandles();
-    };
-
-    LightRenderAdapter.prototype.destroy = function() {
-        var lights = this.renderer.lights;
-        this.removeLight(lights);
-
-        //TODO: uncomment this once branches are merged
-        //this.clearAdapterHandles();
-    };
-
 
     /**
      * @return {XML3DMatrix}
      */
     LightRenderAdapter.prototype.getWorldMatrix = function() {
-
         var m = new window.XML3DMatrix();
-        m._data.set(this.transform);
+        this.renderNode.getWorldMatrix(m._data);
         return m;
     };
 
-    /**
-     *
-     * @param {string} field
-     * @param {Array.<number>} newValue
-     * @return
-     */
-    LightRenderAdapter.prototype.dataChanged = function(field, newValue) {
-        this.renderer.changeLightData(this.lightType, field, this.offset, newValue);
-    };
-
     // Export to XML3D.webgl namespace
-    XML3D.webgl.LightRenderAdapter = LightRenderAdapter;
+    webgl.LightRenderAdapter = LightRenderAdapter;
 
-}());// adapter/factory.js
+}(XML3D.webgl));// adapter/factory.js
 
 (function() {
     /**
@@ -20869,8 +25221,6 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
      */
     var RenderAdapterFactory = function(canvasId) {
         XML3D.base.NodeAdapterFactory.call(this, XML3D.webgl, canvasId);
-        this.handler = XML3D.webgl.handlers[canvasId];
-        this.renderer = XML3D.webgl.renderers[canvasId];
         this.type = "RenderAdapterFactory";
     };
     XML3D.createClass(RenderAdapterFactory, XML3D.base.NodeAdapterFactory);
@@ -20905,6 +25255,22 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
         }
         return null;
     };
+
+    RenderAdapterFactory.prototype.setScene = function(scene) {
+        this.scene = scene;
+    }
+
+    RenderAdapterFactory.prototype.getScene = function() {
+        return this.scene;
+    }
+
+    RenderAdapterFactory.prototype.setRenderer = function(renderer) {
+        this.renderer = renderer;
+    }
+
+    RenderAdapterFactory.prototype.getRenderer = function() {
+        return this.renderer;
+    }
 
     // Export
     XML3D.webgl.RenderAdapterFactory = RenderAdapterFactory;
@@ -20943,9 +25309,6 @@ XML3D.shaders.register("matte", {
     ].join("\n"),
 
     fragment: [
-        "#ifdef GL_ES",
-          "precision highp float;",
-        "#endif",
         "uniform vec3 diffuseColor;",
         "uniform bool useVertexColor;",
 
@@ -20962,10 +25325,14 @@ XML3D.shaders.register("matte", {
     uniforms: {
         diffuseColor : [1.0, 1.0, 1.0],
         useVertexColor: false
+    },
+    attributes: {
+        color: null
     }
 });
 
-XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.register("diffuse", {
+XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));
+XML3D.shaders.register("diffuse", {
 
     vertex : [
         "attribute vec3 position;",
@@ -20998,10 +25365,6 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
     ].join("\n"),
 
     fragment : [
-        "#ifdef GL_ES",
-          "precision highp float;",
-        "#endif",
-
         "uniform float ambientIntensity;",
         "uniform vec3 diffuseColor;",
         "uniform vec3 emissiveColor;",
@@ -21026,20 +25389,20 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "uniform vec3 pointLightAttenuation[MAX_POINTLIGHTS];",
         "uniform vec3 pointLightPosition[MAX_POINTLIGHTS];",
         "uniform vec3 pointLightIntensity[MAX_POINTLIGHTS];",
-        "uniform vec3 pointLightVisibility[MAX_POINTLIGHTS];",
+        "uniform bool pointLightOn[MAX_POINTLIGHTS];",
         "#endif",
 
         "#if MAX_DIRECTIONALLIGHTS > 0",
         "uniform vec3 directionalLightDirection[MAX_DIRECTIONALLIGHTS];",
         "uniform vec3 directionalLightIntensity[MAX_DIRECTIONALLIGHTS];",
-        "uniform vec3 directionalLightVisibility[MAX_DIRECTIONALLIGHTS];",
+        "uniform bool directionalLightOn[MAX_DIRECTIONALLIGHTS];",
         "#endif",
 
         "#if MAX_SPOTLIGHTS > 0",
         "uniform vec3 spotLightAttenuation[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightPosition[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightIntensity[MAX_SPOTLIGHTS];",
-        "uniform vec3 spotLightVisibility[MAX_SPOTLIGHTS];",
+        "uniform bool spotLightOn[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightDirection[MAX_SPOTLIGHTS];",
         "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
         "uniform float spotLightCosSoftFalloffAngle[MAX_SPOTLIGHTS];",
@@ -21066,27 +25429,33 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
 
         "  #if MAX_POINTLIGHTS > 0",
         "    for (int i=0; i<MAX_POINTLIGHTS; i++) {",
+        "      if (!pointLightOn[i])",
+        "         continue;",
         "      vec4 lPosition = viewMatrix * vec4( pointLightPosition[ i ], 1.0 );",
         "      vec3 L = lPosition.xyz - fragVertexPosition;",
         "      float dist = length(L);",
         "      L = normalize(L);",
         "      float atten = 1.0 / (pointLightAttenuation[i].x + pointLightAttenuation[i].y * dist + pointLightAttenuation[i].z * dist * dist);",
         "      vec3 Idiff = pointLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
-        "      color = color + (atten*Idiff) * pointLightVisibility[i];",
+        "      color = color + atten*Idiff;",
         "    }",
         "  #endif",
 
         "#if MAX_DIRECTIONALLIGHTS > 0",
         "  for (int i=0; i<MAX_DIRECTIONALLIGHTS; i++) {",
+        "      if (!directionalLightOn[i])",
+        "         continue;",
         "    vec4 lDirection = viewMatrix * vec4(directionalLightDirection[i], 0.0);",
         "    vec3 L =  normalize(-lDirection.xyz);",
         "    vec3 Idiff = directionalLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
-        "    color = color + (Idiff * directionalLightVisibility[i]);",
+        "    color = color + Idiff;",
         "  }",
         "#endif",
 
         "#if MAX_SPOTLIGHTS > 0",
         "  for (int i=0; i<MAX_SPOTLIGHTS; i++) {",
+        "      if (!spotLightOn[i])",
+        "         continue;",
         "    vec4 lPosition = viewMatrix * vec4( spotLightPosition[ i ], 1.0 );",
         "    vec3 L = lPosition.xyz - fragVertexPosition;",
         "    float dist = length(L);",
@@ -21101,7 +25470,7 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "       float softness = 1.0;",
         "       if (angle < spotLightCosSoftFalloffAngle[i])",
         "           softness = (angle - spotLightCosFalloffAngle[i]) /  (spotLightCosSoftFalloffAngle[i] -  spotLightCosFalloffAngle[i]);",
-        "       color += (atten*softness*Idiff) * spotLightVisibility[i];",
+        "       color += atten * softness * Idiff;",
         "    }",
         "  }",
         "#endif",
@@ -21133,8 +25502,16 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
     samplers: {
         diffuseTexture : null,
         emissiveTexture : null
+    },
+    attributes: {
+        normal : {
+            required: true
+        },
+        texcoord: null,
+        color: null
     }
-});XML3D.shaders.register("phong", {
+});
+XML3D.shaders.register("phong", {
 
     vertex : [
         "attribute vec3 position;",
@@ -21167,10 +25544,6 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
     ].join("\n"),
 
     fragment : [
-        "#ifdef GL_ES",
-          "precision highp float;",
-        "#endif",
-
         "uniform float ambientIntensity;",
         "uniform vec3 diffuseColor;",
         "uniform vec3 emissiveColor;",
@@ -21200,20 +25573,20 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "uniform vec3 pointLightAttenuation[MAX_POINTLIGHTS];",
         "uniform vec3 pointLightPosition[MAX_POINTLIGHTS];",
         "uniform vec3 pointLightIntensity[MAX_POINTLIGHTS];",
-        "uniform vec3 pointLightVisibility[MAX_POINTLIGHTS];",
+        "uniform bool pointLightOn[MAX_POINTLIGHTS];",
         "#endif",
 
         "#if MAX_DIRECTIONALLIGHTS > 0",
         "uniform vec3 directionalLightDirection[MAX_DIRECTIONALLIGHTS];",
         "uniform vec3 directionalLightIntensity[MAX_DIRECTIONALLIGHTS];",
-        "uniform vec3 directionalLightVisibility[MAX_DIRECTIONALLIGHTS];",
+        "uniform bool directionalLightOn[MAX_DIRECTIONALLIGHTS];",
         "#endif",
 
         "#if MAX_SPOTLIGHTS > 0",
         "uniform vec3 spotLightAttenuation[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightPosition[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightIntensity[MAX_SPOTLIGHTS];",
-        "uniform vec3 spotLightVisibility[MAX_SPOTLIGHTS];",
+        "uniform bool spotLightOn[MAX_SPOTLIGHTS];",
         "uniform vec3 spotLightDirection[MAX_SPOTLIGHTS];",
         "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
         "uniform float spotLightCosSoftFalloffAngle[MAX_SPOTLIGHTS];",
@@ -21241,33 +25614,39 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "    objSpecular = objSpecular * texture2D(specularTexture, fragTexCoord).rgb;",
         "  #endif",
 
-        "  #if MAX_POINTLIGHTS > 0",
-        "    for (int i=0; i<MAX_POINTLIGHTS; i++) {",
-        "      vec4 lPosition = viewMatrix * vec4( pointLightPosition[ i ], 1.0 );",
-        "      vec3 L = lPosition.xyz - fragVertexPosition;",
-        "      float dist = length(L);",
-        "      L = normalize(L);",
-        "      vec3 R = normalize(reflect(L,fragNormal));",
-        "      float atten = 1.0 / (pointLightAttenuation[i].x + pointLightAttenuation[i].y * dist + pointLightAttenuation[i].z * dist * dist);",
-        "      vec3 Idiff = pointLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
-        "      vec3 Ispec = pointLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
-        "      color = color + (atten*(Idiff + Ispec)) * pointLightVisibility[i];",
-        "    }",
-        "  #endif",
+        "#if MAX_POINTLIGHTS > 0",
+        "  for (int i=0; i<MAX_POINTLIGHTS; i++) {",
+        "    if(!pointLightOn[i])",
+        "      continue;",
+        "    vec4 lPosition = viewMatrix * vec4( pointLightPosition[ i ], 1.0 );",
+        "    vec3 L = lPosition.xyz - fragVertexPosition;",
+        "    float dist = length(L);",
+        "    L = normalize(L);",
+        "    vec3 R = normalize(reflect(L,fragNormal));",
+        "    float atten = 1.0 / (pointLightAttenuation[i].x + pointLightAttenuation[i].y * dist + pointLightAttenuation[i].z * dist * dist);",
+        "    vec3 Idiff = pointLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
+        "    vec3 Ispec = pointLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
+        "    color = color + (atten*(Idiff + Ispec));",
+        "  }",
+        "#endif",
 
         "#if MAX_DIRECTIONALLIGHTS > 0",
         "  for (int i=0; i<MAX_DIRECTIONALLIGHTS; i++) {",
+        "    if(!directionalLightOn[i])",
+        "      continue;",
         "    vec4 lDirection = viewMatrix * vec4(directionalLightDirection[i], 0.0);",
         "    vec3 L =  normalize(-lDirection.xyz);",
         "    vec3 R = normalize(reflect(L,fragNormal));",
         "    vec3 Idiff = directionalLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
         "    vec3 Ispec = directionalLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
-        "    color = color + ((Idiff + Ispec)) * directionalLightVisibility[i];",
+        "    color = color + ((Idiff + Ispec));",
         "  }",
         "#endif",
 
         "#if MAX_SPOTLIGHTS > 0",
         "  for (int i=0; i<MAX_SPOTLIGHTS; i++) {",
+        "    if(!spotLightOn[i])",
+        "      continue;",
         "    vec4 lPosition = viewMatrix * vec4( spotLightPosition[ i ], 1.0 );",
         "    vec3 L = lPosition.xyz - fragVertexPosition;",
         "    float dist = length(L);",
@@ -21284,7 +25663,7 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         "       float softness = 1.0;",
         "       if (angle < spotLightCosSoftFalloffAngle[i])",
         "           softness = (angle - spotLightCosFalloffAngle[i]) /  (spotLightCosSoftFalloffAngle[i] -  spotLightCosFalloffAngle[i]);",
-        "       color += atten*softness*(Idiff + Ispec) * spotLightVisibility[i];",
+        "       color += atten*softness*(Idiff + Ispec);",
         "    }",
         "  }",
         "#endif",
@@ -21321,8 +25700,107 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
         diffuseTexture : null,
         emissiveTexture : null,
         specularTexture : null
+    },
+
+    attributes: {
+        normal : {
+            required: true
+        },
+        texcoord: null,
+        color: null
     }
-});XML3D.shaders.register("pickobjectid", {
+});
+XML3D.shaders.register("point", {
+
+    vertex : [
+        "attribute vec3 position;",
+        "attribute vec3 color;",
+        "attribute vec2 texcoord;",
+
+        "varying vec3 fragNormal;",
+        "varying vec3 fragVertexPosition;",
+        "varying vec3 fragEyeVector;",
+        "varying vec2 fragTexCoord;",
+        "varying vec3 fragVertexColor;",
+
+        "uniform mat4 modelViewProjectionMatrix;",
+        "uniform mat4 modelViewMatrix;",
+        "uniform mat4 projectionMatrix;",
+        "uniform mat3 normalMatrix;",
+        "uniform vec3 eyePosition;",
+        "uniform float screenWidth;",
+        "uniform float pointSize;",
+
+        "void main(void) {",
+        "    vec3 pos = position;",
+
+        "    gl_Position = modelViewProjectionMatrix * vec4(pos, 1.0);",
+        "    fragVertexPosition = (modelViewMatrix * vec4(pos, 1.0)).xyz;",
+        "    fragEyeVector = normalize(fragVertexPosition);",
+        "    fragTexCoord = texcoord;",
+        "    fragVertexColor = color;",
+        "    vec4 pos2 = vec4(fragVertexPosition, 1.0); pos2.x += pointSize;",
+        "    gl_PointSize = distance( gl_Position.xy, (projectionMatrix * pos2).xy ) * screenWidth / gl_Position.w;",
+        "}"
+    ].join("\n"),
+
+    fragment : [
+        "uniform vec3 diffuseColor;",
+        "uniform float transparency;",
+        "uniform mat4 viewMatrix;",
+        "uniform bool useVertexColor;",
+        "uniform vec2 texCoordOffset;",
+        "uniform vec2 texCoordSize;",
+
+        "#if HAS_DIFFUSETEXTURE",
+        "uniform sampler2D diffuseTexture;",
+        "#endif",
+
+        "varying vec3 fragNormal;",
+        "varying vec3 fragVertexPosition;",
+        "varying vec3 fragEyeVector;",
+        "varying vec2 fragTexCoord;",
+        "varying vec3 fragVertexColor;",
+
+        "void main(void) {",
+        "  float alpha =  max(0.0, 1.0 - transparency);",
+        "  vec3 objDiffuse = diffuseColor;",
+        "  if(useVertexColor)",
+        "    objDiffuse *= fragVertexColor;",
+        "  #if HAS_DIFFUSETEXTURE",
+        "    vec2 texCoord = fragTexCoord + texCoordOffset + gl_PointCoord*texCoordSize;",
+        "    texCoord.y = 1.0 - texCoord.y;",
+        "    vec4 texDiffuse = texture2D(diffuseTexture, texCoord);",
+        "    alpha *= texDiffuse.a;",
+        "    objDiffuse *= texDiffuse.rgb;",
+        "  #endif",
+        "  if (alpha < 0.05) discard;",
+        "  gl_FragColor = vec4(objDiffuse, alpha);",
+        "}"
+    ].join("\n"),
+    addDirectives: function(directives, lights, params) {
+        directives.push("HAS_DIFFUSETEXTURE " + ('diffuseTexture' in params ? "1" : "0"));
+    },
+    hasTransparency: function(params) {
+        return params.transparency && params.transparency.getValue()[0] > 0.001;
+    },
+    uniforms: {
+        diffuseColor: [1.0, 1.0, 1.0],
+        texCoordOffset: [0, 0],
+        texCoordSize: [1, 1],
+        transparency: 0.0,
+        useVertexColor: false,
+        pointSize: 1.0
+    },
+    samplers: {
+        diffuseTexture: null
+    },
+    attributes: {
+        texcoord: null,
+        color: null
+    }
+});
+XML3D.shaders.register("pickobjectid", {
     vertex : [
         "attribute vec3 position;",
         "uniform mat4 modelViewProjectionMatrix;",
@@ -21333,9 +25811,6 @@ XML3D.shaders.register("flat", XML3D.shaders.getScript("matte"));XML3D.shaders.r
     ].join("\n"),
 
     fragment : [
-        "#ifdef GL_ES",
-          "precision highp float;",
-        "#endif",
         "uniform vec3 id;",
 
         "void main(void) {",
@@ -21351,25 +25826,20 @@ XML3D.shaders.register("pickedposition", {
         "attribute vec3 position;",
         "uniform mat4 modelMatrix;",
         "uniform mat4 modelViewProjectionMatrix;",
-        "uniform vec3 min;",
-        "uniform vec3 max;",
+        "uniform vec3 bbox[2];",  // min = bbox[0], max = bbox[1]
 
         "varying vec3 worldCoord;",
 
         "void main(void) {",
         "    worldCoord = (modelMatrix * vec4(position, 1.0)).xyz;",
-        "    vec3 diff = max - min;",
-        "    worldCoord = worldCoord - min;",
+        "    vec3 diff = bbox[1] - bbox[0];",
+        "    worldCoord = worldCoord - bbox[0];",
         "    worldCoord = worldCoord / diff;",
         "    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
         "}"
     ].join("\n"),
 
     fragment : [
-        "#ifdef GL_ES",
-          "precision highp float;",
-        "#endif",
-
         "varying vec3 worldCoord;",
 
         "void main(void) {",
@@ -21385,7 +25855,6 @@ XML3D.shaders.register("pickedNormals", {
     vertex : [
         "attribute vec3 position;",
         "attribute vec3 normal;",
-        "uniform mat4 modelViewMatrix;",
         "uniform mat4 modelViewProjectionMatrix;",
         "uniform mat3 normalMatrix;",
 
@@ -21398,10 +25867,6 @@ XML3D.shaders.register("pickedNormals", {
     ].join("\n"),
 
     fragment : [
-        "#ifdef GL_ES",
-          "precision highp float;",
-        "#endif",
-
         "varying vec3 fragNormal;",
 
         "void main(void) {",
