@@ -122,6 +122,7 @@ function initPage(){
 
     document.title = "XML3D: " + (CURRENT ? CURRENT.name : "Index");
 
+    stats();
     //buildSocialLinks();
     //addGitHubRibbon();
 }
@@ -208,6 +209,37 @@ function addGitHubRibbon() {
         var code = '<a href="https://github.com/xml3d/xml3d-examples/"><img class="ribbon" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/></a>'
         $('body').append(code);
     }
+}
+
+function shouldShowStats() {
+    var params = [],
+        p = window.location.search.substr(1).split('&');
+    p.forEach(function(e, i, a) {
+        var keyVal = e.split('=');
+        params[keyVal[0].toLowerCase()] = decodeURIComponent(keyVal[1]);
+    });
+    return params.hasOwnProperty("stats");
+}
+
+function stats() {
+    if(window.agility && shouldShowStats()) {
+       var xml3d = document.querySelector("xml3d");
+        var message = $$({
+            model: {
+                objects: 0,
+                primitives: 0
+            },
+            view: {
+                format: '<ul><li><span>Objects: </span><span data-bind="objects"></span></li><li><span>Primitives: </span><span data-bind="primitives"></span></li></ul>'
+            },
+            controller: {}
+        });
+        $$.document.prepend(message, "#content");
+       xml3d && xml3d.addEventListener("framedrawn", function(e) {
+           message.model.set(e.detail.count);
+       })
+    }
+
 }
 
 
