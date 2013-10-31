@@ -50,7 +50,7 @@
         </data>
 
         <!-- Viewpoint with connection to AR data -->
-        <view id="View" perspective="#arBase" />
+        <view id="View" perspective="#arBase" ></view>
 
         <!-- Object 1: -->
         <!-- Extract visibility and transformation -->
@@ -68,13 +68,13 @@
           <data filter="keep(visibility)" src="#obj1AR" ></data>
         </shader>
         <!-- Transformations modified by XML3DDataObserver -->
-        <transform id="t_teapot_ar" />
-        <transform id="t_teapot_local" />
+        <transform id="t_teapot_ar" ></transform>
+        <transform id="t_teapot_local" ></transform>
         <!-- Hierarchy of the displayed teapot -->
         <group transform="#t_teapot_ar" shader="#obj1Shader" >
           <group transform="#t_teapot_local" >
             <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-              <mesh type="triangles" src="res/teapot.xml#mesh" />
+              <mesh type="triangles" src="res/teapot.xml#mesh" ></mesh>
             </group>
           </group>
         </group>
@@ -88,11 +88,11 @@
         </lightshader>
 
         <group style="transform: translate3d(0px, 10px, 0px)">
-          <light shader="#light1" />
+          <light shader="#light1" ></light>
         </group>
 
         <group style="transform: translate3d(5px, 10px, 0px)">
-          <light shader="#light1" />
+          <light shader="#light1" ></light>
         </group>
 
 

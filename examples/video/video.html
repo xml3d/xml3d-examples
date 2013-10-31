@@ -44,12 +44,12 @@
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
               <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
-                <video src="Firefox.ogv" id="myvideo" autoplay="true"/>
+                <video src="Firefox.ogv" id="myvideo" autoplay="true"></video>
               </texture>
             </shader>
-            <transform id="myxfm" rotation="1 0 1 0"/>
+            <transform id="myxfm" rotation="1 0 1 0"></transform>
           </defs>
-          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldOfView="0.7854" />
+          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldOfView="0.7854" ></view>
           <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
             <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
           </group>

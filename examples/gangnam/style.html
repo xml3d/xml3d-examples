@@ -36,12 +36,12 @@
             <xml3d id="canvas" activeView="#defaultView" class="xml3d"
                 style="width:640px;height:480px;" >
                 <defs>
-                    <transform id="t_Armature_001" rotation="-1.0 0.0 0.0 1.5707964"/>
-                    <transform id="t_camera1" translation="0 3 -1" rotation="1 0 0 -1.57"/>
+                    <transform id="t_Armature_001" rotation="-1.0 0.0 0.0 1.5707964"></transform>
+                    <transform id="t_camera1" translation="0 3 -1" rotation="1 0 0 -1.57"></transform>
                     <shader id="blackMaterial" script="urn:xml3d:shader:matte">
                         <float3 name="diffuseColor">0.0 0.0 0.0</float3>
                     </shader>
-                    <data id="Ben-lib" proto="http://xml3d.org/xml3d/protos/skinning.xml#skinning">
+                    <data id="Ben-lib" compute="dataflow['protos.xml#skinning']">
 						<data src="json/ben-data.json"></data>
 						<data src="json/animation-data.json"></data>
                         <float id="Ben-lib_animation_key" name="key">0.0</float>
@@ -51,16 +51,16 @@
                     <group id="Armature_001" transform="#t_Armature_001">
                         <group id="Ben">
                             <group shader="#blackMaterial">
-                                <mesh src="#Ben-lib" type="triangles"/>
+                                <mesh src="#Ben-lib" type="triangles"></mesh>
                             </group>
                         </group>
                     </group>
                 </group>
                 <group id="camera1" transform="#t_camera1">
-                    <view id="defaultView"/>
+                    <view id="defaultView"></view>
                 </group>
             </xml3d>
-            <div id="videoDiv"/>
+            <div id="videoDiv"></div>
 			<span class="ben">iBen</span>
             <div class="description">
                 <ul>

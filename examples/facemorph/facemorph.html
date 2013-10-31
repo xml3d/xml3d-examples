@@ -49,9 +49,9 @@
     <div style="width: 800px; height=600px;">
         <xml3d id="xml3dmain" activeView="#Camera" style="width: 800px; height: 550px; background-color:#f8f8f8;" >
          <defs id="mainDef">
-          <transform id="t_Camera" rotation="-0.578102 -0.777834 -0.246520 1.382361" scale="1.000000 1.000000 1.000000" translation="-5.000000 8.000000 5.000000"/>
-          <transform id="t_Lamp" scale="1.000000 1.000000 1.000000" translation="0 0 0"/>
-          <transform id="t_face" rotation="1.000000 0.000000 0.000000 -0.20000" scale="1 1 1" translation="1.000000 -1.000000 0.000000"/>
+          <transform id="t_Camera" rotation="-0.578102 -0.777834 -0.246520 1.382361" scale="1.000000 1.000000 1.000000" translation="-5.000000 8.000000 5.000000"></transform>
+          <transform id="t_Lamp" scale="1.000000 1.000000 1.000000" translation="0 0 0"></transform>
+          <transform id="t_face" rotation="1.000000 0.000000 0.000000 -0.20000" scale="1 1 1" translation="1.000000 -1.000000 0.000000"></transform>
 
           <!--  Computes vertex positions using the result of a Principle Component Analysis and the 6 sliders on the page -->
             <data id="pcaresult" compute="position=xflow.genWithWeights(tangent, pc1, pc2, pc3, pc4, pc5, pc6)">
@@ -116,13 +116,13 @@
 
          </defs>
 
-         <view id="Camera" position="0.000000 -2.000000 35.000000"/>
+         <view id="Camera" position="0.000000 -2.000000 35.000000"></view>
 
          <group transform="#t_Lamp">
-          <light shader="#ls_Spot"/>
+          <light shader="#ls_Spot"></light>
          </group>
          <group transform="#t_face" shader="#phongShader" id="faceGroup">
-            <mesh src="#face_data" type="triangles"/>
+            <mesh src="#face_data" type="triangles"></mesh>
          </group>
 
         </xml3d>

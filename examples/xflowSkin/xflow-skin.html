@@ -61,7 +61,7 @@
 
             <!-- Heavy -->
             <group  style="transform: translate3d(0,-50px,-150px)" >
-              <data id="heavySkinned" proto="protos.xml#skinning" >
+              <data id="heavySkinned" compute="dataflow['protos.xml#skinning']">
                 <data src="asset/heavy.xml#meshbase" ></data>
                 <data src="asset/heavy.xml#anim_taunt05h" ></data>
                 <float id="keyHeavy" name="key" >0.0</float>
@@ -93,7 +93,7 @@
             </group>
             <!-- Sniper -->
             <group style="transform: translate3d(-45px,-50px,-120px)">
-              <data id="sniperSkinned" proto="protos.xml#skinning">
+              <data id="sniperSkinned" compute="dataflow['protos.xml#skinning']">
                 <data src="asset/sniper.xml#meshbase" ></data>
                 <data src="asset/sniper.xml#anim_taunt02_heelClick" ></data>
                 <float id="keySniper" name="key">0.0</float>
@@ -137,7 +137,7 @@
             </group>
             <!-- Medic -->
             <group style="transform: translate3d(-75px,-50px,-150px)">
-              <data id="medicSkinned" proto="protos.xml#skinning">
+              <data id="medicSkinned" compute="dataflow['protos.xml#skinning']">
                 <data src="asset/medic.xml#meshbase" ></data>
                 <data src="asset/medic.xml#anim_taunt02m" ></data>
                 <float id="keyMedic" name="key">0.0</float>
@@ -175,7 +175,7 @@
             </group>
             <!-- Engineer -->
             <group style="transform: translate3d(45px,-50px,-120px)">
-              <data id="engineerSkinned" proto="protos.xml#skinning">
+              <data id="engineerSkinned" compute="dataflow['protos.xml#skinning']">
                 <data src="asset/engineer.xml#meshbase" ></data>
                 <data src="asset/engineer.xml#anim_taunt01e" ></data>
                 <float id="keyEngineer" name="key">0.0</float>
@@ -195,7 +195,7 @@
             </group>
             <!-- Scout -->
             <group style="transform: translate3d(75px,-50px,-150px)">
-              <data id="scoutSkinned" proto="protos.xml#skinning">
+              <data id="scoutSkinned" compute="dataflow['protos.xml#skinning']">
                 <data src="asset/scout.xml#meshbase" ></data>
                 <data src="asset/scout.xml#anim_taunt05_DeathTaunt" ></data>
                 <float id="keyScout" name="key">0.0</float>

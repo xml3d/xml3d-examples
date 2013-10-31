@@ -50,7 +50,7 @@
             <transform id="t_Lamp"
                        rotation="0.205942 0.331517 0.920698 1.926274"
                        scale="1.000000 1.000000 1.000000"
-                       translation="4.076245 1.005454 5.903862"/>
+                       translation="4.076245 1.005454 5.903862"></transform>
 
             <lightshader id="ls_Spot" script="urn:xml3d:lightshader:point">
               <bool name="castShadow">true</bool>
@@ -65,23 +65,23 @@
               <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
               <float name="shininess">0.2</float>
               <texture name="diffuseTexture">
-                <img src="raf22031.jpg"/>
+                <img src="raf22031.jpg" />
               </texture>
             </shader>
 
-            <transform id="t_camera" translation="0 0 10" rotation="0 0 1 0"/>
+            <transform id="t_camera" translation="0 0 10" rotation="0 0 1 0"></transform>
 
             </defs>
 
             <group id="viewGroup" transform="#t_camera">
-              <view id="defaultView"/>
+              <view id="defaultView"></view>
             </group>
             <group shader="#Material">
-              <mesh id="car" src="./raf22031.ctm" type="triangles"/>
+              <mesh id="car" src="./raf22031.ctm" type="triangles"></mesh>
             </group>
 
             <group transform="#t_Lamp">
-              <light shader="#ls_Spot"/>
+              <light shader="#ls_Spot"></light>
             </group>
         </xml3d>
 

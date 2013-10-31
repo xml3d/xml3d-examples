@@ -41,10 +41,10 @@
 
                     <transform id="t_prop"
                         rotation="0.0 0.0 1.0 0.2617994"
-                        scale="1.0 1.0 1.0" translation="0.0 0.0 5.40413"/>
+                        scale="1.0 1.0 1.0" translation="0.0 0.0 5.40413"></transform>
                     <transform id="t_camera1"
                              rotation="-0.5051031 0.83705676 0.21025412 0.92295426"
-                             scale="1.0 1.0 1.0" translation="16.4985 11.1548 18.486"/>
+                             scale="1.0 1.0 1.0" translation="16.4985 11.1548 18.486"></transform>
 
                     <lightshader id="directionLight" script="urn:xml3d:lightshader:directional">
                         <float3 name="intensity">1.0 1.0 1.0</float3>
@@ -54,24 +54,24 @@
                 <group id="VisualSceneNode">
                     <group id="plane" >
                         <group shader="resource/plane.xml#shader_matte" >
-                            <mesh src="resource/plane.xml#mesh1" type="triangles"/>
+                            <mesh src="resource/plane.xml#mesh1" type="triangles"></mesh>
                         </group>
                         <group shader="resource/plane.xml#shader_shine" >
-                            <mesh src="resource/plane.xml#mesh2" type="triangles"/>
+                            <mesh src="resource/plane.xml#mesh2" type="triangles"></mesh>
                         </group>
                         <group id="prop" transform="#t_prop">
                             <group shader="resource/plane.xml#shader_shine" >
-                                <mesh src="resource/plane.xml#mesh_prop" type="triangles"/>
+                                <mesh src="resource/plane.xml#mesh_prop" type="triangles"></mesh>
                             </group>
                         </group>
                     </group>
 
                     <group style="transform: rotate3d(1, 0, 0, -45deg)" >
-                      <light shader="#directionLight" />
+                      <light shader="#directionLight" ></light>
                     </group>
 
                     <group id="camera1" transform="#t_camera1">
-                        <view fieldOfView="0.66059315" id="cameraShape1"/>
+                        <view fieldOfView="0.66059315" id="cameraShape1"></view>
                     </group>
                 </group>
             </xml3d>

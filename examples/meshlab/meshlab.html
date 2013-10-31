@@ -43,7 +43,7 @@
         <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d"
                style="width: 600px; height: 400px;" >
             <defs id="mainDef">
-                <transform id="t_Lamp" translation="0 -200 -700"/>
+                <transform id="t_Lamp" translation="0 -200 -700"></transform>
                 <lightshader id="ls_Spot" script="urn:xml3d:lightshader:point">
                     <bool name="castShadow">true</bool>
                     <float3 name="attenuation">1.000000 0.0001 0.000000</float3>
@@ -56,16 +56,16 @@
                     <float name="shininess">0.2</float>
 					<bool name="useVertexColor">true</bool>
                 </shader>
-				<transform id="t_camera" translation="0 -200 -700" rotation="0 0 1 0"/>
+				<transform id="t_camera" translation="0 -200 -700" rotation="0 0 1 0"></transform>
             </defs>
 			<group id="viewGroup" transform="#t_camera">
-				<view id="defaultView"/>
+				<view id="defaultView"></view>
 			</group>
             <group shader="#Material">
-                <mesh id="laurana" src="./Laurana50k.json" type="triangles"/>
+                <mesh id="laurana" src="./Laurana50k.json" type="triangles"></mesh>
             </group>
             <group transform="#t_Lamp">
-                <light shader="#ls_Spot" intensity="1.5"/>
+                <light shader="#ls_Spot" intensity="1.5"></light>
             </group>
         </xml3d>
 
