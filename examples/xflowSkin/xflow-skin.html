@@ -1,0 +1,268 @@
+<!doctype html>
+<html>
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <!-- Scripts -->
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+	  <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript">
+        window.addEventListener('load', function() {
+            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"), {revolveAroundPoint:
+                new XML3DVec3(-2,-14,-160), sceneRadius: 110});
+            var xml3d = document.getElementById("MyXml3d");
+            xml3d.addEventListener("mousedown", function(e) {
+                controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+            }, false);
+            window.addEventListener("mouseup", function() {
+                controller.stop();
+            }, false);
+            window.addEventListener("mousemove", function(e) {
+                controller.doAction({x: e.clientX, y: e.clientY});
+            }, false);
+        }, false);
+    </script>
+    <title>XML3D Examples</title>
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+        <h1>Xflow Skinning</h1>
+
+        <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d"
+               style="width: 900px; height: 500px;" >
+
+            <defs id="mainDef">
+              <transform id="t_Camera" translation="0 0 30"></transform>
+              <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274"
+                         scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
+
+
+              <shader id="Material" script="urn:xml3d:shader:phong">
+                <float name="ambientIntensity">1</float>
+                <float3 name="diffuseColor">0.400000 0.120000 0.180000</float3>
+                <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
+                <float name="shininess">0.2</float>
+              </shader>
+            </defs>
+            <group id="viewGroup" transform="#t_Camera">
+              <view id="defaultView"></view>
+            </group>
+            <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
+              <bool name="castShadow">true</bool>
+              <float3 name="intensity">0.5 0.5 0.5</float3>
+
+            </lightshader>
+            <group transform="#t_Lamp">
+              <light shader="#ls_Spot" intensity="1.5"></light>
+            </group>
+
+            <!-- Heavy -->
+            <group  style="transform: translate3d(0,-50px,-150px)" >
+              <data id="heavySkinned" proto="protos.xml#skinning" >
+                <data src="asset/heavy.xml#meshbase" ></data>
+                <data src="asset/heavy.xml#anim_taunt05h" ></data>
+                <float id="keyHeavy" name="key" >0.0</float>
+              </data>
+              <group shader="asset/heavy.xml#shader_hvyweapon_red">
+                <mesh type="triangles"  >
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_hvyweapon_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/heavy.xml#shader_heavy_head_red">
+                <mesh type="triangles"  >
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_heavy_head_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/heavy.xml#shader_eyeball_r">
+                <mesh type="triangles"  >
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_eyeball_r" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/heavy.xml#shader_eyeball_l">
+                <mesh type="triangles"  >
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_eyeball_l" ></data>
+                </mesh>
+              </group>
+            </group>
+            <!-- Sniper -->
+            <group style="transform: translate3d(-45px,-50px,-120px)">
+              <data id="sniperSkinned" proto="protos.xml#skinning">
+                <data src="asset/sniper.xml#meshbase" ></data>
+                <data src="asset/sniper.xml#anim_taunt02_heelClick" ></data>
+                <float id="keySniper" name="key">0.0</float>
+              </data>
+              <group shader="asset/sniper.xml#shader_sniper_head">
+                <mesh type="triangles">
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_sniper_head" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/sniper.xml#shader_eyeball_l">
+                <mesh type="triangles">
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_eyeball_l" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/sniper.xml#shader_eyeball_r">
+                <mesh type="triangles">
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_eyeball_r" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/sniper.xml#shader_sniper_red">
+                <mesh type="triangles">
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_sniper_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/sniper.xml#shader_sniper_lens">
+                <mesh type="triangles">
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_sniper_lens" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/sniper.xml#shader_c_arrow">
+                <mesh type="triangles">
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_c_arrow" ></data>
+                </mesh>
+              </group>
+            </group>
+            <!-- Medic -->
+            <group style="transform: translate3d(-75px,-50px,-150px)">
+              <data id="medicSkinned" proto="protos.xml#skinning">
+                <data src="asset/medic.xml#meshbase" ></data>
+                <data src="asset/medic.xml#anim_taunt02m" ></data>
+                <float id="keyMedic" name="key">0.0</float>
+              </data>
+              <group shader="asset/medic.xml#shader_medic_red">
+                <mesh type="triangles">
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_medic_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/medic.xml#shader_medic_backpack_red">
+                <mesh type="triangles">
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_medic_backpack_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/medic.xml#shader_medic_head">
+                <mesh type="triangles">
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_medic_head" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/medic.xml#shader_eyeball_r">
+                <mesh type="triangles">
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_eyeball_r" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/medic.xml#shader_eyeball_l">
+                <mesh type="triangles">
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_eyeball_l" ></data>
+                </mesh>
+              </group>
+            </group>
+            <!-- Engineer -->
+            <group style="transform: translate3d(45px,-50px,-120px)">
+              <data id="engineerSkinned" proto="protos.xml#skinning">
+                <data src="asset/engineer.xml#meshbase" ></data>
+                <data src="asset/engineer.xml#anim_taunt01e" ></data>
+                <float id="keyEngineer" name="key">0.0</float>
+              </data>
+             <group shader="asset/engineer.xml#shader_engineer_red">
+                <mesh type="triangles">
+                  <data src="#engineerSkinned" ></data>
+                  <data src="asset/engineer.xml#index_engineer_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/engineer.xml#shader_engineer_head">
+                <mesh type="triangles">
+                  <data src="#engineerSkinned" ></data>
+                  <data src="asset/engineer.xml#index_engineer_head" ></data>
+                </mesh>
+              </group>
+            </group>
+            <!-- Scout -->
+            <group style="transform: translate3d(75px,-50px,-150px)">
+              <data id="scoutSkinned" proto="protos.xml#skinning">
+                <data src="asset/scout.xml#meshbase" ></data>
+                <data src="asset/scout.xml#anim_taunt05_DeathTaunt" ></data>
+                <float id="keyScout" name="key">0.0</float>
+              </data>
+              <group shader="asset/scout.xml#shader_scout_red">
+                <mesh type="triangles">
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_scout_red" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/scout.xml#shader_scout_head">
+                <mesh type="triangles">
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_scout_head" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/scout.xml#shader_eyeball_r">
+                <mesh type="triangles">
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_eyeball_r" ></data>
+                </mesh>
+              </group>
+              <group shader="asset/scout.xml#shader_eyeball_l">
+                <mesh type="triangles">
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_eyeball_l" ></data>
+                </mesh>
+              </group>
+            </group>
+
+
+          </xml3d>
+          <script type="text/javascript">
+            /* Run timer for wave animation */
+            var mytime = 0;
+            var lastTime = Date.now();
+
+            var docAnims = {
+              "keyHeavy" : 5.29167,
+              "keySniper" : 3.375,
+              "keyMedic" : 3.16667,
+              "keyEngineer" : 4.41667,
+              "keyScout" : 6.04167
+            }
+            var reqAniFrame = (window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame).bind(window);
+
+
+            function updateAnim() {
+              var diff = Date.now() - lastTime;
+              lastTime = Date.now();
+              mytime += diff / 1200;
+              for(var id in docAnims){
+                var maxValue = docAnims[id];
+                var value = mytime % maxValue;
+                $("#" + id).text(value);
+              }
+              reqAniFrame(updateAnim);
+            }
+            reqAniFrame(updateAnim);
+          </script>
+
+        <div class="description">
+          Meet the Medic, Sniper, Engineer, Heavy and Scout - <a href="http://www.teamfortress.com/" >Team Fortress 2</a>
+            models by <a href="https://developer.valvesoftware.com/wiki/Main_Page" >Valve</a> from
+          <a href="https://developer.valvesoftware.com/wiki/SDK_Installation" >Source SDK</a>.
+        </div>
+    </div>
+</div>
+</body>
+</html>
