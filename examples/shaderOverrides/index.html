@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Shader Overrides</title>
-    <script src="http://localhost:8080/xml3d.js/build/output/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
     <script type="text/javascript" src="../../script/agility.min.js"></script>
     <script type="text/javascript" src="../../script/page.js"></script>
@@ -60,28 +60,21 @@
           }
       }
 
-      var fd = null, lastTime = 0, dir = new XML3DVec3(), clock = 0;
-      var update = function(evt) {
-          var view = document.querySelector("view");
-          var timeStamp = 0;
-          if(evt) {
-              var elapsed = (evt.timeStamp - lastTime) / 1000.0;
-              clock += elapsed;
-             // console.log(elapsed);
-			  var x = Math.sin(clock * 0.3) * 1000;
-			  var z = Math.cos(clock * 0.3) * 1000;
-              var y = Math.sin(clock * 0.7) * 500;
-			  dir.set(x,y,z);
-			  //console.log(dir.x, dir.y, dir.z);
-              timeStamp = evt.timeStamp;
-          } else {
-				dir.set(0,0,-1);
-		  }
-    	  view.lookAt(dir);
-          lastTime = timeStamp;
+      var fd = null, lastTime = Date.now(), dir = new XML3DVec3(), clock = 0;
+      var view = document.querySelector("view");
 
 
-
+      var update = function() {
+          var now = Date.now();
+          var elapsed = (now - lastTime) / 750.0;
+          clock += elapsed;
+          var x = Math.sin(clock * 0.3) * 1000;
+		  var z = Math.cos(clock * 0.3) * 1000;
+          var y = Math.sin(clock * 0.7) * 500;
+          dir.set(x,y,z);
+          view.lookAt(dir);
+          view.position.x = 3.0;
+          lastTime = now;
       }
 
       var init = function(evt) {
