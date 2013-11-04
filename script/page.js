@@ -22,6 +22,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates webcam as a source of a video texture."},
     {cat: "basic", name: "Canvas Resizing", href: "examples/canvasresizing/resizing.html",
         info: "Demonstrates dynamic canvas resizing through an attached jQuery UI widget."},
+    {cat: "basic", name: "Script Value", href: "examples/scriptValue/scriptValue.html",
+        info: "Demonstrates efficient data update with TypedArrays and setScriptValue."},
 
     {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.html",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},

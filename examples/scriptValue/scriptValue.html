@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <!-- Scripts -->
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery.min.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+
+    <title>XML3D Examples</title>
+
+</head>
+    <body>
+        <div id="overall"><div id="content">
+            <h1>Set mesh data efficiently via setScriptValue</h1>
+            <xml3d id="canvas" class="xml3d" style="width: 800px;height:600px;background-color:black;">
+                <view position="0 0 10"></view>
+
+                <shader id="lineShader" script="urn:xml3d:shader:flat" >
+                    <float3 name="diffuseColor">1 1 1</float3>
+                    <bool name="useVertexColor">true</bool>
+                </shader>
+
+
+                <group shader="#lineShader">
+                    <mesh type="linestrips">
+                        <float3 name="position" id="posArray" >0 0 0</float3>
+                        <float3 name="color" id="colorArray" >1 0 1</float3>
+                    </mesh>
+                </group>
+
+            </xml3d>
+
+            <div class="controls" >
+              <div class="option">
+                <label>Point Count</label>
+                <div id="slider_points" class="slider" ></div>
+                <div class="info" ><span id="point_count_info" ></span> points</div>
+              </div>
+            </div>
+            <div class="description">
+                In this scene, the geometry is set by JavaScript using TypedArrays and setScriptValue
+            </div>
+        </div></div>
+        <script>
+            (function(){
+                var minPoint = [-5.5, 0, 0],
+                maxPoint = [5.5, 0, 0],
+                deltaVec = [0, 1, 0],
+                colorTop = [0, 1, 0],
+                colorBottom = [0, 0, 1],
+                pointCount = 1000;
+
+                var posArray, colorArray;
+
+                function createArrays(){
+                    posArray = new Float32Array(pointCount*3);
+                    colorArray = new Float32Array(pointCount*3);
+                }
+
+                function updatePosArray(){
+                    for(var i =0; i < pointCount; ++i ){
+                        var offset = i*3;
+                        var weight = i/(pointCount-1),
+                            colorWeight = Math.random(),
+                            deltaWeight = (colorWeight*2 -1)*(1 - 4*(weight - 0.5)*(weight - 0.5));
+                        if(i==0 | i == pointCount-1) deltaWeight = 0;
+
+                        for(var j=0; j<3; ++j){
+                            posArray[offset+j] = minPoint[j]*(1-weight) + maxPoint[j]*weight + deltaVec[j]*deltaWeight;
+                            colorArray[offset+j] = colorBottom[j]*(1-colorWeight) + colorTop[j]*colorWeight;
+                        }
+                    }
+                }
+
+                function updateConfig(){
+                    pointCount = $("#slider_points").slider("value");
+                    $("#point_count_info").text(pointCount);
+                    createArrays();
+                }
+
+                function updateLineMesh(){
+                    updatePosArray();
+                    document.getElementById("posArray").setScriptValue(posArray);
+                    document.getElementById("colorArray").setScriptValue(colorArray);
+                    window.requestAnimationFrame(updateLineMesh);
+                }
+
+                $(function(){
+                    $( ".slider").slider({
+                      orientation: "horizontal",
+                      range: "min",
+                      slide: updateConfig,
+                      change: updateConfig
+                    });
+                    $("#slider_points").slider({min : 100, max: 100000, value: pointCount});
+                    createArrays();
+                    window.requestAnimationFrame(updateLineMesh);
+                })
+            }());
+        </script>
+    </body>
+</html>

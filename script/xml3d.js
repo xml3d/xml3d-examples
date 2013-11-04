@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (04.11.2013 16:47:39 MEZ)
+@version: DEVELOPMENT SNAPSHOT (04.11.2013 18:59:22 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (04.11.2013 16:47:39 MEZ)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (04.11.2013 18:59:22 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -12205,7 +12205,6 @@ function notifyListeners(dataEntry, notification){
  * @constructor
  */
 Xflow.Graph = function(){
-    this._nodes = [];
 };
 var Graph = Xflow.Graph;
 
@@ -12216,7 +12215,6 @@ var Graph = Xflow.Graph;
  */
 Graph.prototype.createInputNode = function(){
     var node = new Xflow.InputNode(this);
-    this._nodes.push(node);
     return node;
 };
 
@@ -12225,7 +12223,6 @@ Graph.prototype.createInputNode = function(){
  */
 Graph.prototype.createDataNode = function(protoNode){
     var node = new Xflow.DataNode(this, protoNode);
-    this._nodes.push(node);
     return node;
 };
 
@@ -26663,7 +26660,7 @@ XML3D.shaders.register("matte", {
         "    vec3 color = diffuseColor;",
         "    if (useVertexColor)",
         "       color *=  fragVertexColor;",
-        "    gl_FragColor = vec4(diffuseColor, 1.0);",
+        "    gl_FragColor = vec4(color, 1.0);",
         "}"
     ].join("\n"),
 
