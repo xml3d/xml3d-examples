@@ -64,7 +64,7 @@
     <data id="TV1" compute="transform = xflow.selectTransform(index, transforms)">
         <data compute="visibility = xflow.selectBool(index, visibilities)">
             <int name="index">0</int>
-            <data src="#ardata"/>
+            <data src="#ardata"></data>
         </data>
     </data>
 
@@ -82,7 +82,7 @@
         <shader id="TeapotPhong" script="urn:xml3d:shader:phongvs">
             <float3 name="diffuseColor">1.0 0.0 0.0</float3>
             <float name="ambientIntensity">0.1</float>
-            <data src="#TV1"/>
+            <data src="#TV1"></data>
         </shader>
 
         <!-- Lights -->

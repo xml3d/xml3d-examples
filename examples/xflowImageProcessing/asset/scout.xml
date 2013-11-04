@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d xmlns="http://www.w3.org/1999/xhtml">
-  <!-- 
+  <!--
 
- Shaders 
+ Shaders
 
  -->
   <shader script="urn:xml3d:shader:phong" id="shader_scout_red">
@@ -45,28 +45,28 @@
       <img src="eye-iris-blue.jpg" />
     </texture>
   </shader>
-  <!-- 
+  <!--
 
- Mesh Base 
-
- -->
-  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="scout.json" />
-  <!-- 
-
- Meshes 
+ Mesh Base
 
  -->
-  <data id="index_scout_red" src="scout.json" filter="keep( {index: index_scout_red} )" />
-  <data id="index_scout_head" src="scout.json" filter="keep( {index: index_scout_head} )" />
-  <data id="index_eyeball_r" src="scout.json" filter="keep( {index: index_eyeball_r} )" />
-  <data id="index_eyeball_l" src="scout.json" filter="keep( {index: index_eyeball_l} )" />
-  <!-- 
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="scout.json" ></data>
+  <!--
 
- Animations 
+ Meshes
+
+ -->
+  <data id="index_scout_red" src="scout.json" filter="keep( {index: index_scout_red} )" ></data>
+  <data id="index_scout_head" src="scout.json" filter="keep( {index: index_scout_head} )" ></data>
+  <data id="index_eyeball_r" src="scout.json" filter="keep( {index: index_eyeball_r} )" ></data>
+  <data id="index_eyeball_l" src="scout.json" filter="keep( {index: index_eyeball_l} )" ></data>
+  <!--
+
+ Animations
 
  -->
   <data id="anim_taunt05_DeathTaunt">
-    <data src="scout.json" filter="keep( {translation: taunt05_DeathTaunt_translation, rotation: taunt05_DeathTaunt_rotation } )" />
+    <data src="scout.json" filter="keep( {translation: taunt05_DeathTaunt_translation, rotation: taunt05_DeathTaunt_rotation } )" ></data>
     <float name="maxKey">6.04167</float>
   </data>
 </xml3d>

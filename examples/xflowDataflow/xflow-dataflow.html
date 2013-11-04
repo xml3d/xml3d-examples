@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
   <!-- Style -->
   <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -38,13 +38,12 @@
 <body>
 <div id="overall">
   <div id="content">
-    <h1>Xflow Prototypes</h1>
+    <h1>Xflow Dataflows</h1>
 
     <xml3d id="MyXml3d" class="xml3d"
            width="600px" height="400px"
-           xmlns="http://www.xml3d.org/2009/xml3d"
         >
-      <view position="0 0 40"/>
+      <view position="0 0 40"></view>
       <defs>
 
         <!-- Shaders -->
@@ -67,42 +66,37 @@
           <float3 name="attenuation">1 1 0</float3>
         </lightshader>
 
-        <!-- Proto Type Declaration -->
+        <!-- Dataflow Declaration -->
 
-        <proto id="doubleBlend" filter="keep(result)" compute="result = xflow.morph(value, valueAdd2, weight2)">
-          <data compute="value = xflow.morph(value, valueAdd1, weight1)" >
-            <data compute="valueAdd2 = xflow.sub(blend2, value)" >
-              <data compute="valueAdd1 = xflow.sub(blend1, value)" >
-                <float3 param="true" name="value" ></float3>
-                <float3 param="true" name="blend1" ></float3>
-                <float3 param="true" name="blend2" ></float3>
-                <float param="true" name="weight1" ></float>
-                <float param="true" name="weight2" ></float>
-              </data>
-            </data>
-          </data>
-        </proto>
+        <dataflow id="doubleBlend" out="result" compute="result = xflow.morph(value, valueAdd2, weight2)">
+            <float3 param="true" name="value" ></float3>
+            <float3 param="true" name="blend1" ></float3>
+            <float3 param="true" name="blend2" ></float3>
+            <float param="true" name="weight1" ></float>
+            <float param="true" name="weight2" ></float>
+            <compute>
+              valueAdd1 = xflow.sub(blend1, value);
+              valueAdd2 = xflow.sub(blend2, value);
+              value = xflow.morph(value, valueAdd1, weight1);
+              result = xflow.morph(value, valueAdd2, weight2);
+            </compute>
+        </dataflow>
 
-        <proto id="morphShape"  filter="keep(position, normal)">
-          <data filter="rename({position : result})" proto="#doubleBlend">
-            <data filter="rename({value: position, blend1: blend1Pos, blend2: blend2Pos})" >
-              <float3 param="true" name="position"></float3>
-              <float3 param="true" name="blend1Pos"></float3>
-              <float3 param="true" name="blend2Pos"></float3>
-              <float  param="true" name="weight1">0.5</float>
-              <float  param="true" name="weight2">0.5</float>
-            </data>
-          </data>
-          <data filter="rename({normal : result})" proto="#doubleBlend">
-            <data filter="rename({value: normal, blend1: blend1Normal, blend2: blend2Normal})" >
-              <float3 param="true" name="normal"></float3>
-              <float3 param="true" name="blend1Normal"></float3>
-              <float3 param="true" name="blend2Normal"></float3>
-              <float  param="true" name="weight1">0.5</float>
-              <float param="true" name="weight2">0.5</float>
-            </data>
-          </data>
-        </proto>
+        <dataflow id="morphShape"  out="position, normal">
+            <float3 param="true" name="position"></float3>
+            <float3 param="true" name="blend1Pos"></float3>
+            <float3 param="true" name="blend2Pos"></float3>
+            <float3 param="true" name="normal"></float3>
+            <float3 param="true" name="blend1Normal"></float3>
+            <float3 param="true" name="blend2Normal"></float3>
+
+            <float  param="true" name="weight1">0.5</float>
+            <float param="true" name="weight2">0.5</float>
+            <compute>
+                position = dataflow['#doubleBlend'](position, blend1Pos, blend2Pos, weight1, weight2);
+                normal = dataflow['#doubleBlend'](normal, blend1Normal, blend2Normal, weight1, weight2);
+            </compute>
+        </dataflow>
 
 
         <data id="meshData">
@@ -122,24 +116,24 @@
       <!-- Scene Graph -->
 
       <group shader="#ObjectShader" style="transform: scale3d(0.5, 0.5, 0.5), translate3d(0px, 5px, 0px)" >
-        <mesh type="triangles" proto="#morphShape" >
-          <data src="#meshData" />
+        <mesh type="triangles" compute="dataflow['#morphShape']" >
+          <data src="#meshData" ></data>
           <float name="weight1" id="weight1" >0</float>
           <float name="weight2" id="weight2" >0</float>
         </mesh>
       </group>
 
       <group shader="#ObjectShader" style="transform: scale3d(0.5, 0.5, 0.5), translate3d(-30px, 5px, 0px)" >
-        <mesh type="triangles" proto="#morphShape" >
-          <data src="#meshData" />
+        <mesh type="triangles" compute="dataflow['#morphShape']" >
+          <data src="#meshData" ></data>
           <float name="weight1" >0.5</float>
           <float name="weight2" >0.5</float>
         </mesh>
       </group>
 
       <group shader="#ObjectShader" style="transform: scale3d(0.5, 0.5, 0.5), translate3d(30px, 5px, 0px)" >
-        <mesh type="triangles" proto="#morphShape" >
-          <data src="#meshData" />
+        <mesh type="triangles" compute="dataflow['#morphShape']" >
+          <data src="#meshData" ></data>
           <float name="weight1" >1.0</float>
           <float name="weight2" >0</float>
         </mesh>
@@ -148,12 +142,12 @@
 
       <group shader="#GroundShader"
              style="transform: translate3d(0px, -10px, 0px) scale3d(20px, 20px, 20px) rotate3d(1, 0, 0, -90deg)" >
-        <mesh src="mesh.xml#ground"/>
+        <mesh src="mesh.xml#ground"></mesh>
       </group>
 
 
       <group style="transform: translate3d(0px, 40px, 40px)" >
-        <light shader="#light1" intensity="30"/>
+        <light shader="#light1" intensity="30"></light>
       </group>
 
     </xml3d>
@@ -169,36 +163,8 @@
       </div>
     </div>
 
-
-    <!-- Java Script to animate scene -->
-    <script type="text/javascript">
-      var shouldAnimate = false;
-
-      $(function () {
-        $("#check").button();
-        $("#check").click(function (e) {
-          shouldAnimate = e.target.checked;
-          animate();
-        });
-      });
-      var anim_i = 0;
-
-      function animate() {
-        var target = document.getElementById("morphKey");
-        ++anim_i;
-        var numFrames = 10;
-        var time = anim_i / 40;
-        target.childNodes[0].nodeValue = time;
-        if (time >= numFrames)
-          anim_i = 0;
-
-        if (shouldAnimate)
-          window.requestAnimFrame(animate);
-      }
-    </script>
-
     <div class="description">
-      All these meshes are transformed using the same dataflow with prototypes.
+      All these meshes are transformed using the same dataflow using the &lt;dataflow&gt; element.
     </div>
   </div>
 </div>

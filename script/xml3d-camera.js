@@ -182,11 +182,11 @@ XML3D.Xml3dSceneController.prototype.setRevolvePoint = function(vec) {
 
 XML3D.Xml3dSceneController.prototype.attach = function() {
     var self = this;
-    this._evt_mousedown = function(e) {self.mousePressEvent(e);};
-    this._evt_mouseup = function(e) {self.mouseReleaseEvent(e);};
-    this._evt_mousemove = function(e) {self.mouseMoveEvent(e);};
-    this._evt_contextmenu = function(e) {self.stopEvent(e);};
-    this._evt_keydown = function(e) {self.keyHandling(e);};
+    this._evt_mousedown = function(e) { return self.mousePressEvent(e);};
+    this._evt_mouseup = function(e) {return self.mouseReleaseEvent(e);};
+    this._evt_mousemove = function(e) {return self.mouseMoveEvent(e);};
+    this._evt_contextmenu = function(e) {return self.stopEvent(e);};
+    this._evt_keydown = function(e) {return self.keyHandling(e);};
 
     this.canvas.addEventListener("mousedown", this._evt_mousedown, false);
     document.addEventListener("mouseup", this._evt_mouseup, false);
@@ -226,9 +226,14 @@ XML3D.Xml3dSceneController.prototype.getView = function() {
     if (!activeView)
     {
         XML3D.debug.logWarning("No view referenced. Trying to use first view.");
-        activeView = document.evaluate('xml3d:view[1]', this.xml3d, function() {
-            return XML3D.xml3dNS;
-        }, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        if(XML3D.xhtml){
+            activeView = document.evaluate('xml3d:view[1]', this.xml3d, function() {
+                return XML3D.xml3dNS;
+            }, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        }
+        else{
+            activeView = this.xml3d.getElementsByTagName("view")[0];
+        }
     }
 
     if(false)
@@ -343,7 +348,7 @@ XML3D.Xml3dSceneController.prototype.mouseMoveEvent = function(event, camera) {
 
     var ev = event || window.event;
     if (!this.action)
-        return;
+        return ;
     switch(this.action) {
         case(this.TRANSLATE):
             var f = 2.0* Math.tan(this.camera.fieldOfView/2.0) / this.height;
@@ -497,7 +502,11 @@ XML3D.Xml3dSceneController.getController = function(xml3d) {
 
     var onload = function() {
 
-        var xml3dList = Array.prototype.slice.call( document.getElementsByTagNameNS(XML3D.xml3dNS, 'xml3d') );
+        var xml3dList;
+        if(document.xmlVersion)
+            xml3dList = Array.prototype.slice.call( document.getElementsByTagNameNS(XML3D.xml3dNS, 'xml3d') );
+        else
+            xml3dList = Array.prototype.slice.call( document.getElementsByTagName('xml3d') );
 
         XML3D.Xml3dSceneController.controllers = new Array();
         for(var i in xml3dList) {

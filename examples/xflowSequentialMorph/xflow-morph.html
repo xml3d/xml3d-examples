@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
   <!-- Style -->
   <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -20,9 +20,8 @@
 
     <xml3d id="MyXml3d" class="xml3d"
            width="600px" height="400px"
-           xmlns="http://www.xml3d.org/2009/xml3d"
         >
-      <view position="0 0 40"/>
+      <view position="0 0 40"></view>
       <defs>
 
         <!-- Shaders -->
@@ -50,8 +49,8 @@
         <data id="morphedMesh" compute="normal = xflow.normalize(normal)">
           <data compute="normal = xflow.lerpSeq(normal, key)">
             <data compute="position = xflow.lerpSeq(position, key)">
-              <data src="mesh.xml#base"/>
-              <data src="mesh.xml#animation"/>
+              <data src="mesh.xml#base"></data>
+              <data src="mesh.xml#animation"></data>
               <float name="key" id="morphKey">0</float>
             </data>
           </data>
@@ -62,16 +61,16 @@
       <!-- Scene Graph -->
 
       <group shader="#ObjectShader" style="transform: translate3d(0px, -5px, 0px)" >
-        <mesh type="triangles" src="#morphedMesh"/>
+        <mesh type="triangles" src="#morphedMesh"></mesh>
       </group>
 
       <group shader="#GroundShader"
              style="transform: translate3d(0px, -10px, 0px) scale3d(20px, 20px, 20px) rotate3d(1, 0, 0, -90deg)" >
-        <mesh src="mesh.xml#ground"/>
+        <mesh src="mesh.xml#ground"></mesh>
       </group>
 
       <group style="transform: translate3d(0px, 40px, 40px)" >
-        <light shader="#light1" intensity="30"/>
+        <light shader="#light1" intensity="30"></light>
       </group>
 
     </xml3d>
@@ -105,7 +104,7 @@
     </script>
 
     <div class="description">
-      Sequential morphing of different shapes with Xflow.<br/>
+      Sequential morphing of different shapes with Xflow.<br>
       You will find all shape data stores in sequences inside the external <i>mesh.xml</i> file.
     </div>
   </div>

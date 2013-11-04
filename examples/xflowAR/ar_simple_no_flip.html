@@ -1,7 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 
 <head>
     <!-- Style -->
@@ -27,8 +25,7 @@
     <video id="background" autoplay="true" width="640" height="480" src="../video/ar_marker.ogg"
            style="position: absolute; top: 0; width: 640px; height: 480px;"></video>
 
-    <xml3d xmlns="http://www.xml3d.org/2009/xml3d"
-          style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">
+    <xml3d style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">
 
         <!-- AR Data -->
         <data id="arBase"
@@ -47,16 +44,24 @@
             </data>
         </data>
 
+        <data id="arBase"
+              compute="transforms, visibilities, perspective = xflar.detect(arvideo, markers)">
+            <int name="markers">22 64</int>
+            <texture name="arvideo">
+                <video autoplay="true" src="videostream.ogg" ></video>
+            </texture>
+        </data>
+
 
         <!-- Viewpoint with connection to AR data -->
-        <view id="View" perspective="#arBase" />
+        <view id="View" perspective="#arBase" ></view>
 
         <!-- Object 1: -->
         <!-- Extract visibility and transformation -->
         <data id="obj1AR" compute="transform = xflow.selectTransform(index, transforms)">
           <data compute="visibility = xflow.selectBool(index, visibilities)">
             <int name="index">0</int>
-            <data src="#arBase"/>
+            <data src="#arBase"></data>
           </data>
         </data>
         <!-- Shader -->
@@ -64,12 +69,12 @@
           <float3 name="diffuseColor">1.0 0.4 0.2</float3>
           <float name="ambientIntensity">0.2</float>
           <!-- Take visibility from AR -->
-          <data filter="keep(visibility)" src="#obj1AR" />
+          <data filter="keep(visibility)" src="#obj1AR" ></data>
         </shader>
         <!-- Group taking transformation from AR data -->
         <group transform="#obj1AR" shader="#obj1Shader" >
           <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-            <mesh type="triangles" src="res/teapot.xml#mesh" />
+            <mesh type="triangles" src="res/teapot.xml#mesh" ></mesh>
           </group>
         </group>
 
@@ -78,7 +83,7 @@
         <data id="obj2AR" compute="transform = xflow.selectTransform(index, transforms)">
           <data compute="visibility = xflow.selectBool(index, visibilities)">
             <int name="index">1</int>
-            <data src="#arBase"/>
+            <data src="#arBase"></data>
           </data>
         </data>
         <!-- Shader -->
@@ -86,12 +91,12 @@
           <float3 name="diffuseColor">0.2 0.4 1.0</float3>
           <float name="ambientIntensity">0.2</float>
           <!-- Take visibility from AR -->
-          <data filter="keep(visibility)" src="#obj2AR" />
+          <data filter="keep(visibility)" src="#obj2AR" ></data>
         </shader>
         <!-- Group taking transformation from AR data -->
         <group transform="#obj2AR" shader="#obj2Shader" >
           <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)" >
-            <mesh type="triangles" src="res/teapot.xml#mesh" />
+            <mesh type="triangles" src="res/teapot.xml#mesh" ></mesh>
           </group>
         </group>
 
@@ -105,11 +110,11 @@
         </lightshader>
 
         <group style="transform: translate3d(0px, 10px, 0px)">
-          <light shader="#light1" />
+          <light shader="#light1" ></light>
         </group>
 
         <group style="transform: translate3d(5px, 10px, 0px)">
-          <light shader="#light1" />
+          <light shader="#light1" ></light>
         </group>
 
 
@@ -122,7 +127,6 @@
 </div>
 </div>
 <script type="text/javascript">
-  <![CDATA[
   window.URL = window.URL || window.webkitURL;
   navigator.getUserMedia  =
       navigator.getUserMedia || navigator.webkitGetUserMedia ||
@@ -162,7 +166,6 @@
 
     });
   });
-  ]]>
 </script>
 
 </body>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <!-- Scripts -->
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/jquery-1.8.1.min.js"></script>
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <title>XML3D Examples</title>
+    <script type="text/javascript">
+        var anim = {};
+
+        function initAnim() {
+            anim.xfm = document.getElementById("myxfm");
+            anim.lastTime = (new Date()).getTime();
+            anim.rotAngle = 0.0;
+            anim.intervalID = window.setInterval(function () {
+                var currentTime = (new Date).getTime();
+                var delta = currentTime - anim.lastTime;
+                anim.rotAngle += (30 * delta) / 1000.0;
+                anim.xfm.setAttribute("rotation", "1.0 0.0 1.0 "+(anim.rotAngle * Math.PI / 180));
+                anim.lastTime = currentTime;
+            }, 20);
+            var video = document.getElementById("myvideo");
+            video.addEventListener('ended', function() {
+                if (anim.intervalID === undefined)
+                    return;
+                window.clearInterval(anim.intervalID);
+                anim.xfm.setAttribute("rotation", "0 1 0 3.14159");
+            });
+        }
+    </script>
+  </head>
+  <body>
+    <div id="overall">
+      <div id="content">
+        <h1>Video Texture</h1>
+
+        <xml3d id="MyXml3d" style="width: 640px; height: 480px; border: 1px solid gray" activeView="#myview" class="xml3d"
+               onload="initAnim()">
+          <defs>
+            <shader id="ex4_2_texShader" script="urn:xml3d:shader:phong">
+              <float3 name="diffuseColor">1.0 1.0 1.0</float3>
+              <float name="ambientIntensity">1.0</float>
+              <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
+                <video src="Firefox.ogv" id="myvideo" autoplay="true"></video>
+              </texture>
+            </shader>
+            <transform id="myxfm" rotation="1 0 1 0"></transform>
+          </defs>
+          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldOfView="0.7854" ></view>
+          <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
+            <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+          </group>
+        </xml3d>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
 <head>
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -12,7 +12,7 @@
 
     <!-- Camera Control: -->
 
-    <script type="text/javascript" src="../../script/xml3d-motion.js"/>
+    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function() {
             var controller = new XMOT.ExamineController(document.getElementById("camera1"),
@@ -20,6 +20,7 @@
             var xml3d = document.getElementById("canvas");
             xml3d.addEventListener("mousedown", function(e) {
                 controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+                e.preventDefault();
             }, false);
             window.addEventListener("mouseup", function() {
                 controller.stop();
@@ -34,16 +35,16 @@
     <body>
         <div id="overall"><div id="content">
             <h1>External XML References</h1>
-            <xml3d id="canvas" xmlns="http://www.xml3d.org/2009/xml3d" class="xml3d"
+            <xml3d id="canvas" class="xml3d"
                 activeView="#cameraShape1" style="width: 800px;height:600px;background-color:black;">
                 <defs>
 
                     <transform id="t_prop"
                         rotation="0.0 0.0 1.0 0.2617994"
-                        scale="1.0 1.0 1.0" translation="0.0 0.0 5.40413"/>
+                        scale="1.0 1.0 1.0" translation="0.0 0.0 5.40413"></transform>
                     <transform id="t_camera1"
                              rotation="-0.5051031 0.83705676 0.21025412 0.92295426"
-                             scale="1.0 1.0 1.0" translation="16.4985 11.1548 18.486"/>
+                             scale="1.0 1.0 1.0" translation="16.4985 11.1548 18.486"></transform>
 
                     <lightshader id="directionLight" script="urn:xml3d:lightshader:directional">
                         <float3 name="intensity">1.0 1.0 1.0</float3>
@@ -53,24 +54,24 @@
                 <group id="VisualSceneNode">
                     <group id="plane" >
                         <group shader="resource/plane.xml#shader_matte" >
-                            <mesh src="resource/plane.xml#mesh1" type="triangles"/>
+                            <mesh src="resource/plane.xml#mesh1" type="triangles"></mesh>
                         </group>
                         <group shader="resource/plane.xml#shader_shine" >
-                            <mesh src="resource/plane.xml#mesh2" type="triangles"/>
+                            <mesh src="resource/plane.xml#mesh2" type="triangles"></mesh>
                         </group>
                         <group id="prop" transform="#t_prop">
                             <group shader="resource/plane.xml#shader_shine" >
-                                <mesh src="resource/plane.xml#mesh_prop" type="triangles"/>
+                                <mesh src="resource/plane.xml#mesh_prop" type="triangles"></mesh>
                             </group>
                         </group>
                     </group>
 
                     <group style="transform: rotate3d(1, 0, 0, -45deg)" >
-                      <light shader="#directionLight" />
+                      <light shader="#directionLight" ></light>
                     </group>
 
                     <group id="camera1" transform="#t_camera1">
-                        <view fieldOfView="0.66059315" id="cameraShape1"/>
+                        <view fieldOfView="0.66059315" id="cameraShape1"></view>
                     </group>
                 </group>
             </xml3d>

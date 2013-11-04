@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html>
 <head>
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
@@ -32,13 +32,12 @@
         <h1>Xflow Skinning</h1>
 
         <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d"
-               style="width: 900px; height: 500px;"
-               xmlns="http://www.xml3d.org/2009/xml3d">
+               style="width: 900px; height: 500px;" >
 
             <defs id="mainDef">
-              <transform id="t_Camera" translation="0 0 30"/>
+              <transform id="t_Camera" translation="0 0 30"></transform>
               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274"
-                         scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"/>
+                         scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
 
 
               <shader id="Material" script="urn:xml3d:shader:phong">
@@ -49,7 +48,7 @@
               </shader>
             </defs>
             <group id="viewGroup" transform="#t_Camera">
-              <view id="defaultView"/>
+              <view id="defaultView"></view>
             </group>
             <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
               <bool name="castShadow">true</bool>
@@ -57,172 +56,172 @@
 
             </lightshader>
             <group transform="#t_Lamp">
-              <light shader="#ls_Spot" intensity="1.5"/>
+              <light shader="#ls_Spot" intensity="1.5"></light>
             </group>
 
             <!-- Heavy -->
             <group  style="transform: translate3d(0,-50px,-150px)" >
-              <data id="heavySkinned" proto="protos.xml#skinning" >
-                <data src="asset/heavy.xml#meshbase" />
-                <data src="asset/heavy.xml#anim_taunt05h" />
+              <data id="heavySkinned" compute="dataflow['protos.xml#skinning']">
+                <data src="asset/heavy.xml#meshbase" ></data>
+                <data src="asset/heavy.xml#anim_taunt05h" ></data>
                 <float id="keyHeavy" name="key" >0.0</float>
               </data>
               <group shader="asset/heavy.xml#shader_hvyweapon_red">
                 <mesh type="triangles"  >
-                  <data src="#heavySkinned" />
-                  <data src="asset/heavy.xml#index_hvyweapon_red" />
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_hvyweapon_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/heavy.xml#shader_heavy_head_red">
                 <mesh type="triangles"  >
-                  <data src="#heavySkinned" />
-                  <data src="asset/heavy.xml#index_heavy_head_red" />
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_heavy_head_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/heavy.xml#shader_eyeball_r">
                 <mesh type="triangles"  >
-                  <data src="#heavySkinned" />
-                  <data src="asset/heavy.xml#index_eyeball_r" />
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_eyeball_r" ></data>
                 </mesh>
               </group>
               <group shader="asset/heavy.xml#shader_eyeball_l">
                 <mesh type="triangles"  >
-                  <data src="#heavySkinned" />
-                  <data src="asset/heavy.xml#index_eyeball_l" />
+                  <data src="#heavySkinned" ></data>
+                  <data src="asset/heavy.xml#index_eyeball_l" ></data>
                 </mesh>
               </group>
             </group>
             <!-- Sniper -->
             <group style="transform: translate3d(-45px,-50px,-120px)">
-              <data id="sniperSkinned" proto="protos.xml#skinning">
-                <data src="asset/sniper.xml#meshbase" />
-                <data src="asset/sniper.xml#anim_taunt02_heelClick" />
+              <data id="sniperSkinned" compute="dataflow['protos.xml#skinning']">
+                <data src="asset/sniper.xml#meshbase" ></data>
+                <data src="asset/sniper.xml#anim_taunt02_heelClick" ></data>
                 <float id="keySniper" name="key">0.0</float>
               </data>
               <group shader="asset/sniper.xml#shader_sniper_head">
                 <mesh type="triangles">
-                  <data src="#sniperSkinned" />
-                  <data src="asset/sniper.xml#index_sniper_head" />
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_sniper_head" ></data>
                 </mesh>
               </group>
               <group shader="asset/sniper.xml#shader_eyeball_l">
                 <mesh type="triangles">
-                  <data src="#sniperSkinned" />
-                  <data src="asset/sniper.xml#index_eyeball_l" />
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_eyeball_l" ></data>
                 </mesh>
               </group>
               <group shader="asset/sniper.xml#shader_eyeball_r">
                 <mesh type="triangles">
-                  <data src="#sniperSkinned" />
-                  <data src="asset/sniper.xml#index_eyeball_r" />
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_eyeball_r" ></data>
                 </mesh>
               </group>
               <group shader="asset/sniper.xml#shader_sniper_red">
                 <mesh type="triangles">
-                  <data src="#sniperSkinned" />
-                  <data src="asset/sniper.xml#index_sniper_red" />
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_sniper_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/sniper.xml#shader_sniper_lens">
                 <mesh type="triangles">
-                  <data src="#sniperSkinned" />
-                  <data src="asset/sniper.xml#index_sniper_lens" />
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_sniper_lens" ></data>
                 </mesh>
               </group>
               <group shader="asset/sniper.xml#shader_c_arrow">
                 <mesh type="triangles">
-                  <data src="#sniperSkinned" />
-                  <data src="asset/sniper.xml#index_c_arrow" />
+                  <data src="#sniperSkinned" ></data>
+                  <data src="asset/sniper.xml#index_c_arrow" ></data>
                 </mesh>
               </group>
             </group>
             <!-- Medic -->
             <group style="transform: translate3d(-75px,-50px,-150px)">
-              <data id="medicSkinned" proto="protos.xml#skinning">
-                <data src="asset/medic.xml#meshbase" />
-                <data src="asset/medic.xml#anim_taunt02m" />
+              <data id="medicSkinned" compute="dataflow['protos.xml#skinning']">
+                <data src="asset/medic.xml#meshbase" ></data>
+                <data src="asset/medic.xml#anim_taunt02m" ></data>
                 <float id="keyMedic" name="key">0.0</float>
               </data>
               <group shader="asset/medic.xml#shader_medic_red">
                 <mesh type="triangles">
-                  <data src="#medicSkinned" />
-                  <data src="asset/medic.xml#index_medic_red" />
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_medic_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/medic.xml#shader_medic_backpack_red">
                 <mesh type="triangles">
-                  <data src="#medicSkinned" />
-                  <data src="asset/medic.xml#index_medic_backpack_red" />
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_medic_backpack_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/medic.xml#shader_medic_head">
                 <mesh type="triangles">
-                  <data src="#medicSkinned" />
-                  <data src="asset/medic.xml#index_medic_head" />
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_medic_head" ></data>
                 </mesh>
               </group>
               <group shader="asset/medic.xml#shader_eyeball_r">
                 <mesh type="triangles">
-                  <data src="#medicSkinned" />
-                  <data src="asset/medic.xml#index_eyeball_r" />
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_eyeball_r" ></data>
                 </mesh>
               </group>
               <group shader="asset/medic.xml#shader_eyeball_l">
                 <mesh type="triangles">
-                  <data src="#medicSkinned" />
-                  <data src="asset/medic.xml#index_eyeball_l" />
+                  <data src="#medicSkinned" ></data>
+                  <data src="asset/medic.xml#index_eyeball_l" ></data>
                 </mesh>
               </group>
             </group>
             <!-- Engineer -->
             <group style="transform: translate3d(45px,-50px,-120px)">
-              <data id="engineerSkinned" proto="protos.xml#skinning">
-                <data src="asset/engineer.xml#meshbase" />
-                <data src="asset/engineer.xml#anim_taunt01e" />
+              <data id="engineerSkinned" compute="dataflow['protos.xml#skinning']">
+                <data src="asset/engineer.xml#meshbase" ></data>
+                <data src="asset/engineer.xml#anim_taunt01e" ></data>
                 <float id="keyEngineer" name="key">0.0</float>
               </data>
              <group shader="asset/engineer.xml#shader_engineer_red">
                 <mesh type="triangles">
-                  <data src="#engineerSkinned" />
-                  <data src="asset/engineer.xml#index_engineer_red" />
+                  <data src="#engineerSkinned" ></data>
+                  <data src="asset/engineer.xml#index_engineer_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/engineer.xml#shader_engineer_head">
                 <mesh type="triangles">
-                  <data src="#engineerSkinned" />
-                  <data src="asset/engineer.xml#index_engineer_head" />
+                  <data src="#engineerSkinned" ></data>
+                  <data src="asset/engineer.xml#index_engineer_head" ></data>
                 </mesh>
               </group>
             </group>
             <!-- Scout -->
             <group style="transform: translate3d(75px,-50px,-150px)">
-              <data id="scoutSkinned" proto="protos.xml#skinning">
-                <data src="asset/scout.xml#meshbase" />
-                <data src="asset/scout.xml#anim_taunt05_DeathTaunt" />
+              <data id="scoutSkinned" compute="dataflow['protos.xml#skinning']">
+                <data src="asset/scout.xml#meshbase" ></data>
+                <data src="asset/scout.xml#anim_taunt05_DeathTaunt" ></data>
                 <float id="keyScout" name="key">0.0</float>
               </data>
               <group shader="asset/scout.xml#shader_scout_red">
                 <mesh type="triangles">
-                  <data src="#scoutSkinned" />
-                  <data src="asset/scout.xml#index_scout_red" />
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_scout_red" ></data>
                 </mesh>
               </group>
               <group shader="asset/scout.xml#shader_scout_head">
                 <mesh type="triangles">
-                  <data src="#scoutSkinned" />
-                  <data src="asset/scout.xml#index_scout_head" />
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_scout_head" ></data>
                 </mesh>
               </group>
               <group shader="asset/scout.xml#shader_eyeball_r">
                 <mesh type="triangles">
-                  <data src="#scoutSkinned" />
-                  <data src="asset/scout.xml#index_eyeball_r" />
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_eyeball_r" ></data>
                 </mesh>
               </group>
               <group shader="asset/scout.xml#shader_eyeball_l">
                 <mesh type="triangles">
-                  <data src="#scoutSkinned" />
-                  <data src="asset/scout.xml#index_eyeball_l" />
+                  <data src="#scoutSkinned" ></data>
+                  <data src="asset/scout.xml#index_eyeball_l" ></data>
                 </mesh>
               </group>
             </group>
@@ -230,7 +229,6 @@
 
           </xml3d>
           <script type="text/javascript">
-            <![CDATA[
             /* Run timer for wave animation */
             var mytime = 0;
             var lastTime = Date.now();
@@ -257,7 +255,6 @@
               reqAniFrame(updateAnim);
             }
             reqAniFrame(updateAnim);
-            ]]>
           </script>
 
         <div class="description">

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d xmlns="http://www.w3.org/1999/xhtml">
-  <!-- 
+  <!--
 
- Shaders 
+ Shaders
 
  -->
 
@@ -26,26 +26,26 @@
       <img src="engineer_head.jpg" />
     </texture>
   </shader>
-  <!-- 
+  <!--
 
- Mesh Base 
-
- -->
-  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="engineer.json" />
-  <!-- 
-
- Meshes 
+ Mesh Base
 
  -->
-  <data id="index_engineer_red" src="engineer.json" filter="keep( {index: index_engineer_red} )" />
-  <data id="index_engineer_head" src="engineer.json" filter="keep( {index: index_engineer_head} )" />
-  <!-- 
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="engineer.json" ></data>
+  <!--
 
- Animations 
+ Meshes
+
+ -->
+  <data id="index_engineer_red" src="engineer.json" filter="keep( {index: index_engineer_red} )" ></data>
+  <data id="index_engineer_head" src="engineer.json" filter="keep( {index: index_engineer_head} )" ></data>
+  <!--
+
+ Animations
 
  -->
   <data id="anim_taunt01e">
-    <data src="engineer.json" filter="keep( {translation: taunt01e_translation, rotation: taunt01e_rotation } )" />
+    <data src="engineer.json" filter="keep( {translation: taunt01e_translation, rotation: taunt01e_rotation } )" ></data>
     <float name="maxKey">4.41667</float>
   </data>
 </xml3d>

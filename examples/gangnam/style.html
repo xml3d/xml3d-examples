@@ -1,23 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<html lang="en">
     <head>
         <!-- Style -->
         <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
         <link href="http://www.xml3d.org/xml3d/script/xml3d.css" media="all" rel="stylesheet" type="text/css"/>
 		<link href="style/psy.css" media="all" rel="stylesheet" type="text/css"/>
         <!-- Scripts -->
-		<script src="../../script/xml3d.js" type="text/javascript"/>
-        <script src="../../script/xml3d-motion.js" type="text/javascript"/>
-		<script src=" http://ajax.googleapis.com/ajax/libs/swfobject/2.1/swfobject.js" type="text/javascript"/>
-		<script src="../../script/jquery-1.8.1.min.js" type="text/javascript"/>
-		<script src="animation.js" type="text/javascript"/>
-        <script src="../../script/page.js" type="text/javascript" />
+		<script src="../../script/xml3d.js" type="text/javascript"></script>
+        <script src="../../script/xml3d-motion.js" type="text/javascript"></script>
+		<script src=" http://ajax.googleapis.com/ajax/libs/swfobject/2.1/swfobject.js" type="text/javascript"></script>
+		<script src="../../script/jquery-1.8.1.min.js" type="text/javascript"></script>
+		<script src="animation.js" type="text/javascript"></script>
+        <script src="../../script/page.js" type="text/javascript" ></script>
         <script type="text/javascript">
             window.addEventListener('load', function() {
                 var controller = new XMOT.ExamineController(document.getElementById("camera1"));
                 var xml3d = document.getElementById("canvas");
                 xml3d.addEventListener("mousedown", function(e) {
                     controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+                    e.preventDefault();
                 }, false);
                 window.addEventListener("mouseup", function() {
                     controller.stop();
@@ -33,16 +34,16 @@
     <div id="content">
         <div id="myDiv">
             <xml3d id="canvas" activeView="#defaultView" class="xml3d"
-                style="width:640px;height:480px;" xmlns="http://www.xml3d.org/2009/xml3d">
+                style="width:640px;height:480px;" >
                 <defs>
-                    <transform id="t_Armature_001" rotation="-1.0 0.0 0.0 1.5707964"/>
-                    <transform id="t_camera1" translation="0 3 -1" rotation="1 0 0 -1.57"/>
+                    <transform id="t_Armature_001" rotation="-1.0 0.0 0.0 1.5707964"></transform>
+                    <transform id="t_camera1" translation="0 3 -1" rotation="1 0 0 -1.57"></transform>
                     <shader id="blackMaterial" script="urn:xml3d:shader:matte">
                         <float3 name="diffuseColor">0.0 0.0 0.0</float3>
                     </shader>
-                    <data id="Ben-lib" proto="http://xml3d.org/xml3d/protos/skinning.xml#skinning">
-						<data src="json/ben-data.json"/>
-						<data src="json/animation-data.json"/>
+                    <data id="Ben-lib" compute="dataflow['protos.xml#skinning']">
+						<data src="json/ben-data.json"></data>
+						<data src="json/animation-data.json"></data>
                         <float id="Ben-lib_animation_key" name="key">0.0</float>
                     </data>
                 </defs>
@@ -50,17 +51,17 @@
                     <group id="Armature_001" transform="#t_Armature_001">
                         <group id="Ben">
                             <group shader="#blackMaterial">
-                                <mesh src="#Ben-lib" type="triangles"/>
+                                <mesh src="#Ben-lib" type="triangles"></mesh>
                             </group>
                         </group>
                     </group>
                 </group>
                 <group id="camera1" transform="#t_camera1">
-                    <view id="defaultView"/>
+                    <view id="defaultView"></view>
                 </group>
             </xml3d>
-            <div id="videoDiv"/>
-			<span class="ben">iBen</span>			
+            <div id="videoDiv"></div>
+			<span class="ben">iBen</span>
             <div class="description">
                 <ul>
                  <li>Ben design, modeling and textures done by Janosch Obenauer, skeleton and rig by Alexis Heloir, skinning by Alexis Heloir and Janosch Obenauer, released under creative common license, design production funded by BMAS: ISSN 0174-4992 Forschungsbericht 417.</li>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d xmlns="http://www.w3.org/1999/xhtml">
-  <!-- 
+  <!--
 
- Shaders 
+ Shaders
 
  -->
   <shader script="urn:xml3d:shader:phong" id="shader_medic_red">
@@ -55,29 +55,29 @@
       <img src="eye-iris-blue.jpg" />
     </texture>
   </shader>
-  <!-- 
+  <!--
 
- Mesh Base 
-
- -->
-  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="medic.json" />
-  <!-- 
-
- Meshes 
+ Mesh Base
 
  -->
-  <data id="index_medic_red" src="medic.json" filter="keep( {index: index_medic_red} )" />
-  <data id="index_medic_backpack_red" src="medic.json" filter="keep( {index: index_medic_backpack_red} )" />
-  <data id="index_medic_head" src="medic.json" filter="keep( {index: index_medic_head} )" />
-  <data id="index_eyeball_r" src="medic.json" filter="keep( {index: index_eyeball_r} )" />
-  <data id="index_eyeball_l" src="medic.json" filter="keep( {index: index_eyeball_l} )" />
-  <!-- 
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="medic.json" ></data>
+  <!--
 
- Animations 
+ Meshes
+
+ -->
+  <data id="index_medic_red" src="medic.json" filter="keep( {index: index_medic_red} )" ></data>
+  <data id="index_medic_backpack_red" src="medic.json" filter="keep( {index: index_medic_backpack_red} )" ></data>
+  <data id="index_medic_head" src="medic.json" filter="keep( {index: index_medic_head} )" ></data>
+  <data id="index_eyeball_r" src="medic.json" filter="keep( {index: index_eyeball_r} )" ></data>
+  <data id="index_eyeball_l" src="medic.json" filter="keep( {index: index_eyeball_l} )" ></data>
+  <!--
+
+ Animations
 
  -->
   <data id="anim_taunt02m">
-    <data src="medic.json" filter="keep( {translation: taunt02m_translation, rotation: taunt02m_rotation } )" />
+    <data src="medic.json" filter="keep( {translation: taunt02m_translation, rotation: taunt02m_rotation } )" ></data>
     <float name="maxKey">3.16667</float>
   </data>
 </xml3d>
