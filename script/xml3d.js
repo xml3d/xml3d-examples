@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (31.10.2013 14:50:17 CET)
+@version: DEVELOPMENT SNAPSHOT (04.11.2013 16:47:39 MEZ)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (31.10.2013 14:50:17 CET)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (04.11.2013 16:47:39 MEZ)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -8970,7 +8970,6 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
     function processResponse(httpRequest) {
         var mimetype = httpRequest.getResponseHeader("content-type");
         setDocumentData(httpRequest, httpRequest._url, mimetype);
-        updateDocumentHandles(httpRequest._url);
     };
 
     /**
@@ -9015,7 +9014,16 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
             return;
         }
         docCache.format = formatHandler;
-        docCache.response = formatHandler.getFormatData(response, httpRequest.responseType, cleanedMimetype);
+        formatHandler.getFormatData(response, httpRequest.responseType, cleanedMimetype, function(success, result){
+            if(success){
+                docCache.response = result;
+                updateDocumentHandles(url)
+            }
+            else{
+                invalidateDocumentHandles(url);
+            }
+        } );
+
     }
 
     /**
@@ -9499,8 +9507,8 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
      * @param {string} mimetype
      * @return {Object}
      */
-    FormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
-        return response;
+    FormatHandler.prototype.getFormatData = function(response, responseType, mimetype, callback) {
+        callback(true, response);
     }
 
     /**
@@ -9531,8 +9539,8 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         return response && response.nodeType === 9 && (mimetype === "application/xml" || mimetype === "text/xml");
     }
 
-    XMLFormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
-        return response;
+    XMLFormatHandler.prototype.getFormatData = function(response, responseType, mimetype, callback) {
+        callback(true, response);
     }
 
     XMLFormatHandler.prototype.getFragmentData = function(documentData, fragment) {
@@ -9556,14 +9564,13 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         return supported;
     }
 
-    XML3DFormatHandler.prototype.getFormatData = function(response, responseType) {
+    XML3DFormatHandler.prototype.getFormatData = function(response, responseType, mimetype, callback) {
         // Configure all xml3d elements:
         var xml3dElements = response.querySelectorAll("xml3d");
         for (var i = 0; i < xml3dElements.length; ++i) {
             XML3D.config.element(xml3dElements[i]);
         }
-
-        return response;
+        callback(true, response);
     }
 
     /**
@@ -9577,10 +9584,6 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
 
     JSONFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
         return mimetype === "application/json";
-    }
-
-    JSONFormatHandler.prototype.getFormatData = function(response, responseType, mimetype) {
-        return response;
     }
 
     /**
@@ -18843,6 +18846,18 @@ XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
         return mimetype === "application/json" && response.format == "xml3d-json" && response.version == "0.4.0";
     }
 
+
+    XML3DJSONFormatHandler.prototype.getFormatData = function(response, responseType, mimetype, callback) {
+        try{
+            var xflowNode = createXflowNode(response);
+            callback(true, xflowNode);
+        } catch (e) {
+            XML3D.debug.logException(e, "Failed to process XML3D json file");
+            callback(false);
+        }
+
+    }
+
     var xml3dJsonFormatHandler = new XML3DJSONFormatHandler();
     XML3D.base.registerFormat(xml3dJsonFormatHandler);
 
@@ -18944,14 +18959,8 @@ XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
     /**
      * @implements IDataAdapter
      */
-    var JSONDataAdapter = function(jsonData) {
-        this.json = jsonData;
-        try{
-            this.xflowDataNode = createXflowNode(jsonData);
-        } catch (e) {
-            XML3D.debug.logException(e, "Failed to process XML3D json file");
-        }
-
+    var JSONDataAdapter = function(xflowNode) {
+        this.xflowDataNode = xflowNode;
     };
 
     JSONDataAdapter.prototype.getXflowNode = function(){
@@ -18971,8 +18980,8 @@ XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
 
     JSONFactory.prototype.aspect = XML3D.data;
 
-    JSONFactory.prototype.createAdapter = function(data) {
-        return new JSONDataAdapter(data);
+    JSONFactory.prototype.createAdapter = function(xflowNode) {
+        return new JSONDataAdapter(xflowNode);
     }
 
     xml3dJsonFormatHandler.registerFactoryClass(JSONFactory);
@@ -21133,6 +21142,12 @@ XML3D.webgl.stopEvent = function(ev) {
     /** @const */
     var ENTRY_SIZE = PROJECTION_MATRIX_OFFSET + 16;
 
+    /** @const */
+    var CLIPPLANE_NEAR_MIN = 0.01;
+
+    /** @const */
+    var DEFAULT_FIELDOFVIEW = 45 / 180 * Math.PI;
+
     /**
      *
      * @constructor
@@ -21143,12 +21158,13 @@ XML3D.webgl.stopEvent = function(ev) {
         opt = opt || {};
         this.position = opt.position || XML3D.math.vec3.create();
         this.orientation = opt.orientation || XML3D.math.mat4.create();
-        this.fieldOfView = opt.fieldOfView !== undefined ? opt.fieldOfView : 0.78;
+        this.fieldOfView = opt.fieldOfView !== undefined ? opt.fieldOfView : DEFAULT_FIELDOFVIEW;
         this.worldSpacePosition = XML3D.math.vec3.create();
         this.projectionAdapter = opt.projectionAdapter;
         this.viewDirty = true;
         this.projectionDirty = true;
         this.frustum = new XML3D.webgl.Frustum(1, 100000, 0, this.fieldOfView, 1);
+        this.lastAspectRatio = 1;
     };
     RenderView.ENTRY_SIZE = ENTRY_SIZE;
 
@@ -21187,6 +21203,7 @@ XML3D.webgl.stopEvent = function(ev) {
                     this.setProjectionMatrix(this.projectionAdapter.getMatrix("perspective"));
                     return;
                 }
+
                 var clipPlane = this.getClippingPlanes(),
                     near = clipPlane.near,
                     far = clipPlane.far,
@@ -21198,6 +21215,8 @@ XML3D.webgl.stopEvent = function(ev) {
                 this.setProjectionMatrix(tmp);
                 // Update Frustum
                 this.frustum.setFrustum(near, far, 0, fovy, aspect);
+
+                this.lastAspectRatio = aspect;
             }
         })(),
 
@@ -21214,14 +21233,15 @@ XML3D.webgl.stopEvent = function(ev) {
                 this.getWorldToViewMatrix(t_mat);
                 XML3D.math.bbox.transform(bb, t_mat, bb);
 
-                var bounds = { zMin: bb[2], zMax: bb[5] };
-                var length = XML3D.math.bbox.longestSide(bb);
+                var near = -bb[5],
+                    far = -bb[2],
+                    expand = Math.max((far - near) * 0.01, 0.1);
 
                 // Expand the view frustum a bit to ensure 2D objects parallel to the camera are rendered
-                bounds.zMin -= length * 0.005;
-                bounds.zMax += length * 0.005;
+                far += expand;
+                near -= expand;
 
-                return {near: Math.max(-bounds.zMax, 0.01*length), far: -bounds.zMin};
+                return {near: Math.max(near, CLIPPLANE_NEAR_MIN), far: far};
             }
         })(),
 
@@ -21303,7 +21323,7 @@ XML3D.webgl.stopEvent = function(ev) {
         },
 
         getProjectionMatrix: function(dest, aspect) {
-                if (this.projectionDirty) {
+                if (this.projectionDirty || aspect != this.lastAspectRatio) {
                     this.updateProjectionMatrix(aspect);
                 }
                 var o = this.offset + PROJECTION_MATRIX_OFFSET;
@@ -22821,7 +22841,11 @@ XML3D.webgl.stopEvent = function(ev) {
                 var bufferType = elementBuffer ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER;
 
                 gl.bindBuffer(bufferType, buffer);
-                gl.bufferSubData(bufferType, 0, xflowDataEntry.getValue());
+                if (elementBuffer) {
+                    gl.bufferSubData(bufferType, 0, new Uint16Array(xflowDataEntry.getValue()));
+                } else {
+                    gl.bufferSubData(bufferType, 0, xflowDataEntry.getValue());
+                }
                 break;
             case Xflow.DATA_ENTRY_STATE.CHANGED_NEW:
             case Xflow.DATA_ENTRY_STATE.CHANGED_SIZE:
@@ -23582,14 +23606,17 @@ XML3D.webgl.stopEvent = function(ev) {
             return function (scene) {
                 var gl = this.context.gl,
                     target = this.target,
+                    width = target.getWidth(),
+                    height = target.getHeight(),
+                    aspect = width / height,
                     count = { objects: 0, primitives: 0 };
 
                 target.bind();
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-                gl.viewport(0, 0, target.getWidth(), target.getHeight());
+                gl.viewport(0, 0, width, height);
                 gl.enable(gl.DEPTH_TEST);
 
-                scene.updateReadyObjectsFromActiveView(target.getWidth() / target.getHeight());
+                scene.updateReadyObjectsFromActiveView(aspect);
                 scene.getActiveView().getWorldToViewMatrix(c_worldToViewMatrix);
 
                 var sorted = this.sorter.sortScene(scene, c_worldToViewMatrix);
@@ -23642,7 +23669,7 @@ XML3D.webgl.stopEvent = function(ev) {
                 program.bind();
                 //this.shaderManager.updateActiveShader(shader);
                 scene.getActiveView().getWorldToViewMatrix(c_viewMat_tmp);
-                scene.getActiveView().getProjectionMatrix(c_projMat_tmp, this.width / this.height);
+                scene.getActiveView().getProjectionMatrix(c_projMat_tmp, this.target.getWidth() / this.target.getHeight());
 
                 systemUniforms["viewMatrix"] = c_viewMat_tmp;
                 systemUniforms["projectionMatrix"] = c_projMat_tmp;
@@ -26087,36 +26114,6 @@ XML3D.webgl.stopEvent = function(ev) {
         this.textureAdapter.notifyChanged(evt);
     };
 })();
-//Adapter for <texture>
-(function() {
-
-    var TextureRenderAdapter = function(factory, node) {
-        XML3D.webgl.RenderAdapter.call(this, factory, node);
-        this.dataAdapter = XML3D.base.resourceManager.getAdapter(this.node, XML3D.data);
-    };
-
-    XML3D.createClass(TextureRenderAdapter, XML3D.webgl.RenderAdapter);
-
-    TextureRenderAdapter.prototype.notifyChanged = function(evt) {
-        var shaderAdapter = this.factory.getAdapter(this.node.parentElement);
-        if (shaderAdapter)
-            shaderAdapter.notifyChanged(evt);
-    };
-
-    TextureRenderAdapter.prototype.getDataTable = function() {
-        return this.dataAdapter.createDataTable();
-    };
-
-    TextureRenderAdapter.prototype.destroy = function() {
-
-    };
-
-    TextureRenderAdapter.prototype.dispose = function(evt) {
-        //TODO: tell renderer to dispose
-    };
-
-    XML3D.webgl.TextureRenderAdapter = TextureRenderAdapter;
-}());
 XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
 //Adapter for <mesh>
@@ -26584,7 +26581,6 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             data:           ns.DataRenderAdapter,
             transform:      ns.TransformRenderAdapter,
             shader:         ns.ShaderRenderAdapter,
-            texture:        ns.TextureRenderAdapter,
             group:          ns.GroupRenderAdapter,
             img:            ns.ImgRenderAdapter,
             light:          ns.LightRenderAdapter,
@@ -26622,7 +26618,8 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
 
     // Export
     XML3D.webgl.RenderAdapterFactory = RenderAdapterFactory;
-}());// renderer/shaders/base.js
+}());
+// renderer/shaders/base.js
 (function() {
     "use strict";
      var shaders = {};

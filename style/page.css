@@ -1,19 +1,18 @@
-@namespace xml3d "http://www.xml3d.org/2009/xml3d";
 
 * {
     padding: 0;
     margin: 0;
 }
 
-xml3d|float,
-xml3d|float2,
-xml3d|float3,
-xml3d|float4,
-xml3d|float4x4,
-xml3d|int,
-xml3d|int4,
-xml3d|bool,
-xml3d|script  {
+float,
+float2,
+float3,
+float4,
+float4x4,
+int,
+int4,
+bool,
+script  {
    display: none;
 }
 
