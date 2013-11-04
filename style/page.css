@@ -187,6 +187,7 @@ iframe{
     padding: 8px;
     margin: 8px;
     border-radius: 8px;
+    text-align: center;
 }
 
 #content .xml3d{
