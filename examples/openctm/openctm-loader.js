@@ -10,13 +10,23 @@
             return false;
 
         var stream = new CTM.Stream(response);
-        var header;
         try {
-            header = new CTM.FileHeader(stream);
+            new CTM.FileHeader(stream);
         } catch (e) {
             return false; // not a OpenCTM stream
         }
         return true;
+    }
+
+    OpenCTMFormatHandler.prototype.getFormatData = function(response, responseType, mimetype, callback) {
+        try {
+            var xflowDataNode = loadOpenCTM(response);
+            callback(true, xflowDataNode);
+        } catch (e) {
+            XML3D.debug.logError("Failed to process OpenCTM file: " + e);
+            callback(false);
+        }
+
     }
 
     var openctmFormatHandler = new OpenCTMFormatHandler();
@@ -92,12 +102,8 @@
     /**
      * @implements IDataAdapter
      */
-    var OpenCTMDataAdapter = function(openctmData) {
-        try {
-            this.xflowDataNode = loadOpenCTM(openctmData);
-        } catch (e) {
-            XML3D.debug.logError("Failed to process OpenCTM JSON json file: " + e);
-        }
+    var OpenCTMDataAdapter = function(xflowNode) {
+        this.xflowDataNode = xflowNode;
     }
 
     OpenCTMDataAdapter.prototype.getXflowNode = function() {
