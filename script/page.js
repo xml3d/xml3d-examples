@@ -102,7 +102,7 @@ function initPage(){
 
     buildNavigation();
 
-    var header = $('<div id="header" ><h1><a href="'+ LINK_PREFIX + 'index.xhtml" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
+    var header = $('<div id="header" ><h1><a href="'+ LINK_PREFIX + 'index.html" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
     $(document.body).prepend(header);
     var footer = $('<div id="footer" ></div>')
     $(document.body).append(footer);
@@ -151,7 +151,7 @@ function buildNavigation(){
     var naviList = buildTestList();
     inner.append(naviList);
 
-    naviList.prepend($('<li><a href="' + LINK_PREFIX + 'index.xhtml">Index</a></li>'));
+    naviList.prepend($('<li><a href="' + LINK_PREFIX + 'index.html">Index</a></li>'));
 
     $(document.body).prepend(navi);
 }
