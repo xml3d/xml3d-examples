@@ -45,8 +45,8 @@ var EXAMPLE_LIST = [
     {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.html",
         info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"},
 
-    {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.html",
-        info: "Demonstrates Xflow Prototypes."},
+    {cat: "xflow", name: "Xflow Dataflows", href: "examples/xflowDataflow/xflow-dataflow.html",
+        info: "Demonstrates Xflow Dataflows to reuse processing graphs."},
     {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.html",
         info: "Demonstrates Xflow Skinning."},
      {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.html",
