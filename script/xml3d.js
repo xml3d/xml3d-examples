@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2010-2012
+Copyright (c) 2010-2013
               DFKI - German Research Center for Artificial Intelligence
               www.dfki.de
 
@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (04.11.2013 18:59:22 MEZ)
+@version: 4.5
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (04.11.2013 18:59:22 MEZ)';
+XML3D.version = '4.5';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -21232,13 +21232,13 @@ XML3D.webgl.stopEvent = function(ev) {
 
                 var near = -bb[5],
                     far = -bb[2],
-                    expand = Math.max((far - near) * 0.01, 0.1);
+                    expand = Math.max((far - near) * 0.005, 0.05);
 
                 // Expand the view frustum a bit to ensure 2D objects parallel to the camera are rendered
                 far += expand;
                 near -= expand;
 
-                return {near: Math.max(near, CLIPPLANE_NEAR_MIN), far: far};
+                return {near: Math.max(near, expand, CLIPPLANE_NEAR_MIN), far: far};
             }
         })(),
 

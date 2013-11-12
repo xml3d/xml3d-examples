@@ -697,7 +697,7 @@ XML3D.Xml3dSceneController.getController = function(xml3d) {
 
     var onload = function() {
 
-        var xml3dList = Array.prototype.slice.call( document.getElementsByTagNameNS(XML3D.xml3dNS, 'xml3d') );
+        var xml3dList = Array.prototype.slice.call( document.querySelectorAll('xml3d') );
 
         XML3D.Xml3dSceneController.controllers = new Array();
         for(var i in xml3dList) {
