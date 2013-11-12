@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
     <!-- Scripts -->
@@ -34,9 +35,9 @@
                             if (code == 1) {
                                 $("#fail").text("You declined the access to your webcam. Reload the page if you changed your opinion.");
                             } else {
-                                $("#fail").text("Could not access the video of your webcam.");
+                                $("#fail").text("Could not access the video of your webcam: " + (e.name ? e.name : e));
                             }
-                            XML3D.debug.logError("Cannot access WebCam");
+                            XML3D.debug.logError("Cannot access WebCam", e);
                         });
             } else {
                 $("#fail").text("Your browser does not support the WebRTC API required to access your webcam.");
