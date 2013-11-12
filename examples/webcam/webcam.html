@@ -23,12 +23,8 @@
                 return;
             }
             // audio: true does not work with chrome
-            if ($.browser.mozilla && ($.browser.version < 18)) {
-                $("#fail").text("Sorry: WebRTC API is not supported in Firefox < 18.");
-                return;
-            }
             if (navigator.getUserMedia) {
-                navigator.getUserMedia({video: true, audio: true},
+                navigator.getUserMedia({video: true, audio: false},
                         function(stream) {
                             XML3D.debug.logInfo("Accessing WebCam");
                             video.src = window.URL.createObjectURL(stream);
