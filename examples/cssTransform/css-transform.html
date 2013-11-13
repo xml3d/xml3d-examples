@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Style -->
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+  <!-- Scripts -->
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/jquery.min.js"></script>
+  <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="../../script/page.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <title>XML3D Examples</title>
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+    <h1>CSS Transforms</h1>
+
+    <xml3d id="MyXml3d" class="xml3d"
+           width="600px" height="400px"
+        >
+      <view position="0 0 20"></view>
+      <defs>
+
+      <!-- Shaders -->
+
+        <shader id="GroundShader" script="urn:xml3d:shader:phong">
+          <float name="transparency" >0.5</float>
+          <float3 name="specularColor">0.025 0.025 0.025</float3>
+          <float name="shininess">0.1</float>
+          <float name="ambientIntensity">0.3</float>
+          <float3 name="diffuseColor">1 1 1</float3>
+        </shader>
+        <shader id="ObjectShader" script="urn:xml3d:shader:phong">
+          <float3 name="specularColor">0.55 0.55 0.55</float3>
+          <float name="shininess">0.6</float>
+          <float name="ambientIntensity">0.3</float>
+          <float3 name="diffuseColor">1.5 1.0 0.2</float3>
+        </shader>
+        <lightshader id="light1" script="urn:xml3d:lightshader:point">
+          <float3 name="intensity">1.0 1.0 1.0</float3>
+          <float3 name="attenuation">1 1 0</float3>
+        </lightshader>
+
+      </defs>
+
+      <!-- Scene Graph -->
+
+      <group shader="#GroundShader"
+             style="transform: translate3d(0px, -2px, 0px) scale3d(10px, 10px, 10px) rotate3d(1, 0, 0, -90deg)" >
+        <mesh src="basic.xml#mesh_ground" ></mesh>
+      </group>
+
+
+      <group shader="#ObjectShader"  >
+        <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(5px)" >
+        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)" >
+        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) " >
+        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px)  rotateZ(45deg)
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)" >
+          <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)
+              rotate3d(0,0,1,-45deg) translate3d(0, -5px, 0px) scale3d(1,1,0.5)" >
+        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      </group>
+
+      <group style="transform: translate3d(0px, 40px, 40px)" >
+        <light shader="#light1" intensity="30"></light>
+      </group>
+
+    </xml3d>
+
+    <div class="description">
+      An example on how to use css transformations.<br>
+      Note that css transformations are currently only supported via the element's <i>style</i> attribute.
+    </div>
+  </div>
+</div>
+</body>
+</html>

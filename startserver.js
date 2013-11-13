@@ -35,9 +35,9 @@ server.configure(function() {
     next();
   });
 
-  // Serve index.xhtml when root is specified '/'
+  // Serve index.html when root is specified '/'
   server.get('/', function(req, res) {
-    res.sendfile('index.xhtml')
+    res.sendfile('index.html')
   });
 
   server.use(server.router);

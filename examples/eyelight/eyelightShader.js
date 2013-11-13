@@ -82,5 +82,11 @@ XML3D.shaders.register("eyelight", {
 
     samplers: { 
         diffuseTexture : null
+    },
+	    attributes: {
+        normal : {
+            required: true
+        },
+        texcoord: null,
     }
 });

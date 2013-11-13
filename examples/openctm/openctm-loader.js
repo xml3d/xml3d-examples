@@ -1,124 +1,128 @@
 (function() {
 
-    var OpenCTMFormatHandler = function() {
-        XML3D.base.BinaryFormatHandler.call(this);
-    }
-    XML3D.createClass(OpenCTMFormatHandler, XML3D.base.BinaryFormatHandler);
+	var hasWebWorkerSupport = !!window.Worker;
 
-    OpenCTMFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
-        if (!(response instanceof ArrayBuffer))
-            return false;
+	var OpenCTMFormatHandler = function() {
+		XML3D.base.BinaryFormatHandler.call(this);
+		if (hasWebWorkerSupport) {
+			this.worker = new Worker("openctm-worker.js");
+			this.callbackMap = [];
+			this.worker.addEventListener("error", function (error) {
+				XML3D.debug.logError("[OpenCTMFormatHandler] Failed to process OpenCTM file: " + error.message);
+				if (error.id)
+					self.callbackMap[error.id](false);
+			});
+			var self = this;
+			this.worker.addEventListener("message", function (event) {
+				var message = event.data;
+				switch (message.type) {
+					case "file":
+						var xflowDataNode = createXflowDataNode(message);
+						self.callbackMap[message.id](true, xflowDataNode);
+						break;
+					default:
+						XML3D.debug.logError("[OpenCTMFormatHandler] Unrecognized message received: " + message.type);
+						self.callbackMap[message.id](false);
+						break;
+				}
+			})
+		}
+	};
 
-        var stream = new CTM.Stream(response);
-        var header;
-        try {
-            header = new CTM.FileHeader(stream);
-        } catch (e) {
-            return false; // not a OpenCTM stream
-        }
-        return true;
-    }
+	XML3D.createClass(OpenCTMFormatHandler, XML3D.base.BinaryFormatHandler);
 
-    var openctmFormatHandler = new OpenCTMFormatHandler();
-    XML3D.base.registerFormat(openctmFormatHandler);
+	OpenCTMFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
+		if (!(response instanceof ArrayBuffer))
+			return false;
 
-    function createXflowBuffer(dataNode, name, type, size, key) {
-        var inputNode = Xflow.createBufferInputNode(type, name, size);
-        dataNode.appendChild(inputNode);
-        return inputNode.data.getValue();
-    }
+		var stream = new CTM.Stream(response);
+		try {
+			new CTM.FileHeader(stream);
+		} catch (e) {
+			return false;
+		}
 
-    // OpenCTM
+		return true;
+	};
 
-    function loadOpenCTM(data)
-    {
-        if (!data instanceof ArrayBuffer)
-            throw new Error("ArrayBuffer required");
+	function getFormatDataWebWorker(response, responseType, mimetype, callback) {
+		var id = this.callbackMap.push(callback) - 1;
+		this.worker.postMessage({
+			type: "decodeFile",
+			id: id,
+			stream: response
+		}, [response]);
+	}
 
-        var stream = new CTM.Stream(data);
-        var header;
-        try {
-            header = new CTM.FileHeader(stream);
-        } catch (e) {
-            throw new Error("not a OpenCTM stream");
-        }
+	function getFormatDataSynchronously(response, responseType, mimetype, callback) {
+		try {
+			var stream = new CTM.Stream(response);
+			var file = new CTM.File(stream);
+			var xflowDataNode = createXflowDataNode(file.body);
+			callback(true, xflowDataNode);
+		} catch (e) {
+			XML3D.debug.logError("Failed to process OpenCTM file: " + e);
+			callback(false);
+		}
+	}
 
-        var indexSize = 3 * header.triangleCount;
-        var normalSize = header.vertexCount;
-        var positionSize = header.vertexCount;
-        var texcoordSize = (header.uvMapCount > 0 ? header.vertexCount : 0);
+	function createXflowDataNode (file) {
+		var xflowDataNode = XML3D.data.xflowGraph.createDataNode();
+		xflowDataNode.appendChild(createInputNode("index", "int", file.indices));
+		xflowDataNode.appendChild(createInputNode("position", "float3", file.vertices));
+		if (file.normals)
+			xflowDataNode.appendChild(createInputNode("normal", "float3", file.normals));
+		else
+			xflowDataNode.appendChild(createInputNode("normal", "float3", CTM.calcSmoothNormals(file.indices, file.vertices)));
 
-        var node = XML3D.data.xflowGraph.createDataNode();
+		if (file.uvMaps)
+			xflowDataNode.appendChild(createInputNode("texcoord", "float2", file.uvMaps[0].uv));
 
-        var index = createXflowBuffer(node, 'index', 'int', indexSize);
-        var normal = createXflowBuffer(node, 'normal', 'float3', normalSize);
-        var position = createXflowBuffer(node, 'position', 'float3', positionSize);
-        var texcoord = createXflowBuffer(node, 'texcoord', 'float2', texcoordSize);
+		return xflowDataNode;
+	}
 
-        //stream.setPosition(0);
-        stream = new CTM.Stream(data);
-        var file = new CTM.File(stream);
+	function createInputNode(name, type, typedArray) {
+		var inputNode = XML3D.data.xflowGraph.createInputNode();
+		inputNode.name = name;
+		inputNode.data = new Xflow.BufferEntry(XML3D.data.BUFFER_TYPE_TABLE[type], typedArray);
+		return inputNode;
+	}
 
-        //if (file.header.hasNormals());
+	if (hasWebWorkerSupport)
+		OpenCTMFormatHandler.prototype.getFormatData = getFormatDataWebWorker;
+	else
+		OpenCTMFormatHandler.prototype.getFormatData = getFormatDataSynchronously;
 
-        for (var i = 0; i < file.body.indices.length; ++i) {
-            index[i] = file.body.indices[i];
-        }
-        for (var i = 0; i < file.body.vertices.length; ++i) {
-            position[i] = file.body.vertices[i];
-        }
+	var openctmFormatHandler = new OpenCTMFormatHandler();
+	XML3D.base.registerFormat(openctmFormatHandler);
 
-        if (file.body.normals) {
-            for (var i = 0; i < file.body.normals.length; ++i) {
-                normal[i] = file.body.normals[i];
-            }
-        } else {
-            for (var i = 0; i < normal.length / 3; ++i) {
-                normal[i * 3 + 0] = 1;
-                normal[i * 3 + 1] = 0;
-                normal[i * 3 + 2] = 0;
-            }
-        }
-        if (file.body.uvMaps) {
-            var uvMap = file.body.uvMaps[0];
-            for (var i = 0; i < uvMap.uv.length; ++i) {
-                texcoord[i] = uvMap.uv[i];
-            }
-        }
+	/**
+	 * @implements IDataAdapter
+	 */
+	var OpenCTMDataAdapter = function (xflowNode) {
+		this._xflowDataNode = xflowNode;
+	};
 
-        return node;
-    }
+	OpenCTMDataAdapter.prototype.getXflowNode = function() {
+		return this._xflowDataNode;
+	};
 
-    /**
-     * @implements IDataAdapter
-     */
-    var OpenCTMDataAdapter = function(openctmData) {
-        try {
-            this.xflowDataNode = loadOpenCTM(openctmData);
-        } catch (e) {
-            XML3D.debug.logError("Failed to process OpenCTM JSON json file: " + e);
-        }
-    }
+	/**
+	 * @constructor
+	 * @implements {XML3D.base.IFactory}
+	 */
+	var OpenCTMFactory = function(){
+		XML3D.base.AdapterFactory.call(this, XML3D.data);
+	};
 
-    OpenCTMDataAdapter.prototype.getXflowNode = function() {
-        return this.xflowDataNode;
-    }
+	XML3D.createClass(OpenCTMFactory, XML3D.base.AdapterFactory);
 
-    /**
-     * @constructor
-     * @implements {XML3D.base.IFactory}
-     */
-    var OpenCTMFactory = function(){
-        XML3D.base.AdapterFactory.call(this, XML3D.data);
-    };
-    XML3D.createClass(OpenCTMFactory, XML3D.base.AdapterFactory);
+	OpenCTMFactory.prototype.aspect = XML3D.data;
+	OpenCTMFactory.prototype.createAdapter = function(xflowNode) {
+		return new OpenCTMDataAdapter(xflowNode);
+	};
 
-    OpenCTMFactory.prototype.aspect = XML3D.data;
-    OpenCTMFactory.prototype.createAdapter = function(data) {
-        return new OpenCTMDataAdapter(data);
-    }
-
-    XML3D.base.resourceManager.addBinaryExtension('.ctm');
-    openctmFormatHandler.registerFactoryClass(OpenCTMFactory);
+	XML3D.base.resourceManager.addBinaryExtension('.ctm');
+	openctmFormatHandler.registerFactoryClass(OpenCTMFactory);
 
 }());

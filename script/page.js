@@ -7,56 +7,58 @@ var CATEGORY_LIST = {
     xflow : { name: "Xflow" },
     ar : { name: "Augmented Reality"},
     ip : {name: "Image Processing"}
-
-
 }
 
 var EXAMPLE_LIST = [
-    {cat: "basic", name: "Directional Light", href: "examples/directionalLight/index.xhtml",
+    {cat: "basic", name: "Directional Light", href: "examples/directionalLight/index.html",
         info: "Demonstrates the directional light shader."},
-    {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.xhtml",
+    {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.html",
         info: "Demonstrates the spot light shader."},
-    {cat: "basic", name: "CSS Transforms", href: "examples/cssTransform/css-transform.xhtml",
+    {cat: "basic", name: "CSS Transforms", href: "examples/cssTransform/css-transform.html",
         info: "Demonstrates the spot light shader."},
-    {cat: "basic", name: "Video Texture", href: "examples/video/video.xhtml",
+    {cat: "basic", name: "Video Texture", href: "examples/video/video.html",
         info: "Demonstrates video textures."},
-    {cat: "basic", name: "Webcam Integration", href: "examples/webcam/webcam.xhtml",
+    {cat: "basic", name: "Webcam Integration", href: "examples/webcam/webcam.html",
         info: "Demonstrates webcam as a source of a video texture."},
-    {cat: "basic", name: "Canvas Resizing", href: "examples/canvasresizing/resizing.xhtml",
+    {cat: "basic", name: "Canvas Resizing", href: "examples/canvasresizing/resizing.html",
         info: "Demonstrates dynamic canvas resizing through an attached jQuery UI widget."},
+    {cat: "basic", name: "Script Value", href: "examples/scriptValue/scriptValue.html",
+        info: "Demonstrates efficient data update with TypedArrays and setScriptValue."},
 
-    {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.xhtml",
+    {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.html",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},
-    {cat: "external", name: "MeshLab Format", href: "examples/meshlab/meshlab.xhtml",
+    {cat: "external", name: "MeshLab Format", href: "examples/meshlab/meshlab.html",
         info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
-    {cat: "external", name: "OpenCTM Format", href: "examples/openctm/openctm.xhtml",
+    {cat: "external", name: "OpenCTM Format", href: "examples/openctm/openctm.html",
         info: "Demonstrates extending supported formats, here using OpenCTM binary format"},
-    {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.xhtml",
+    {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.html",
         info: "Demonstrates the usage of external mesh data and shaders with XML files."},
 
-    {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.xhtml",
+    {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.html",
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
-    {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.xhtml",
+    {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.html",
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
-    {cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.xhtml",
+    {cat: "shader", name: "Shader Overrides", href: "examples/shaderOverrides/index.html",
+        info: "Demonstrates overriding of shader attributes in the mesh."},
+	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
-    {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.xhtml",
+    {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.html",
         info: "Demonstrates how to declare and use custom Xflow scripts to generate mesh data."},
-    {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.xhtml",
+    {cat: "xflow", name: "Wave Animation", href: "examples/xflowWave/xflow-wave.html",
         info: "Demonstrates how to declare and use custom Xflow scripts to create a wave animation"},
 
-    {cat: "xflow", name: "Xflow Prototypes", href: "examples/xflowPrototypes/xflow-prototypes.xhtml",
-        info: "Demonstrates Xflow Prototypes."},
-    {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.xhtml",
+    {cat: "xflow", name: "Xflow Dataflows", href: "examples/xflowDataflow/xflow-dataflow.html",
+        info: "Demonstrates Xflow Dataflows to reuse processing graphs."},
+    {cat: "xflow", name: "Xflow Skinning", href: "examples/xflowSkin/xflow-skin.html",
         info: "Demonstrates Xflow Skinning."},
-     {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.xhtml",
+     {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.html",
         info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
      /*{cat: "xflow", name: "Xflow Keyframe Animation", href: "examples/xflowTransforms/xflow-transforms.xhtml",
         info: "Demonstrates Xflow to animate transformations."},*/
 
-    {cat: "ar", name: "Simple AR", href: "examples/xflowAR/ar_simple_no_flip.xhtml",
+    {cat: "ar", name: "Simple AR", href: "examples/xflowAR/ar_simple_no_flip.html",
         info: "A simple augmented reality application with a teapot. Implemented with Xflow."},
-    {cat: "ar", name: "Flying Teapot", href: "examples/xflowAR/ar_flying_teapot.xhtml",
+    {cat: "ar", name: "Flying Teapot", href: "examples/xflowAR/ar_flying_teapot.html",
         info: "Augmented reality application with a teapot jumping between two markers."},
 
     {cat: "ip", name: "Pixel-Wise", href: "examples/xflowIP/pixel-wise.html",
@@ -102,7 +104,7 @@ function initPage(){
 
     buildNavigation();
 
-    var header = $('<div id="header" ><h1><a href="'+ LINK_PREFIX + 'index.xhtml" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
+    var header = $('<div id="header" ><h1><a href="'+ LINK_PREFIX + 'index.html" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
     $(document.body).prepend(header);
     var footer = $('<div id="footer" ></div>')
     $(document.body).append(footer);
@@ -118,6 +120,7 @@ function initPage(){
 
     document.title = "XML3D: " + (CURRENT ? CURRENT.name : "Index");
 
+    stats();
     //buildSocialLinks();
     //addGitHubRibbon();
 }
@@ -150,7 +153,7 @@ function buildNavigation(){
     var naviList = buildTestList();
     inner.append(naviList);
 
-    naviList.prepend($('<li><a href="' + LINK_PREFIX + 'index.xhtml">Index</a></li>'));
+    naviList.prepend($('<li><a href="' + LINK_PREFIX + 'index.html">Index</a></li>'));
 
     $(document.body).prepend(navi);
 }
@@ -204,6 +207,37 @@ function addGitHubRibbon() {
         var code = '<a href="https://github.com/xml3d/xml3d-examples/"><img class="ribbon" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/></a>'
         $('body').append(code);
     }
+}
+
+function shouldShowStats() {
+    var params = [],
+        p = window.location.search.substr(1).split('&');
+    p.forEach(function(e, i, a) {
+        var keyVal = e.split('=');
+        params[keyVal[0].toLowerCase()] = decodeURIComponent(keyVal[1]);
+    });
+    return params.hasOwnProperty("stats");
+}
+
+function stats() {
+    if(window.agility && shouldShowStats()) {
+       var xml3d = document.querySelector("xml3d");
+        var message = $$({
+            model: {
+                objects: 0,
+                primitives: 0
+            },
+            view: {
+                format: '<ul><li><span>Objects: </span><span data-bind="objects"></span></li><li><span>Primitives: </span><span data-bind="primitives"></span></li></ul>'
+            },
+            controller: {}
+        });
+        $$.document.prepend(message, "#content");
+       xml3d && xml3d.addEventListener("framedrawn", function(e) {
+           message.model.set(e.detail.count);
+       })
+    }
+
 }
 
 

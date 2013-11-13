@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d xmlns="http://www.w3.org/1999/xhtml">
-  <!-- 
+  <!--
 
- Shaders 
+ Shaders
 
  -->
     <shader script="urn:xml3d:shader:phong" id="shader_sniper_head">
@@ -70,25 +70,25 @@
    Mesh Base
 
    -->
-    <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="sniper.json" />
+    <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="sniper.json" ></data>
     <!--
 
    Meshes
 
    -->
-  <data id="index_sniper_head" src="sniper.json" filter="keep( {index: index_sniper_head} )" />
-  <data id="index_eyeball_l" src="sniper.json" filter="keep( {index: index_eyeball_l} )" />
-  <data id="index_eyeball_r" src="sniper.json" filter="keep( {index: index_eyeball_r} )" />
-  <data id="index_sniper_red" src="sniper.json" filter="keep( {index: index_sniper_red} )" />
-  <data id="index_sniper_lens" src="sniper.json" filter="keep( {index: index_sniper_lens} )" />
-  <data id="index_c_arrow" src="sniper.json" filter="keep( {index: index_c_arrow} )" />
+  <data id="index_sniper_head" src="sniper.json" filter="keep( {index: index_sniper_head} )" ></data>
+  <data id="index_eyeball_l" src="sniper.json" filter="keep( {index: index_eyeball_l} )" ></data>
+  <data id="index_eyeball_r" src="sniper.json" filter="keep( {index: index_eyeball_r} )" ></data>
+  <data id="index_sniper_red" src="sniper.json" filter="keep( {index: index_sniper_red} )" ></data>
+  <data id="index_sniper_lens" src="sniper.json" filter="keep( {index: index_sniper_lens} )" ></data>
+  <data id="index_c_arrow" src="sniper.json" filter="keep( {index: index_c_arrow} )" ></data>
     <!--
 
    Animations
 
    -->
   <data id="anim_taunt02_heelClick">
-    <data src="sniper.json" filter="keep( {translation: taunt02_heelClick_translation, rotation: taunt02_heelClick_rotation } )" />
+    <data src="sniper.json" filter="keep( {translation: taunt02_heelClick_translation, rotation: taunt02_heelClick_rotation } )" ></data>
     <float name="maxKey">3.375</float>
   </data>
 </xml3d>
