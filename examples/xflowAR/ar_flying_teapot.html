@@ -2,17 +2,20 @@
 <html lang="en">
 
 <head>
-    <!-- Style -->
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="ar.css"/>
-    <title>Simple AR application</title>
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/jquery.min.js"></script>
-    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
-    <script type="text/javascript" src="../../script/page.js"></script>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
 
-    <!-- Application Scrips -->
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
     <script type="text/javascript" src="script/JSARToolKit.js"></script>
     <script type="text/javascript" src="script/xflar.js"></script>
     <script type="text/javascript" src="script/phongvs.js"></script>
@@ -23,11 +26,16 @@
 <body>
 <div id="overall">
 <div id="content">
-    <div style="position: relative; width: 640px; height: 480px; margin: 0 auto" >
-    <canvas id="background" width="640" height="480"
-              style="position: absolute; top: 0px; width: 640px; height: 480px;"></canvas>
+    <div style="position: relative; width: 100vw; height: 100vh; margin: 0 auto" >
+        <canvas id="background"  width="640" height="480"
+               style="position: absolute; left: calc(50vw - 640px/2); top: calc(50vh - 480px/2); width: 640px; height: 480px;"></canvas>
 
-    <xml3d style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">
+        <xml3d style="background: rgba(0,0,0,0); position: absolute; left: calc(50vw - 640px/2); top:  calc(50vh - 480px/2); width: 640px; height: 480px;">
+    <!--<div style="position: relative; width: 640px; height: 480px; margin: 0 auto" >-->
+    <!--<canvas id="background" width="640" height="480"-->
+              <!--style="position: absolute; top: 0px; width: 640px; height: 480px;"></canvas>-->
+
+    <!--<xml3d style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">-->
 
         <!-- AR Data -->
         <data id="arBase" >
@@ -98,7 +106,7 @@
 
     </xml3d>
     </div>
-    <div class="webcam" >
+    <div class="controls">
       <p>Current Threshold: <span id="thresholdView" ></span></p>
       <p><input type="checkbox" id="check"/><label for="check">Activate Webcam</label></p>
       <p><a href="markers.xhtml" target="_blank" >Print Markers</a></p>

@@ -53,8 +53,6 @@ var EXAMPLE_LIST = [
         info: "Demonstrates Xflow Skinning."},
      {cat: "xflow", name: "Xflow Gangnam Style", href: "examples/gangnam/style.html",
         info: "Another Xflow Skinning Demonstration - Gangnam Style!"},
-     /*{cat: "xflow", name: "Xflow Keyframe Animation", href: "examples/xflowTransforms/xflow-transforms.xhtml",
-        info: "Demonstrates Xflow to animate transformations."},*/
 
     {cat: "ar", name: "Simple AR", href: "examples/xflowAR/ar_simple_no_flip.html",
         info: "A simple augmented reality application with a teapot. Implemented with Xflow."},
@@ -97,69 +95,87 @@ function initPage(){
         }
     }
 
-    if(window.PAGE_INDEX){
+    var overall = $("#overall");
+    var inner = $('<div id="inner" class="inner-wrap">');
+    overall.append(inner);
+
+    var navbar = $('<nav id="nav-bar" class="tab-bar">');
+    var navbarCenter = $('<section id="navbar-middle" class="middle tab-bar-section"><h1>' + (CURRENT ? CURRENT.name : "XML3D Examples") + '</h1></section>');
+    navbar.append(navbarCenter);
+    inner.append(navbar);
+
+    var breadcrumb = $('<ul class="breadcrumbs right">');
+    breadcrumb.append($('<li><a href="/index.html">XML3D Examples</a>'));
+    inner.append(breadcrumb);
+
+    var content = $("#content");
+    content.addClass("main-section");
+    inner.append(content);
+
+    if(window.PAGE_INDEX) {
+        $(document.body).css("overflow", "auto");
         buildIndex();
+    } else {
+        overall.addClass("off-canvas-wrap");
+        overall.attr("data-offcanvas", "");
+        $(document.body).css("overflow", "hidden");
+        buildNavigation();
+        if(CURRENT_CAT)
+            breadcrumb.append($('<li><a href="/index.html">' + CURRENT_CAT.name + '</a>'));
+        if(CURRENT)
+            breadcrumb.append($('<li class="current"><a href=/' + CURRENT.href + '>' + CURRENT.name + '</a>'));
+
     }
-
-
-    buildNavigation();
-
-    var header = $('<div id="header" ><h1><a href="'+ LINK_PREFIX + 'index.html" >XML3D Examples</a></h1><h2></h2><h3></h3></div>')
-    $(document.body).prepend(header);
-    var footer = $('<div id="footer" ></div>')
-    $(document.body).append(footer);
-
-    if(CURRENT_CAT)
-        header.find("h2").text( CURRENT_CAT.name);
-    else
-        header.find("h2").hide();
-    if(CURRENT)
-        header.find("h3").text( CURRENT.name);
-    else
-        header.find("h3").hide();
 
     document.title = "XML3D: " + (CURRENT ? CURRENT.name : "Index");
 
-    stats();
+    //stats();
     //buildSocialLinks();
     //addGitHubRibbon();
+    $(document).foundation();
+    var minWidthQuery = window.matchMedia( "(min-width: 1024px)" );
+    minWidthQuery.addListener(handleScreenSize);
+    handleScreenSize(minWidthQuery);
 }
 
-function buildIndex(){
+function handleScreenSize(minScreenSizeQuery) {
+    if (window.PAGE_INDEX)
+        return;
+
+    if (minScreenSizeQuery.matches) {
+        $("#overall").addClass("offcanvas-overlap");
+        $("#nav-bar > .left-small").remove();
+        $("#inner > .exit-off-canvas").remove();
+    } else {
+        $("#overall").removeClass("offcanvas-overlap");
+        // add offscreen toggle button on small screens
+        $("#nav-bar").append($('<section class="left-small"><a class="left-off-canvas-toggle menu-icon" href="#"><span></span></a></section>'));
+        $("#inner").append($('<a class="exit-off-canvas"></a>'));
+    }
+}
+
+function buildIndex() {
     var content = $("#content");
     var container = $('<div id="start" ></div>');
     var list = buildTestList();
+    list.removeClass("off-canvas-list");
     container.append(list);
     content.append(container);
 }
 
-function buildNavigation(){
-    var navi = $('<div id="navigation" ></div>');
-    navi.append($("<h4>Navigation</h4>"));
+function buildNavigation() {
 
-    function adjustNavi(){
-        navi.height($(document.body).hasClass("navi_hidden") ? 43 : $(window).height() - 8);
-    }
-
-    navi.find("h4").click(function(){
-        $(document.body).toggleClass("navi_hidden");
-        adjustNavi();
-    });
-    $(window).bind('resize', adjustNavi);
-    adjustNavi();
-
-    var inner = $('<div class="inner"></div>');
-    navi.append(inner);
+    var navi = $('<aside class="left-off-canvas-menu">');
     var naviList = buildTestList();
-    inner.append(naviList);
+    navi.append(naviList);
 
-    naviList.prepend($('<li><a href="' + LINK_PREFIX + 'index.html">Index</a></li>'));
+    naviList.prepend($('<li><label>Examples</label></li><li><a href="' + LINK_PREFIX + 'index.html">Index</a></li>'));
 
-    $(document.body).prepend(navi);
+    $("#inner").append(navi);
 }
 
-function buildTestList(){
-    var naviList = $('<ul class="main" ></ul>');
+function buildTestList() {
+    var naviList = $('<ul class="off-canvas-list" ></ul>');
 
     for(var i in CATEGORY_LIST)
         CATEGORY_LIST[i].examples = [];
@@ -172,16 +188,12 @@ function buildTestList(){
         var cat = CATEGORY_LIST[catId];
         if(cat.examples.length == 0)
             continue;
-        var header = $('<li><h5>' + cat.name + '</h5></li>');
-        var list = $('<ul class="sub" ></ul>');
+        var header = $('<li><label>' + cat.name + '</label></li>');
+        naviList.append(header);
         for(var i in cat.examples){
             var entry = cat.examples[i];
-            list.append($('<li><a href="' + LINK_PREFIX + entry.href + '">' + entry.name + '</a><span class="info">' +
-                ( entry.info || "" ) + '</span></li>'))
-
+            naviList.append($('<li><a href="' + LINK_PREFIX + entry.href + '">' + entry.name + '</a><span class="info">' + ( entry.info || "" ) + '</span></li>'));
         }
-        header.append(list);
-        naviList.append(header);
     }
 
     return naviList;

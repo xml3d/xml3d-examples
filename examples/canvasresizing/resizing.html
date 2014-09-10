@@ -1,14 +1,18 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <!-- Style -->
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <!-- Scripts -->
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
     <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
     <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
 
     <title>XML3D Examples</title>
 
@@ -29,24 +33,28 @@
             window.addEventListener("mousemove", function(e) {
                 controller.doAction({x: e.clientX, y: e.clientY});
             }, false);
-
             // To bind a jQuery widget to the xml3d element you should specify a class for it (class="xml3d" in this case)
             // and use this as the selector. This ensures the widget is also applied to the canvas element that XML3D creates.
-            $(".xml3d").resizable();
-
+            $(".xml3d").resizable({
+                minWidth: 800,
+                minHeight: 600,
+            });
             // Fixing css issues caused by the widget's wrapper
-            $(".ui-wrapper").css({margin: "16px auto", overflow:""});
+//            $(".ui-wrapper").css({margin: "16px auto", overflow:""});
 
+//            window.requestAnimationFrame(function () {
+//                $("canvas").css("width", "800px");
+//                $("canvas").css("height", "600px");
+//            })
         }, false);
     </script>
 
 </head>
     <body>
         <div id="overall"><div id="content">
-            <h1>Canvas resizing example </h1>
-
-            <xml3d id="canvas" class="xml3d"
-                activeView="#cameraShape1" style="width:800px; height:600px; background-color:rgb(230, 230, 230); border:1px solid #aaf;">
+            <!--<h1>Canvas resizing example </h1>-->
+            <div style="width: 100vw; height: 100vh;">
+            <xml3d id="canvas" class="xml3d" activeView="#cameraShape1" style="width: 800px;height:600px;">
                 <defs>
                     <transform id="t_plane" scale="1.0 1.0 1.0"/>
                     <data id="planeShape-lib">
@@ -125,7 +133,7 @@
                     </group>
                 </group>
             </xml3d>
-
+            </div>
         </div></div>
     </body>
 </html>

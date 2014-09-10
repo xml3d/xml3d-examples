@@ -2,54 +2,63 @@
 <html lang="en">
 
 <head>
-  <meta http-equiv="content-type" content="text/html; charset=iso-8859-1" />
-  <meta name="description" content="A face morphing demonstration of XML3D and XFlow using principal component analysis."/>
-  <link rel="stylesheet" type="text/css" href="style.css" />
-  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
 
-   <script src="../../script/xml3d.js" type="text/javascript"></script>
-   <script src="../../script/xml3d-camera.js" type="text/javascript"></script>
-   <script src="scripts/SOTC-Trackbar.js" type="text/javascript"></script>
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+
+    <script src="scripts/SOTC-Trackbar.js" type="text/javascript"></script>
 
    <script src="scripts/shape.js" type="text/javascript"></script>
    <script src="scripts/pca_kernel.js" type="text/javascript"></script>
    <script src="scripts/deltashader.js" type="text/javascript"></script>
 
    <title>XML3D Examples</title>
-   <script type="text/javascript" src="../../script/jquery.min.js"></script>
-   <script type="text/javascript" src="../../script/page.js"></script>
 
 </head>
 
 <body onload="init()">
   <div id="overall"><div id="content">
-  <div id="container_header"><p>&nbsp;</p></div>
-    <div id="main" class="rounded_container">
-       <div id="site_content">
-       <div id="controls">
+       <div class="controls">
            <form action="">
-           <div style="float: right">
-           <!-- <input type="button" class="control_button" name="refpoint" onclick="setReferencePoint()" value="Set Reference Point" /> -->
-            <input type="button" class="control_button" name="reset" onclick="resetSliders()" value="Reset Sliders"/>
-           </div>
-           <div>
-            <span class="control_caption">Sex:</span>
-            <input type="radio" name="sex" value="male" checked="true" onclick="changeToFaceType('Male')"/> <span style="margin-right: 10px;">Male</span>
-            <input type="radio" name="sex" value="female" onclick="changeToFaceType('Female')"/> Female
-           </div>
-           <div>
-            <span class="control_caption">Shader:</span>
-            <input type="radio" name="shader" value="Phong" checked="true" onclick="changeShaderTo('#phongShader')"/> <span style="margin-right: 10px;">Phong</span>
-            <input type="radio" name="shader" value="Delta" onclick="changeShaderTo('#deltaShader')"/> Delta
-           </div>
-
+               <!--<div style="float: right">-->
+               <!-- <input type="button" class="control_button" name="refpoint" onclick="setReferencePoint()" value="Set Reference Point" /> -->
+               <!--</div>-->
+               <div>
+                <span class="control_caption">Sex:</span>
+                <input type="radio" name="sex" value="male" checked="true" onclick="changeToFaceType('Male')"/> <span style="margin-right: 10px;">Male</span>
+                <input type="radio" name="sex" value="female" onclick="changeToFaceType('Female')"/> Female
+               </div>
+               <div>
+                <span class="control_caption">Shader:</span>
+                <input type="radio" name="shader" value="Phong" checked="true" onclick="changeShaderTo('#phongShader')"/> <span style="margin-right: 10px;">Phong</span>
+                <input type="radio" name="shader" value="Delta" onclick="changeShaderTo('#deltaShader')"/> <span style="margin-right: 10px;">Delta</span>
+               </div>
+               <input type="button" class="control_button" name="reset" onclick="resetSliders()" value="Reset Sliders"/>
            </form>
+           <div id="trackerdiv">
+               <div>
+                   <div style="position:relative;height:50px;width:430px;float:left;" id="trackbarHolder1"></div>
+                   <div style="position:relative;height:50px;width:430px;float:left;" id="trackbarHolder2"></div>
+                   <div style="position:relative;height:50px;width:430px;float:left;" id="trackbarHolder3"></div>
+               </div>
+               <div>
+                   <div style="position:relative;float:left;height:50px;width:430px;" id="trackbarHolder4"></div>
+                   <div style="position:relative;float:left;height:50px;width:430px;" id="trackbarHolder5"></div>
+                   <div style="position:relative;float:left;height:50px;width:430px;" id="trackbarHolder6"></div>
+               </div>
+           </div>
        </div>
 
-    <div style="width: 800px; height=600px;">
-        <xml3d id="xml3dmain" activeView="#Camera" style="width: 800px; height: 550px; background-color:#f8f8f8;" >
+    <div>
+        <xml3d id="xml3dmain" activeView="#Camera" >
          <defs id="mainDef">
-          <transform id="t_Camera" rotation="-0.578102 -0.777834 -0.246520 1.382361" scale="1.000000 1.000000 1.000000" translation="-5.000000 8.000000 5.000000"></transform>
+          <transform id="t_Camera" rotation="-0.578102 -0.777834 -0.246520 1.382361" scale="1.000000 1.000000 1.000000" translation="-15.000000 8.000000 5.000000"></transform>
           <transform id="t_Lamp" scale="1.000000 1.000000 1.000000" translation="0 0 0"></transform>
           <transform id="t_face" rotation="1.000000 0.000000 0.000000 -0.20000" scale="1 1 1" translation="1.000000 -1.000000 0.000000"></transform>
 
@@ -116,7 +125,7 @@
 
          </defs>
 
-         <view id="Camera" position="0.000000 -2.000000 35.000000"></view>
+         <view id="Camera" position="0.000000 -6.000000 40.000000"></view>
 
          <group transform="#t_Lamp">
           <light shader="#ls_Spot"></light>
@@ -126,23 +135,11 @@
          </group>
 
         </xml3d>
-      <div id="trackerdiv" style="padding-left: 75px;">
-        <div>
-          <div style="position:relative;height:50px;width:430px;float:left;" id="trackbarHolder1"></div>
-          <div style="position:relative;height:50px;width:430px;float:left;" id="trackbarHolder2"></div>
-          <div style="position:relative;height:50px;width:430px;float:left;" id="trackbarHolder3"></div>
-        </div>
-        <div>
-          <div style="position:relative;left:430px;height:50px;width:430px;" id="trackbarHolder4"></div>
-          <div style="position:relative;left:430px;height:50px;width:430px;" id="trackbarHolder5"></div>
-          <div style="position:relative;left:430px;height:50px;width:430px;" id="trackbarHolder6"></div>
-        </div>
-        </div>
     </div>
     </div>
 
   </div>
-  <div id="container_footer" class="rounded_container">
+  <div class="description">
         3D faces from the BU-3DFE database:
         <p class="biblio" style="padding-top: 5px;">
             Lijun Yin, Xiaozhou Wei, Yi Sun, Jun Wang, Matthew J. Rosato. <em>"A 3D Facial Expression Database For Facial Behavior Research."</em> 7th International Conference on Automatic Face and Gesture Recognition (FGR06), 10-12 April 2006 P:211 - 216.
@@ -152,7 +149,5 @@
             Augusto Salazar, Stefanie Wuhrer, Chang Shu, Flavio Prieto. <em>"Fully Automatic Expression-Invariant Face Correspondence"</em>. arXiv report 1202.1444.
         </p>
     </div>
-  <p style="float: left;padding: 0;">&nbsp;</p>
-</div></div>
 </body>
 </html>

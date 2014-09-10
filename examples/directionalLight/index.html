@@ -1,28 +1,29 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <!-- Style -->
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <!-- Scripts -->
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/jquery.min.js"></script>
-    <script type="text/javascript" src="../../script/jquery-ui.js"></script>
-    <script type="text/javascript" src="../../script/agility.min.js"></script>
-    <script type="text/javascript" src="../../script/page.js"></script>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
 
-    <title>XML3D Examples - Directional Light</title>
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 
+    <title>XML3D Examples - Directional Light</title>
 </head>
 <body>
 <div id="overall">
     <div id="content">
-        <h1>Directional Light - urn:xml3d:lightshader:directional</h1>
-<input type="checkbox" id="check" /><label for="check">Animate</label>
+        <!--<h1>Directional Light - urn:xml3d:lightshader:directional</h1>-->
 
-        <xml3d activeView="#defaultView" class="xml3d" style="width: 600px; height: 400px;background-color:rgb(14,56,102)">
-     <defs id="mainDef">
+        <xml3d activeView="#defaultView" class="xml3d">
+        <defs id="mainDef">
       <transform id="t_Camera.001" rotation="0.920225 0.386587 0.061130 0.812012" scale="1.000000 1.000000 1.000000" translation="6.979012 -8.424916 10.316041"></transform>
       <transform id="t_Lamp"></transform>
       <data id="Sphere_data">
@@ -59,6 +60,12 @@
       <light shader="#ls_directional"></light>
      </group>
     </xml3d>
+        <div class="controls" >
+            <div class="option">
+                <label for="check">Animate</label>
+                <input type="checkbox" id="check" />
+            </div>
+        </div>
 
 	  <script>
 		$(function() {

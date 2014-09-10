@@ -1,13 +1,17 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <!-- Style -->
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <!-- Scripts -->
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/jquery.min.js"></script>
-    <script type="text/javascript" src="../../script/page.js"></script>
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+      <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+      <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+      <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+      <script type="text/javascript" src="../../script/page.js"></script>
+      <script type="text/javascript" src="../../script/xml3d.js"></script>
+
     <title>XML3D Examples</title>
     <script type="text/javascript">
         // http://www.html5rocks.com/en/tutorials/getusermedia/intro/
@@ -69,9 +73,8 @@
   <body>
     <div id="overall">
       <div id="content">
-        <h1>Webcam Texture</h1>
 
-        <xml3d id="MyXml3d" style="width: 640px; height: 480px; border: 1px solid gray" class="xml3d" activeView="#myview" >
+        <xml3d id="MyXml3d" class="xml3d" activeView="#myview" >
           <defs>
             <shader id="ex4_2_texShader" script="urn:xml3d:shader:phong">
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>

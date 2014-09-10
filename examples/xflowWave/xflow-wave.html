@@ -1,15 +1,20 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Style -->
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <!-- Scripts -->
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/jquery.min.js"></script>
-    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
-    <script type="text/javascript" src="../../script/page.js"></script>
-    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+      <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+      <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+      <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+      <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+      <script type="text/javascript" src="../../script/page.js"></script>
+      <script type="text/javascript" src="../../script/xml3d.js"></script>
+      <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
     <script type="text/javascript" src="./myxflow.js" ></script>
     <title>XML3D Examples</title>
     <script type="text/javascript">
@@ -40,10 +45,7 @@
   </head>
   <body>
   <div id="overall"><div id="content">
-   <h1>
-    Wave it!
-   </h1>
-    <xml3d id="myxml3d" class="xml3d" activeView="#Camera" style="background: black;" >
+    <xml3d id="myxml3d" class="xml3d" activeView="#Camera" >
      <defs id="mainDef">
 
       <!--- Not so important part: -->
