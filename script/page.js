@@ -105,7 +105,7 @@ function initPage(){
     inner.append(navbar);
 
     var breadcrumb = $('<ul class="breadcrumbs right">');
-    breadcrumb.append($('<li><a href="/index.html">XML3D Examples</a>'));
+    breadcrumb.append($('<li><a href="../../index.html">XML3D Examples</a>'));
     inner.append(breadcrumb);
 
     var content = $("#content");
@@ -121,7 +121,7 @@ function initPage(){
         $(document.body).css("overflow", "hidden");
         buildNavigation();
         if(CURRENT_CAT)
-            breadcrumb.append($('<li><a href="/index.html">' + CURRENT_CAT.name + '</a>'));
+            breadcrumb.append($('<li><a href="../../index.html">' + CURRENT_CAT.name + '</a>'));
         if(CURRENT)
             breadcrumb.append($('<li class="current"><a href=/' + CURRENT.href + '>' + CURRENT.name + '</a>'));
 
