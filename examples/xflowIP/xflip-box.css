@@ -22,7 +22,6 @@
     display: block;
 }
 
-
 .xflipBox .options{
     position: absolute;
     top: 100%;
@@ -32,21 +31,25 @@
     display: none;
     text-align: center;
     padding: 4px;
+    z-index: 100;
 }
 .xflipBox:hover .options{
     display: block;
 }
 
-.xflipOverall{
+.xflipOverall {
     padding-top: 16px;
     padding-bottom: 64px;
+    margin-left: 30vw;
+    height: 100vh;
+    width: 50%;
 }
 
 .xflipOverall h1{
      margin-bottom: 16px;
 }
 
-.xflipOverall:after{
+.xflipOverall:after {
     content: " ";
     display: block;
     clear: both;

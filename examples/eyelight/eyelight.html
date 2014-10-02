@@ -1,13 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <!-- Style -->
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <!-- Scripts -->
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/jquery.min.js"></script>
-    <script type="text/javascript" src="../../script/page.js"></script>
 
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
     <title>XML3D Examples</title>
 
     <!-- Camera Control: -->
@@ -32,14 +35,11 @@
     <!-- Custom Shader: -->
 
     <script type="text/javascript" src="eyelightShader.js" ></script>
-
-
 </head>
     <body>
         <div id="overall"><div id="content">
-            <h1>Custom Shader Example: Eyelight Shader </h1>
             <xml3d id="canvas" class="xml3d"
-                activeView="#cameraShape1" style="width: 800px;height:600px;background-color:black;">
+                activeView="#cameraShape1">
                 <defs>
                     <transform id="t_plane" scale="1.0 1.0 1.0"></transform>
                     <data id="planeShape-lib">

@@ -1,32 +1,33 @@
-@font-face {
-  font-family: 'Droid Sans';
-  font-style: normal;
-  font-weight: 400;
-  src: local('Droid Sans'), local('DroidSans'), url(http://themes.googleusercontent.com/static/fonts/droidsans/v3/s-BiyweUPV0v-yRb-cjciBsxEYwM7FgeyaSgU71cLG0.woff) format('woff');
-}
+/*@font-face {*/
+  /*font-family: 'Droid Sans';*/
+  /*font-style: normal;*/
+  /*font-weight: 400;*/
+  /*src: local('Droid Sans'), local('DroidSans'), url(http://themes.googleusercontent.com/static/fonts/droidsans/v3/s-BiyweUPV0v-yRb-cjciBsxEYwM7FgeyaSgU71cLG0.woff) format('woff');*/
+/*}*/
 
-body {
-  background-color:#1a99e6;
-}
+/*body {*/
+  /*background-color:#1a99e6;*/
+/*}*/
 
-.ben {
- position:absolute;
- top:10px;
- left:10px;
- font-family: 'Droid Sans', sans-serif;
- color: white;
- font-size:30pt
-}
+/*.ben {*/
+ /*position:absolute;*/
+ /*top:10px;*/
+ /*left:10px;*/
+ /*font-family: 'Droid Sans', sans-serif;*/
+ /*color: white;*/
+ /*font-size:30pt*/
+/*}*/
 
-.xml3d{
-    border: none !important;
-}
+/*.xml3d{*/
+    /*border: none !important;*/
+/*}*/
 
-#content{
-    border: none !important;
-}
+/*#content{*/
+    /*border: none !important;*/
+/*}*/
 
-object{
-    display: block;
-    margin: 0 auto;
+object {
+    position: absolute;
+    right: 0px;
+    bottom: calc(205px / 2.0);
 }
