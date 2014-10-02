@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2010-2013
+Copyright (c) 2010-2014
               DFKI - German Research Center for Artificial Intelligence
               www.dfki.de
 
@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: 4.5
+@version: 4.6
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = '4.5';
+XML3D.version = '4.6';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -250,6 +250,8 @@ XML3D.createClass = function(ctor, parent, methods) {
 
     function onLoad() {
 
+        XML3D.options.setOptionsFromQuery();
+
         XML3D.css.init();
 
         var debug = XML3D.debug.setup();
@@ -287,6 +289,828 @@ XML3D.createClass = function(ctor, parent, methods) {
     document.addEventListener('DOMNodeRemoved', onNodeRemoved, false);
 
 })();
+//TODO: Helpful API methods concerning WebCL will be added when needed. Please provide feedback!
+
+/**
+ * @file WebCL API. Provides useful methods for initialising and utilising the WebCL platform.
+ * @version 0.2
+ * @author Toni Dahl
+ */
+
+(function (namespace, undefined) {
+
+    "use strict";
+
+    var platforms = [],
+        devices = [],
+        ctx = null,
+
+        WebCLNamespaceAvailable = false,
+        OpenCLDriversAvailable = false;
+
+    /**
+     *     @constant {string} DEFAULT_DEVICE
+     *     @default "CPU"
+     */
+    var DEFAULT_DEVICE = "CPU",
+
+        /**
+         *     @readonly
+         *     @name CL_ERROR_CODES
+         *     @enum {number}
+         */
+            CL_ERROR_CODES = {
+            "SUCCESS": 0,
+            "DEVICE_NOT_FOUND": -1,
+            "DEVICE_NOT_AVAILABLE": -2,
+            "COMPILER_NOT_AVAILABLE": -3,
+            "MEM_OBJECT_ALLOCATION_FAILURE": -4,
+            "OUT_OF_RESOURCES": -5,
+            "OUT_OF_HOST_MEMORY": -6,
+            "PROFILING_INFO_NOT_AVAILABLE": -7,
+            "MEM_COPY_OVERLAP": -8,
+            "IMAGE_FORMAT_MISMATCH": -9,
+            "IMAGE_FORMAT_NOT_SUPPORTED": -10,
+            "BUILD_PROGRAM_FAILURE": -11,
+            "MAP_FAILURE": -12,
+            "INVALID_VALUE": -30,
+            "INVALID_DEVICE_TYPE": -31,
+            "INVALID_PLATFORM": -32,
+            "INVALID_DEVICE": -33,
+            "INVALID_CONTEXT": -34,
+            "INVALID_QUEUE_PROPERTIES": -35,
+            "INVALID_COMMAND_QUEUE": -36,
+            "INVALID_HOST_PTR": -37,
+            "INVALID_MEM_OBJECT": -38,
+            "INVALID_IMAGE_FORMAT_DESCRIPTOR": -39,
+            "INVALID_IMAGE_SIZE": -40,
+            "INVALID_SAMPLER": -41,
+            "INVALID_BINARY": -42,
+            "INVALID_BUILD_OPTIONS": -43,
+            "INVALID_PROGRAM": -44,
+            "INVALID_PROGRAM_EXECUTABLE": -45,
+            "INVALID_KERNEL_NAME": -46,
+            "INVALID_KERNEL_DEFINITION": -47,
+            "INVALID_KERNEL": -48,
+            "INVALID_ARG_INDEX": -49,
+            "INVALID_ARG_VALUE": -50,
+            "INVALID_ARG_SIZE": -51,
+            "INVALID_KERNEL_ARGS": -52,
+            "INVALID_WORK_DIMENSION": -53,
+            "INVALID_WORK_GROUP_SIZE": -54,
+            "INVALID_WORK_ITEM_SIZE": -55,
+            "INVALID_GLOBAL_OFFSET": -56,
+            "INVALID_EVENT_WAIT_LIST": -57,
+            "INVALID_EVENT": -58,
+            "INVALID_OPERATION": -59,
+            "INVALID_GL_OBJECT": -60,
+            "INVALID_BUFFER_SIZE": -61,
+            "INVALID_MIP_LEVEL": -62,
+            "INVALID_GLOBAL_WORK_SIZE": -63
+        };
+    Object.freeze(CL_ERROR_CODES);
+
+
+    function isNumber(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
+    }
+
+    /**
+     * Returns a CL error name corresponding to a CL error code
+     *
+     * @function XML3D.webcl~getCLErrorName
+     * @param {number} errorCode
+     * @returns {string}
+     */
+
+    function getCLErrorName(errorCode) {
+        var prop;
+
+        if (isNumber(errorCode)) {
+            for (prop in CL_ERROR_CODES) {
+                if (CL_ERROR_CODES[prop] === errorCode) {
+                    return prop;
+                }
+            }
+            XML3D.debug.logDebug("Got unknown OpenCL Error Code:", errorCode);
+        }
+
+        return "UNKNOWN_ERROR";
+    }
+
+    /**
+     * Gets an error code from a CL error message (thrown by Nokia WebCL Plugin)
+     *
+     * @param e
+     * @returns {Integer|Boolean}
+     */
+
+    function getErrorCodeFromCLError(e) {
+        var code = null;
+
+        if (e.name && typeof e.name === "string") {
+            if (CL_ERROR_CODES[e.name]) {
+                return CL_ERROR_CODES[e.name];
+            }
+        }
+        if (e.message && typeof e.message === "string") {
+            code = e.message.match(/-?\d+/g);
+
+            if (code instanceof Array) {
+                return parseInt(code[code.length - 1], 10);
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Creates instance of WebCLError
+     *
+     * @constructor XML3D.webcl~WebCLError
+     * @param {string} [name="WebCLError"] Error name
+     * @param {string} [msg="Generic WebCL error."] The desired error message
+     */
+
+    function WebCLError(name, msg) {
+        if (name && typeof name !== "string") {
+            XML3D.debug.logDebug("WebCL API: WebCLError: Error name not type of String");
+            name = "";
+        }
+
+        if (msg && typeof msg !== "string") {
+            XML3D.debug.logDebug("WebCL API: WebCLError: Error message not type of String");
+            msg = "";
+        }
+
+        this.name = name || "WebCLError";
+        this.message = msg || "Generic WebCL error.";
+        this.stack = (new Error()).stack;
+    }
+
+    WebCLError.prototype = Object.create(Error.prototype);
+    WebCLError.prototype.constructor = WebCLError;
+
+
+    /**
+     * Checks if WebCL namespace is available. The namespace can be provided by a WebCL plugin or native implementation.
+     *
+     * @function XML3D.webcl~hasWebCLNamespace
+     * @returns {Boolean}
+     */
+
+    function hasWebCLNamespace() {
+        WebCLNamespaceAvailable = window.WebCL && WebCL.getPlatforms;
+
+        return WebCLNamespaceAvailable;
+
+    }
+
+    /**
+     * Tests a basic WebCL method to see if the OpenCL drivers are working on users device.
+     *
+     * @function XML3D.webcl~hasOpenCLDrivers
+     * @returns {Boolean}
+     */
+
+    function hasOpenCLDrivers() {
+        var platArr;
+        OpenCLDriversAvailable = true;
+
+        try {
+            platArr = WebCL.getPlatforms();
+        } catch (e) {
+            OpenCLDriversAvailable = false;
+        }
+
+        if (!platArr || platArr.length === 0) {
+            OpenCLDriversAvailable = false;
+        }
+
+        return OpenCLDriversAvailable;
+
+    }
+
+    /**
+     * Combines WebCL namespace and driver test.
+     *
+     * @function XML3D.webcl~isAvailable
+     * @returns {Boolean}
+     */
+
+    function isAvailable() {
+        return hasWebCLNamespace() && hasOpenCLDrivers();
+    }
+
+
+    /**
+     * Initialises the WebCL API with default values using a predefined device type or a default device type.
+     *
+     * @function XML3D.webcl~init
+     * @param {string} [type="CPU"] Device type
+     * @return {Boolean}
+     */
+
+    function init(type) {
+        // Checking if WebCL is available in the users system
+        if (!hasWebCLNamespace()) {
+            XML3D.debug.logWarning("WebCL API: Unfortunately your system does not support WebCL. " +
+                "WebCL namespace is not available.");
+            return false;
+        }
+
+        if (!hasOpenCLDrivers()) {
+            XML3D.debug.logWarning("WebCL API: Unfortunately your system does not support WebCL. " +
+                "OpenCL drivers are not working properly.");
+            return false;
+        }
+
+        getPlatforms();
+
+        devices = getDevicesByType(type || DEFAULT_DEVICE);
+
+        // Creating default context
+        ctx = createContext({devices: devices});
+
+        return true;
+    }
+
+    /**
+     * Returns all available WebCL device platforms.
+     *
+     * @function XML3D.webcl~getPlatforms
+     * @returns {Array}
+     */
+
+    function getPlatforms() {
+        if(platforms.length === 0) {
+            platforms = WebCL.getPlatforms();
+        }
+
+        return platforms;
+    }
+
+    /**
+     * Returns all devices of a chosen type from a selected platform.
+     *
+     * @param {string} [type="CPU"] Device type
+     * @param {IWebCLPlatform} platform
+     * @returns {Array|Boolean}
+     */
+
+    function getPlatformDevicesByType(type, platform) {
+        var deviceArr = [], errCode;
+
+        if (!platform) {
+            XML3D.debug.logError("WebCL API: getPlatformDevicesByType(): platform was not defined.");
+            return false;
+        }
+
+        type = type || DEFAULT_DEVICE;
+
+        try {
+            if (type === "CPU") {
+                deviceArr = platform.getDevices(WebCL.DEVICE_TYPE_CPU);
+            } else if (type === "GPU") {
+                deviceArr = platform.getDevices(WebCL.DEVICE_TYPE_GPU);
+            } else if (type === "ALL") {
+                deviceArr = platform.getDevices(WebCL.DEVICE_TYPE_ALL);
+            }
+
+        } catch (e) {
+            errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            } else if (errCode !== CL_ERROR_CODES.DEVICE_NOT_FOUND) {
+                throw new WebCLError(getCLErrorName(errCode), "Could not get devices.");
+            }
+
+            return false;
+        }
+
+        return deviceArr;
+    }
+
+    /**
+     * Gets all devices of a selected type from all available platforms.
+     *
+     * @function XML3D.webcl~getDevicesByType
+     * @param {string} type Device type
+     * @returns {Array|Boolean}
+     */
+
+    function getDevicesByType(type) {
+        var resultArr = [], deviceArr, i;
+
+        getPlatforms();
+
+        for (i = platforms.length; i--;) {
+            deviceArr = getPlatformDevicesByType(type, platforms[i]);
+
+            if (deviceArr) {
+                deviceArr.forEach(function (v) {
+                    resultArr.push(v);
+                });
+            }
+        }
+        return resultArr.length === 0 ? false : resultArr;
+    }
+
+
+    /**
+     * Gets the platform on where the device is.
+     *
+     * @function XML3D.webcl~getDevicePlatform
+     * @param {IWebCLDevice} device
+     * @returns {IWebCLPlatform|Boolean}
+     */
+
+    function getDevicePlatform(device) {
+        var platform;
+
+        if (!device) {
+            XML3D.debug.logError("WebCL API: getDevicePlatform(): device was not defined.");
+            return false;
+        }
+
+        try {
+            platform = device.getInfo(WebCL.DEVICE_PLATFORM);
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+
+            throw new WebCLError(getCLErrorName(errCode), "Could not get the platform of the device.");
+        }
+
+        return platform;
+    }
+
+    /**
+     *
+     * @param clCtx
+     * @returns {boolean}
+     */
+
+    function getContextDevices(clCtx) {
+        var deviceArr = [], errCode;
+
+        if(!clCtx) {
+            XML3D.debug.logError("WebCL API: getContextDevices(): clCtx was not defined.");
+            return false;
+        }
+
+        try {
+            deviceArr = clCtx.getInfo(WebCL.CONTEXT_DEVICES);
+        }catch(e) {
+            errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            } else {
+                throw new WebCLError(getCLErrorName(errCode), "Could not get devices.");
+            }
+
+        }
+
+        return deviceArr.length === 0 ? false : deviceArr;
+    }
+
+    /**
+     * Creates a WebCL context
+     *
+     * @function XML3D.webcl~createContext
+     * @param {object} [properties]
+     * @returns {IWebCLContext}
+     */
+
+    function createContext(properties) {
+        var props = {
+            devices: getDevicesByType(DEFAULT_DEVICE)
+            }, context;
+
+        XML3D.extend(props, properties);
+
+        try {
+            context = WebCL.createContext(props);
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+            throw new WebCLError(getCLErrorName(errCode), "Failed to create a WebCL context.");
+        }
+
+        return context;
+    }
+
+    /**
+     * Gets the default WebCL context.
+     *
+     * @function XML3D.webcl~getDefaultContext
+     * @returns {IWebCLContext}
+     */
+
+    function getDefaultContext() {
+        return ctx;
+    }
+
+
+    /**
+     * Creates a WebCL program from a string of WebCL code.
+     *
+     * @function XML3D.webcl~createProgram
+     * @param {string} codeStr
+     * @param {IWebCLContext} clCtx
+     * @returns {IWebCLProgram | Boolean}
+     */
+
+    function createProgram(codeStr, clCtx) {
+        var program;
+
+        clCtx = clCtx || ctx;
+
+        if (!codeStr) {
+            XML3D.debug.logError("WebCL API: createProgram(): codeStr was not defined.");
+            return false;
+        }
+
+        if (!clCtx) {
+            XML3D.debug.logError("WebCL API: createProgram(): clCtx was not defined.");
+            return false;
+        }
+
+        try {
+            program = clCtx.createProgram(codeStr);
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+
+            throw new WebCLError(getCLErrorName(errCode), "Failed to create a WebCL program.");
+        }
+
+        return program;
+    }
+
+    /**
+     * Builds a WebCL program.
+     *
+     * @function XML3D.webcl~buildProgram
+     * @param {IWebCLProgram} program
+     * @param {Array} deviceArr
+     * @returns {IWebCLProgram|Boolean}
+     */
+
+    function buildProgram(program, deviceArr) {
+        deviceArr = deviceArr || devices;
+
+        if (!program) {
+            XML3D.debug.logError("WebCL API: buildProgram(): program was not defined.");
+            return false;
+        }
+
+        try {
+            program.build(deviceArr, "");
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+            throw new WebCLError(getCLErrorName(errCode),
+                program.getBuildInfo(deviceArr[0], WebCL.CL_PROGRAM_BUILD_LOG));
+        }
+
+        return program;
+    }
+
+    /**
+     * Creates a WebCL Kernel using a defined program.
+     *
+     * @function XML3D.webcl~createKernel
+     * @param {IWebCLProgram} program
+     * @param {string} name
+     * @returns {IWebCLKernel|Boolean}
+     */
+
+    function createKernel(program, name) {
+        var kernel;
+
+        if (!program) {
+            XML3D.debug.logError("WebCL API: createKernel(): program was not defined.");
+            return false;
+        }
+
+        if (!name) {
+            XML3D.debug.logError("WebCL API: createKernel(): name was not defined.");
+            return false;
+        }
+
+        try {
+            kernel = program.createKernel(name);
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+            throw new WebCLError(getCLErrorName(errCode), "Failed to create a WebCL kernel.");
+        }
+
+        return kernel;
+    }
+
+    /**
+     * Creates a WebCL Command Queue for queueing kernels for execution.
+     *
+     * @function XML3D.webcl~createCommandQueue
+     * @param {IWebCLDevice} device
+     * @param {IWebCLContext} clCtx
+     * @returns {IWebCLCommandQueue|Boolean}
+     */
+
+    function createCommandQueue(device, clCtx) {
+        var cmdQueue;
+
+        clCtx = clCtx || ctx;
+
+        if(!clCtx) {
+            XML3D.debug.logError("WebCL API: createCommandQueue: clCtx was not defined");
+            return false;
+        }
+
+        try {
+            cmdQueue = clCtx.createCommandQueue(device || devices[0], 0);
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+            throw new WebCLError(getCLErrorName(getErrorCodeFromCLError(e)), "Could not create CommandQueue.");
+        }
+
+        return cmdQueue;
+    }
+
+    /**
+     * Creates an input/output buffer to be used with a WebCL kernel
+     *
+     * @function XML3D.webcl~createBuffer
+     * @param {int} size
+     * @param {string} type
+     * @param {IWebCLContext} clCtx
+     * @returns {IWebCLMemoryObject|Boolean}
+     */
+
+    function createBuffer(size, type, clCtx) {
+        clCtx = clCtx || ctx;
+
+        if (!size) {
+            XML3D.debug.logError("WebCL API: createBuffer(): Buffer size was not defined.");
+            return false;
+        }else if (!isNumber(size) || size < 0) {
+            XML3D.debug.logError("WebCL API: createBuffer(): Buffer size must be a positive number.");
+            return false;
+        }
+
+        if (!type) {
+            XML3D.debug.logError("WebCL API: createBuffer(): Buffer type was not defined.");
+            return false;
+        }
+
+        if(!clCtx) {
+            XML3D.debug.logError("WebCL API: createBuffer(): clCtx was not defined.");
+            return false;
+        }
+
+        try {
+            if (type === "r") {
+                return clCtx.createBuffer(WebCL.CL_MEM_READ_ONLY, size);
+            } else if (type === "w") {
+                return clCtx.createBuffer(WebCL.CL_MEM_WRITE_ONLY, size);
+            } else if (type === "rw") {
+                return clCtx.createBuffer(WebCL.CL_MEM_READ_WRITE, size);
+            } else {
+                XML3D.debug.logError("WebCL API: createBuffer(): Unknown buffer type:", type);
+                return false;
+            }
+        } catch (e) {
+            var errCode = getErrorCodeFromCLError(e);
+
+            if (!errCode) {
+                throw e;
+            }
+            throw new WebCLError(getCLErrorName(errCode), "Could not create a WebCL buffer.");
+        }
+    }
+
+    /**
+     * Creates an instance of KernelManager.
+     *
+     * @name KernelManager
+     * @constructor XML3D.webcl~KernelManager
+     */
+
+    var KernelManager = function (clCtx, deviceArr) {
+        var kernels = {};
+
+        return {
+
+            /**
+             * Creates and builds a WebCL program from a code string and creates a WebCL kernel from the program.
+             *
+             * @function KernelManager~register
+             * @param {string} name
+             * @param {string} codeStr
+             */
+
+            register: function (name, codeStr) {
+                if (kernels.hasOwnProperty(name)) {
+                    XML3D.debug.logWarning("WebCL API: kernels.register(): Kernel with a same name is already defined.");
+                    return false;
+                }
+
+                if (typeof name !== "string") {
+                    XML3D.debug.logError("WebCL API: kernels.register(): Kernel name was not defined or was not type of String.");
+                    return false;
+                }
+
+                if (typeof codeStr !== "string") {
+                    XML3D.debug.logError("WebCL API: kernels.register(): Kernel code was not defined or was not type of String.");
+                    return false;
+                }
+
+                var program, kernel;
+
+                program = createProgram(codeStr, clCtx);
+
+                buildProgram(program, deviceArr);
+
+                if (program) {
+                    kernel = createKernel(program, name);
+                }
+
+                if (kernel) {
+                    kernels[name] = kernel;
+
+                    return true;
+                }
+
+                return false;
+
+            },
+
+            /**
+             * Deallocates and unregisters a kernel.
+             *
+             * @function KernelManager~unRegister
+             * @param {string} name
+             */
+
+            unRegister: function (name) {
+                if (kernels.hasOwnProperty(name)) {
+                    try {
+                        kernels[name].release();
+                    } catch (e) {
+                        var errCode = getErrorCodeFromCLError(e);
+
+                        if (!errCode) {
+                            throw e;
+                        }
+
+                        throw new WebCLError(getCLErrorName(errCode), "Could not release kernel resources.");
+                    }
+                    delete kernels[name];
+
+                    return true;
+                }
+
+                return false;
+            },
+
+            /**
+             * Gets a kernel of a specified name.
+             *
+             * @function KernelManager~getKernel
+             * @param {string} name
+             * @returns {IWebCLKernel | Boolean}
+             */
+
+            getKernel: function (name) {
+                if (typeof name !== "string") {
+                    return false;
+                }
+
+                if (kernels.hasOwnProperty(name)) {
+                    return kernels[name];
+                }
+
+                return false;
+            },
+
+            /**
+             * Sets arguments of a specified kernel.
+             * The first argument of this function is a registered kernel name, other arguments are the kernel arguments respectively.
+             *
+             * @function KernelManager~setArgs
+             * @param {IWebCLKernel} kernel WebCL kernel
+             * @param {...*} args Kernel arguments in the same order as defined in the kernel code
+             * @returns {boolean}
+             */
+
+            setArgs: function () {
+                var args = Array.prototype.slice.call(arguments),
+                    kernel, inputArgs, nKernelArgs, i;
+
+                if (args.length < 2) {
+                    XML3D.debug.logWarning("WebCL API: setArgs(): No kernel arguments were defined.");
+                    return false;
+                }
+
+                kernel = args[0];
+                inputArgs = args.slice(1);
+
+                if (!kernel) {
+                    XML3D.debug.logWarning("WebCL API: setArgs(): WebCL kernel was not defined.");
+                    return false;
+                }
+
+                nKernelArgs = kernel.getInfo(WebCL.CL_KERNEL_NUM_ARGS);
+
+                if (inputArgs.length > nKernelArgs) {
+                    XML3D.debug.logWarning("WebCL: setArgs: Input args amount > kernel program args amount! Ignoring extra arguments.");
+                } else if (inputArgs.length < nKernelArgs) {
+                    XML3D.debug.logError("WebCL: setArgs: Not enough arguments were given to WebCL kernel.");
+                    return false;
+                }
+
+                XML3D.debug.logDebug("Args for kernel:", kernel.getInfo(WebCL.KERNEL_FUNCTION_NAME));
+
+                i = nKernelArgs;
+
+                try {
+                    while (i--) {
+                        XML3D.debug.logDebug("Arg:", i, inputArgs[i]);
+                        kernel.setArg(i, inputArgs[i]);
+                    }
+                } catch (e) {
+                    var errCode = getErrorCodeFromCLError(e);
+
+                    if (!errCode) {
+                        throw e;
+                    }
+                    throw new WebCLError(getCLErrorName(errCode), "Could not set kernel arguments.");
+                }
+
+                return true;
+
+            }
+        };
+    };
+
+
+    /**
+     * API
+     *
+     * @namespace webcl
+     * @memberOf XML3D
+     */
+
+    namespace['webcl'] = {
+        "init": init,
+        "createContext": createContext,
+        "createProgram": createProgram,
+        "buildProgram": buildProgram,
+        "createKernel": createKernel,
+        "createCommandQueue": createCommandQueue,
+        "createBuffer": createBuffer,
+        "getDefaultContext": getDefaultContext,
+        "getPlatforms": getPlatforms,
+        "getDevicesByType": getDevicesByType,
+        "getContextDevices": getContextDevices,
+        "getDevicePlatform": getDevicePlatform,
+
+        /** @name XML3D.webcl~kernels */
+        "kernels": new KernelManager(),
+        "KernelManager": KernelManager,
+
+        "hasWebCLNamespace": hasWebCLNamespace,
+        "hasOpenCLDrivers": hasOpenCLDrivers,
+        "isAvailable": isAvailable,
+        "WebCLError": WebCLError,
+        "getCLErrorName": getCLErrorName
+    };
+
+
+}(XML3D = XML3D || {}));
 // utils/misc.js
 
 XML3D.setParameter = function(elementId, fieldName, value) {
@@ -509,117 +1333,231 @@ if (!Array.isArray) {
         return Object.prototype.toString.call(arg) == '[object Array]';
     };
 }
-XML3D.debug = {
-    ALL : 0,
-    DEBUG: 1,
-    INFO : 2,
-    WARNING : 3,
-    ERROR : 4,
-    EXCEPTION : 5,
-    params : {},
-    isSetup : false,
-    loglevel : 4,
-    loglevels : {
-        all : 0,
-        debug : 1,
-        info : 2,
-        warning : 3,
-        error : 4,
-        exception : 5
-    },
+(function (ns) {
 
-    setup : function() {
-        var debug = XML3D.debug;
-        if (!debug.isSetup) {
-            var p = window.location.search.substr(1).split('&');
-            p.forEach(function(e, i, a) {
-              var keyVal = e.split('=');
-              debug.params[keyVal[0].toLowerCase()] = decodeURIComponent(keyVal[1]);
+    /**
+     * Class to handle options. Currently only used for global options, could
+     * be extended to work hierarchically to configure other elements.
+     * @constructor
+     */
+    var Options = function () {
+        this._options = {};
+        this._listeners = { "*": [] };
+    };
+
+    Options.prototype = {
+        register: function (key, defaultValue) {
+            if (this._options.hasOwnProperty(key))
+                throw new Error("Option already registered '" + key + "'");
+            this._options[key] = {
+                currentValue: defaultValue,
+                defaultValue: defaultValue
+            };
+        },
+        resetValue: function (key) {
+            if (!this._options.hasOwnProperty(key))
+                throw new Error("Invalid configuration key '" + key + "'");
+            this._options[key].currentValue = this._options[key].defaultValue;
+            this.notifyObservers(key, this._options[key].currentValue);
+        },
+        setValue: function (key, value) {
+            if (!this._options.hasOwnProperty(key))
+                throw new Error("Invalid configuration key '" + key + "'");
+            this._options[key].currentValue = value;
+            this.notifyObservers(key, value);
+        },
+        getValue: function (key) {
+            if (!this._options.hasOwnProperty(key)) {
+                throw new Error("Invalid configuration key '" + key + "'");
+            }
+            return this._options[key].currentValue;
+        },
+        getKeys: function () {
+            return Object.keys(this._options);
+        },
+        notifyObservers: function (key, value) {
+            // Notify specific observers
+            if(this._listeners.hasOwnProperty(key)) {
+                this._listeners[key].forEach(function(l) {
+                   l(key, value);
+                });
+            }
+            // Notify generic observers
+            this._listeners["*"].forEach(function(l) {
+               l(key, value);
             });
-            debug.loglevel = debug.loglevels[debug.params.xml3d_loglevel] ||
-                             debug.params.xml3d_loglevel ||
-                             debug.loglevels.error;
+        },
+        addObserver: function (key, observer) {
+            if(typeof key == 'function') {
+                observer = key;
+                key = "*"
+            }
+            if(!this._options.hasOwnProperty(key) && key !== "*") {
+                throw new Error("Can't register to unknown option '" + key + "'");
+            }
+            if(!this._listeners.hasOwnProperty(key)) {
+                this._listeners[key] = [];
+            }
+            this._listeners[key].push(observer);
+        },
+        removeObserver: function (observer) {
+            for(var filter in this._listeners) {
+                var listeners = this._listeners[filter];
+                var idx = listeners.indexOf(observer);
+                if (idx != -1)
+                    listeners.splice(idx, 1);
+            }
 
-            XML3D.debug.isSetup = true;
         }
-        return !XML3D.debug.params.xml3d_nolog;
-    },
-    doLog : function(logType, args) {
-        var params = XML3D.debug.params;
-        if (params.xml3d_nolog || logType < XML3D.debug.loglevel) {
-            return;
-        }
-        args = Array.prototype.slice.call(args);
-        if (window.console) {
-            switch (logType) {
-            case XML3D.debug.INFO:
-                window.console.info.apply(window.console, args);
-                break;
-            case XML3D.debug.WARNING:
-                window.console.warn.apply(window.console, args);
-                break;
-            case XML3D.debug.ERROR:
-                window.console.error.apply(window.console, args);
-                break;
-            case XML3D.debug.EXCEPTION:
-                window.console.error(XML3D.debug.printStackTrace({e: args[0], guess: true}).join('\n'));
-                break;
-            case XML3D.debug.DEBUG:
-                window.console.debug.apply(window.console, args);
-                break;
-            default:
-                break;
+    };
+
+    var GlobalOptions = new Options();
+
+    GlobalOptions.setOptionsFromQuery = function () {
+        var p = window.location.search.substr(1).split('&');
+
+        p.forEach(function (e) {
+            var keyVal = e.split('=');
+            try {
+                var key = keyVal[0].toLowerCase();
+                if (key.indexOf("xml3d-") === 0) {
+                    var value = decodeURIComponent(keyVal[1]);
+                    try {
+                        value = JSON.parse(value);
+                    } catch (e) {
+                        // Do nothing
+                    }
+                    XML3D.options.setValue(key.substr(6), value);
+                }
+            } catch (e) {
+                XML3D.debug && XML3D.debug.logError(e);
             }
-        }
-    },
-    logDebug : function() {
-        XML3D.debug.doLog(XML3D.debug.DEBUG, arguments);
-    },
-    logInfo : function() {
-        XML3D.debug.doLog(XML3D.debug.INFO, arguments);
-    },
-    logWarning : function() {
-        XML3D.debug.doLog(XML3D.debug.WARNING, arguments);
-    },
-    logError : function() {
-        XML3D.debug.doLog(XML3D.debug.ERROR, arguments);
-    },
-    logException : function() {
-        XML3D.debug.doLog(XML3D.debug.EXCEPTION, arguments);
-    },
-    assert : function(c, msg) {
-        if (!c) {
-            XML3D.debug.doLog(XML3D.debug.WARNING, ["Assertion failed in "
-                    + XML3D.debug.assert.caller.name, msg ]);
-        }
-    },
-    trace  : function(msg, logType) {
-        logType = logType !== undefined ? logType : XML3D.debug.ERROR;
-        if(window.console.trace) {
-            if (msg) {
-                XML3D.debug.doLog(logType, [msg]);
-            }
-            window.console.trace();
-        } else {
-            var stack = XML3D.debug.printStackTrace();
-            msg && stack.splice(0,0,msg);
-            XML3D.debug.doLog(logType, stack);
-        }
-    },
-    getNumberWithPadding: function(number, width){
-        var res = "" + number;
-        while(res.length < width) res= " " + res;
-        return res;
-    },
-    formatSourceCode: function(source){
-        var result = "";
-        var sourceLines = source.split("\n");
-        for(var i =0; i < sourceLines.length; ++i){
-            result += this.getNumberWithPadding(i+1, 3) + "  " + sourceLines[i] + "\n";
-        }
-        return result;
+        });
     }
-};
+
+    ns.options = GlobalOptions;
+
+}(XML3D));
+(function (ns) {
+
+    var OPTION_LOGLEVEL = "loglevel";
+    XML3D.options.register(OPTION_LOGLEVEL, "warning");
+
+    ns.debug = {
+        ALL: 0,
+        DEBUG: 1,
+        INFO: 2,
+        WARNING: 3,
+        ERROR: 4,
+        EXCEPTION: 5,
+        params: {},
+        isSetup: false,
+        loglevel: 4,
+        loglevels: {
+            all: 0,
+            debug: 1,
+            info: 2,
+            warning: 3,
+            error: 4,
+            exception: 5
+        },
+
+        setup: function () {
+            var debug = XML3D.debug;
+            if (!debug.isSetup) {
+                debug.isSetup = true;
+                debug.loglevel = debug.loglevels[XML3D.options.getValue(OPTION_LOGLEVEL)] || 3;
+                XML3D.options.addObserver(function(key, value) {
+                    if(key == OPTION_LOGLEVEL) {
+                        debug.loglevel = debug.loglevels[value] || 3;
+                    }
+                })
+            }
+            return true;
+        },
+        _setLogLevel: function() {
+        },
+        doLog: function (logType, args) {
+            var params = XML3D.debug.params;
+            if (params.xml3d_nolog || logType < XML3D.debug.loglevel) {
+                return;
+            }
+            args = Array.prototype.slice.call(args);
+            if (window.console) {
+                switch (logType) {
+                    case XML3D.debug.INFO:
+                        window.console.info.apply(window.console, args);
+                        break;
+                    case XML3D.debug.WARNING:
+                        window.console.warn.apply(window.console, args);
+                        break;
+                    case XML3D.debug.ERROR:
+                        window.console.error.apply(window.console, args);
+                        break;
+                    case XML3D.debug.EXCEPTION:
+                        window.console.error(XML3D.debug.printStackTrace({e: args[0], guess: true}).join('\n'));
+                        break;
+                    case XML3D.debug.DEBUG:
+                        window.console.debug.apply(window.console, args);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        },
+        logDebug: function () {
+            XML3D.debug.doLog(XML3D.debug.DEBUG, arguments);
+        },
+        logInfo: function () {
+            XML3D.debug.doLog(XML3D.debug.INFO, arguments);
+        },
+        logWarning: function () {
+            XML3D.debug.doLog(XML3D.debug.WARNING, arguments);
+        },
+        logError: function () {
+            XML3D.debug.doLog(XML3D.debug.ERROR, arguments);
+        },
+        logException: function () {
+            XML3D.debug.doLog(XML3D.debug.EXCEPTION, arguments);
+        },
+        assert: function (c, msg) {
+            if (!c) {
+                var caller = XML3D.debug.assert.caller ? XML3D.debug.assert.caller.name : null;
+
+                if (caller)
+                    XML3D.debug.doLog(XML3D.debug.WARNING, ["Assertion failed in " + caller, msg ]); else
+                    XML3D.debug.doLog(XML3D.debug.WARNING, ["Assertion failed", msg ]);
+            }
+        },
+        trace: function (msg, logType) {
+            logType = logType !== undefined ? logType : XML3D.debug.ERROR;
+            if (window.console.trace) {
+                if (msg) {
+                    XML3D.debug.doLog(logType, [msg]);
+                }
+                window.console.trace();
+            } else {
+                var stack = XML3D.debug.printStackTrace();
+                msg && stack.splice(0, 0, msg);
+                XML3D.debug.doLog(logType, stack);
+            }
+        },
+        getNumberWithPadding: function (number, width) {
+            var res = "" + number;
+            while (res.length < width) res = " " + res;
+            return res;
+        },
+        formatSourceCode: function (source) {
+            var result = "";
+            var sourceLines = source.split("\n");
+            for (var i = 0; i < sourceLines.length; ++i) {
+                result += this.getNumberWithPadding(i + 1, 3) + "  " + sourceLines[i] + "\n";
+            }
+            return result;
+        }
+    };
+
+}(XML3D))
 /**
  * Class URI
  * @constructor
@@ -1643,13 +2581,19 @@ FirminCSSMatrix.prototype.setMatrixValue = function(domstr) {
     len    = chunks.length;
     points = new Array(len);
 
-    if ((is3d && len !== 16) || !(is3d || len === 6)) return;
+    if ((is3d && len !== 16) || !(is3d || len === 6)) {
+        XML3D.debug.logError("Invalid CSS Matrix: ", domstr);
+        return;
+    }
 
     for (i = 0; i < len; i++) {
         chunk = chunks[i];
         if (chunk.match(/^-?\d+(\.\d+)?$/)) {
             points[i] = parseFloat(chunk);
-        } else return;
+        } else {
+            XML3D.debug.logError("Invalid CSS Matrix: ", domstr);
+            return;
+        }
     }
 
     for (i = 0; i < len; i++) {
@@ -7044,6 +7988,47 @@ SimplexNoise.prototype.noise3d = function(xin, yin, zin) {
         return Math.max(x, Math.max(y, z));
     };
 
+    /**
+     * Tests a given ray against a given bounding box and returns true if the ray intersects it, false otherwise.
+     * @param bb The axis aligned bounding box to test against
+     * @param xml3dRay The ray to test for intersection with
+     * @param opt {object} If opt.dist is provided the function will fill it with the distance from the ray origin to
+     *                     the hit point on the bounding box, or MAX_VALUE if the ray does not intersect.
+     * @returns {boolean}
+     */
+    bbox.intersects = function(bb, xml3dRay, opt) {
+        var inverseDirX = 1 / xml3dRay._direction.x;
+        var inverseDirY = 1 / xml3dRay._direction.y;
+        var inverseDirZ = 1 / xml3dRay._direction.z;
+
+        var t1 = (bb[0] - xml3dRay._origin.x) * inverseDirX;
+        var t2 = (bb[3] - xml3dRay._origin.x) * inverseDirX;
+        var t3 = (bb[1] - xml3dRay._origin.y) * inverseDirY;
+        var t4 = (bb[4] - xml3dRay._origin.y) * inverseDirY;
+        var t5 = (bb[2] - xml3dRay._origin.z) * inverseDirZ;
+        var t6 = (bb[5] - xml3dRay._origin.z) * inverseDirZ;
+
+        var tmin = Math.max(Math.max(Math.min(t1, t2), Math.min(t3, t4)), Math.min(t5, t6));
+        var tmax = Math.min(Math.min(Math.max(t1, t2), Math.max(t3, t4)), Math.max(t5, t6));
+
+        if (opt === undefined || opt.dist === undefined) {
+            return tmax > 0 && tmin <= tmax;
+        }
+
+        if (tmax < 0) {
+            opt.dist = Number.MAX_VALUE;
+            return false;
+        }
+
+        if (tmin > tmax) {
+            opt.dist = Number.MAX_VALUE;
+            return false;
+        }
+
+        opt.dist = tmin;
+        return true;
+    };
+
     bbox.asXML3DBox = function (bb) {
         var result = new window.XML3DBox();
         result.min._data[0] = bb[0];
@@ -9821,6 +10806,14 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
     function attrModified(e) {
 
         var eh = e.target._configured;
+
+        if(e.attrName == "style"){
+            var n = new events.NotificationWrapper(e);
+            n.type = events.VALUE_MODIFIED;
+            eh.notify(n);
+            return;
+        }
+
         var handler = eh && eh.handlers[e.attrName];
         if(!handler)
             return;
@@ -10412,8 +11405,7 @@ if (navigator.userAgent.indexOf("WebKit") != -1) {
         this.resetValue = function() { ta.value = null; };
     };
     handler.StringValueHandler.prototype.parse = function(elem) {
-        var str = getContent(elem);
-        return str;
+        return elem.textContent;
     };
 
     handler.CanvasStyleHandler = function(e, id, d) {
@@ -10460,8 +11452,13 @@ new (function() {
         return new window.XML3DRay();
     };
 
-    methods.xml3dGetElementByRay = function() {
-        XML3D.debug.logError(this.nodeName + "::getElementByRay is not implemeted yet.");
+    methods.xml3dGetElementByRay = function(ray, hitPoint, hitNormal) {
+        var adapters = this._configured.adapters || {};
+        for (var adapter in adapters) {
+            if (adapters[adapter].getElementByRay) {
+                return adapters[adapter].getElementByRay(ray, hitPoint, hitNormal);
+            }
+        }
         return null;
     };
 
@@ -10640,6 +11637,17 @@ new (function() {
         }
         return new window.XML3DBox();
     };
+
+    methods.xml3dGetRenderInterface = function() {
+        var adapters = this._configured.adapters || {};
+        for ( var adapter in adapters) {
+            if (adapters[adapter].getRenderInterface) {
+                return adapters[adapter].getRenderInterface();
+            }
+        }
+        return {};
+    };
+
 
     methods.XML3DGraphTypeGetWorldMatrix = function() {
         var adapters = this._configured.adapters || {};
@@ -10820,6 +11828,16 @@ XML3D.WrapTypes["repeat"] = 1;
 XML3D.WrapTypes[1] = "repeat";
 XML3D.WrapTypes["border"] = 2;
 XML3D.WrapTypes[2] = "border";
+// PlatformTypes
+XML3D.PlatformTypes = {};
+XML3D.PlatformTypes["auto"] = 1;
+XML3D.PlatformTypes[1] = "auto";
+XML3D.PlatformTypes["js"] = 2;
+XML3D.PlatformTypes[2] = "js";
+XML3D.PlatformTypes["gl"] = 3;
+XML3D.PlatformTypes[3] = "gl";
+XML3D.PlatformTypes["cl"] = 4;
+XML3D.PlatformTypes[4] = "cl";
 // DataFieldType
 XML3D.DataFieldType = {};
 XML3D.DataFieldType["float "] = 0;
@@ -10859,30 +11877,31 @@ XML3D.classInfo = {};
  * Properties and methods for <xml3d>
  **/
 XML3D.classInfo['xml3d'] = {
-    id: {a: XML3D.IDHandler},
-    className: {a: XML3D.CanvasClassHandler, id: 'class'},
-    style: {a: XML3D.CanvasStyleHandler},
-    onclick: {a: XML3D.EventAttributeHandler},
-    ondblclick: {a: XML3D.EventAttributeHandler},
-    onmousedown: {a: XML3D.EventAttributeHandler},
-    onmouseup: {a: XML3D.EventAttributeHandler},
-    onmouseover: {a: XML3D.EventAttributeHandler},
-    onmousemove: {a: XML3D.EventAttributeHandler},
-    onmouseout: {a: XML3D.EventAttributeHandler},
-    onkeypress: {a: XML3D.EventAttributeHandler},
-    onkeydown: {a: XML3D.EventAttributeHandler},
-    onkeyup: {a: XML3D.EventAttributeHandler},
-    height: {a: XML3D.IntAttributeHandler, params: 600},
-    width: {a: XML3D.IntAttributeHandler, params: 800},
-    createXML3DVec3: {m: XML3D.methods.xml3dCreateXML3DVec3},
-    createXML3DRotation: {m: XML3D.methods.xml3dCreateXML3DRotation},
-    createXML3DMatrix: {m: XML3D.methods.xml3dCreateXML3DMatrix},
-    createXML3DRay: {m: XML3D.methods.xml3dCreateXML3DRay},
-    getElementByPoint: {m: XML3D.methods.xml3dGetElementByPoint},
-    generateRay: {m: XML3D.methods.xml3dGenerateRay},
-    getElementByRay: {m: XML3D.methods.xml3dGetElementByRay},
-    getBoundingBox: {m: XML3D.methods.xml3dGetBoundingBox},
-    activeView: {a: XML3D.ReferenceHandler},
+    id : {a: XML3D.IDHandler},
+    className : {a: XML3D.CanvasClassHandler, id: 'class'},
+    style : {a: XML3D.CanvasStyleHandler},
+    onclick : {a: XML3D.EventAttributeHandler},
+    ondblclick : {a: XML3D.EventAttributeHandler},
+    onmousedown : {a: XML3D.EventAttributeHandler},
+    onmouseup : {a: XML3D.EventAttributeHandler},
+    onmouseover : {a: XML3D.EventAttributeHandler},
+    onmousemove : {a: XML3D.EventAttributeHandler},
+    onmouseout : {a: XML3D.EventAttributeHandler},
+    onkeypress : {a: XML3D.EventAttributeHandler},
+    onkeydown : {a: XML3D.EventAttributeHandler},
+    onkeyup : {a: XML3D.EventAttributeHandler},
+    height : {a: XML3D.IntAttributeHandler, params: 600},
+    width : {a: XML3D.IntAttributeHandler, params: 800},
+    createXML3DVec3 : {m: XML3D.methods.xml3dCreateXML3DVec3},
+    createXML3DRotation : {m: XML3D.methods.xml3dCreateXML3DRotation},
+    createXML3DMatrix : {m: XML3D.methods.xml3dCreateXML3DMatrix},
+    createXML3DRay : {m: XML3D.methods.xml3dCreateXML3DRay},
+    getElementByPoint : {m: XML3D.methods.xml3dGetElementByPoint},
+    generateRay : {m: XML3D.methods.xml3dGenerateRay},
+    getElementByRay : {m: XML3D.methods.xml3dGetElementByRay},
+    getBoundingBox : {m: XML3D.methods.xml3dGetBoundingBox},
+    getRenderInterface : {m: XML3D.methods.xml3dGetRenderInterface},
+    activeView : {a: XML3D.ReferenceHandler},
     _term: undefined
 };
 
@@ -10902,6 +11921,7 @@ XML3D.classInfo['data'] = {
     className: {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for data
     compute: {a: XML3D.StringAttributeHandler},
+    platform: {a: XML3D.EnumAttributeHandler, params: {e: XML3D.PlatformTypes, d: 1}},
     filter: {a: XML3D.StringAttributeHandler},
     getOutputNames: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputNames},
     getOutputChannelInfo: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputChannelInfo},
@@ -10913,11 +11933,14 @@ XML3D.classInfo['data'] = {
     proto: {a: XML3D.ReferenceHandler},
     _term: undefined
 };
-
+/**
+ * Properties and methods for <dataflow>
+ **/
 XML3D.classInfo['dataflow'] = {
     id: {a: XML3D.IDHandler},
     className: {a: XML3D.StringAttributeHandler, id: 'class'},
-    // TODO: Handle style for data
+    // TODO: Handle style for dataflow
+    platform: {a: XML3D.EnumAttributeHandler, params: {e: XML3D.PlatformTypes, d: 1}},
     out: {a: XML3D.StringAttributeHandler},
     getOutputNames: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputNames},
     getOutputChannelInfo: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputChannelInfo},
@@ -11089,6 +12112,7 @@ XML3D.classInfo['proto'] = {
     className: {a: XML3D.StringAttributeHandler, id: 'class'},
     // TODO: Handle style for proto
     compute: {a: XML3D.StringAttributeHandler},
+    platform: {a: XML3D.EnumAttributeHandler, params: {e: XML3D.PlatformTypes, d: 1}},
     filter: {a: XML3D.StringAttributeHandler},
     getOutputNames: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputNames},
     getOutputChannelInfo: {m: XML3D.methods.XML3DNestedDataContainerTypeGetOutputChannelInfo},
@@ -11288,10 +12312,10 @@ XML3D.classInfo['view'] = {
     _term: undefined
 };
 /* END GENERATED */
-window=this;
+window = this;
 var Xflow = {};
 
-(function(){
+(function () {
     Xflow.EPSILON = 0.000001;
 
     /**
@@ -11301,32 +12325,33 @@ var Xflow = {};
     Xflow.DATA_TYPE = {
         UNKNOWN: 0,
         FLOAT: 1,
-        FLOAT2 : 2,
-        FLOAT3 : 3,
-        FLOAT4 : 4,
-        FLOAT4X4 : 10,
-        INT : 20,
-        INT4 : 21,
+        FLOAT2: 2,
+        FLOAT3: 3,
+        FLOAT4: 4,
+        FLOAT3X3 : 5,
+        FLOAT4X4: 10,
+        INT: 20,
+        INT4: 21,
         BOOL: 30,
         TEXTURE: 40,
-        BYTE : 50,
-        UBYTE : 60
-    }
+        BYTE: 50,
+        UBYTE: 60
+    };
 
     Xflow.DATA_TYPE_MAP = {
-        'float' : Xflow.DATA_TYPE.FLOAT,
-        'float2' : Xflow.DATA_TYPE.FLOAT2,
-        'float3' : Xflow.DATA_TYPE.FLOAT3,
-        'float4' : Xflow.DATA_TYPE.FLOAT4,
-        'float4x4' : Xflow.DATA_TYPE.FLOAT4X4,
-        'int' : Xflow.DATA_TYPE.INT,
-        'int4' : Xflow.DATA_TYPE.INT4,
-        'bool' : Xflow.DATA_TYPE.BOOL,
-        'texture' : Xflow.DATA_TYPE.TEXTURE,
-        'byte' : Xflow.DATA_TYPE.BYTE,
-        'ubyte' : Xflow.DATA_TYPE.UBYTE
-    }
-
+        'float': Xflow.DATA_TYPE.FLOAT,
+        'float2': Xflow.DATA_TYPE.FLOAT2,
+        'float3': Xflow.DATA_TYPE.FLOAT3,
+        'float4': Xflow.DATA_TYPE.FLOAT4,
+        'float3x3' : Xflow.DATA_TYPE.FLOAT3X3,
+        'float4x4': Xflow.DATA_TYPE.FLOAT4X4,
+        'int': Xflow.DATA_TYPE.INT,
+        'int4': Xflow.DATA_TYPE.INT4,
+        'bool': Xflow.DATA_TYPE.BOOL,
+        'texture': Xflow.DATA_TYPE.TEXTURE,
+        'byte': Xflow.DATA_TYPE.BYTE,
+        'ubyte': Xflow.DATA_TYPE.UBYTE
+    };
 
 
     Xflow.DATA_TYPE_TUPLE_SIZE = {};
@@ -11334,6 +12359,7 @@ var Xflow = {};
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT2] = 2;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT3] = 3;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4] = 4;
+    Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT3X3] = 9;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.FLOAT4X4] = 16;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT] = 1;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.INT4] = 4;
@@ -11341,7 +12367,6 @@ var Xflow = {};
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.TEXTURE] = 1;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.BYTE] = 1;
     Xflow.DATA_TYPE_TUPLE_SIZE[Xflow.DATA_TYPE.UBYTE] = 1;
-
 
 
     Xflow.TYPED_ARRAY_MAP = {};
@@ -11357,13 +12382,14 @@ var Xflow = {};
     Xflow.TYPED_ARRAY_MAP[Xflow.DATA_TYPE.UBYTE] = Uint8Array;
 
 
-    Xflow.getTypeName = function(type){
-        for(var i in Xflow.DATA_TYPE_MAP){
-            if(Xflow.DATA_TYPE_MAP[i] == type){
+    Xflow.getTypeName = function (type) {
+        var i;
+        for (i in Xflow.DATA_TYPE_MAP) {
+            if (Xflow.DATA_TYPE_MAP[i] === type) {
                 return i;
             }
         }
-    }
+    };
 
     /**
      * @enum {number}
@@ -11397,7 +12423,7 @@ var Xflow = {};
         VIEW_TRANSFORM_NORMAL: 5,
         SCREEN_TRANSFORM_NORMAL: 6,
         OBJECT_ID: 7
-    }
+    };
 
     Xflow.VS_ATTRIB_TRANSFORM = {
         NONE: 0,
@@ -11405,7 +12431,7 @@ var Xflow = {};
         WORLD_POINT: 2,
         VIEW_NORMAL: 3,
         WORLD_NORMAL: 4
-    }
+    };
 
 
     /**
@@ -11419,7 +12445,7 @@ var Xflow = {};
         RENAME: 0,
         KEEP: 1,
         REMOVE: 2
-    }
+    };
 
 
     /**
@@ -11437,7 +12463,7 @@ var Xflow = {};
     Xflow.RESULT_TYPE = {
         COMPUTE: 0,
         VS: 1
-    }
+    };
 
 
     /**
@@ -11467,14 +12493,14 @@ var Xflow = {};
         PREV_BUFFER: 1,
         NEXT_BUFFER: 2,
         LINEAR_WEIGHT: 3
-    }
+    };
 
 
     Xflow.ITERATION_TYPE = {
         NULL: 0,
         ONE: 1,
         MANY: 2
-    }
+    };
 
     /**
      * Type of Information Extraction - used by operators
@@ -11499,8 +12525,9 @@ var Xflow = {};
      */
     Xflow.PLATFORM = {
         JAVASCRIPT: 0,
-        GLSL: 1
-    }
+        GLSL: 1,
+        CL: 2
+    };
 
     Xflow.PROCESS_STATE = {
         MODIFIED: 0,
@@ -11509,24 +12536,24 @@ var Xflow = {};
         INVALID: 3,
         UNPROCESSED: 4,
         PROCESSED: 5
-    }
+    };
 
     // Error Callbacks:
     var c_errorCallbacks = [];
-    Xflow.registerErrorCallback = function(callback){
-        c_errorCallbacks.push(callback)
-    }
+    Xflow.registerErrorCallback = function (callback) {
+        c_errorCallbacks.push(callback);
+    };
 
-    Xflow.notifyError = function(message, node){
-        if(c_errorCallbacks.length > 0){
-            for(var i = 0; i < c_errorCallbacks.length; ++i)
+    Xflow.notifyError = function (message, node) {
+        if (c_errorCallbacks.length > 0) {
+            var i;
+            for (i = 0; i < c_errorCallbacks.length; ++i) {
                 c_errorCallbacks[i](message, node);
-        }
-        else{
+            }
+        } else {
             // TODO: Do Default error printing
         }
     };
-
 
 
     /* Tools */
@@ -11538,18 +12565,18 @@ var Xflow = {};
      * @param {Object=} methods Methods to add to the class
      * @returns {Object}
      */
-    Xflow.createClass = function(ctor, parent, methods) {
+    Xflow.createClass = function (ctor, parent, methods) {
         methods = methods || {};
         if (parent) {
             /** @constructor */
-            var F = function() {
+            var F = function () {
             };
             F.prototype = parent.prototype;
             ctor.prototype = new F();
             ctor.prototype.constructor = ctor;
             ctor.superclass = parent.prototype;
         }
-        for ( var m in methods) {
+        for (var m in methods) {
             ctor.prototype[m] = methods[m];
         }
         return ctor;
@@ -11558,26 +12585,28 @@ var Xflow = {};
 
     var c_listedCallbacks = [];
     var c_listedCallbacksData = [];
-    Xflow._listCallback = function(object, data){
+    Xflow._listCallback = function (object, data) {
         var index;
-        if(( index = c_listedCallbacks.indexOf(object)) == -1){
+        if (( index = c_listedCallbacks.indexOf(object)) == -1) {
             index = c_listedCallbacks.length;
             c_listedCallbacks.push(object);
         }
         var prevData = c_listedCallbacksData[index];
-        if(!prevData || prevData < data){
+        if (!prevData || prevData < data) {
             c_listedCallbacksData[index] = data;
         }
-    }
+    };
 
-    Xflow._callListedCallback = function(){
-        if(c_listedCallbacks.length){
-            for(var i = 0; i < c_listedCallbacks.length; ++i)
+    Xflow._callListedCallback = function () {
+        if (c_listedCallbacks.length) {
+            var i;
+            for (i = 0; i < c_listedCallbacks.length; ++i) {
                 c_listedCallbacks[i]._onListedCallback(c_listedCallbacksData[i]);
+            }
             c_listedCallbacks = [];
             c_listedCallbacksData = [];
         }
-    }
+    };
 }());
 
 
@@ -12195,6 +13224,7 @@ function notifyListeners(dataEntry, notification){
  */
 
 
+
 //----------------------------------------------------------------------------------------------------------------------
 // Xflow.Graph
 //----------------------------------------------------------------------------------------------------------------------
@@ -12205,12 +13235,84 @@ function notifyListeners(dataEntry, notification){
  * @constructor
  */
 Xflow.Graph = function(){
+    this.initPlatform();
 };
+
 var Graph = Xflow.Graph;
 
+    /**
+     *
+     */
 
+Graph.prototype.initPlatform = function () {
+    this.platform = Xflow.PLATFORM.JAVASCRIPT; // Setting default platform for the graph
 
-/**
+    if(initWebCLPlatform(this)) {
+        this.platform = Xflow.PLATFORM.CL;
+    }
+
+};
+
+function initWebCLPlatform(graph) {
+    var clPlatforms, clDevices, clCtx, cmdQueue;
+    var webcl = XML3D.webcl;
+
+    if (webcl && webcl.isAvailable()) {
+
+        // Fetching WebCL device platforms
+        clPlatforms = webcl.getPlatforms();
+
+        if (!clPlatforms || typeof clPlatforms === 'array' && clPlatforms.length === 0) {
+            return false;
+        }
+
+        // Fetching WebCL devices
+        try {
+            // Trying initially to use GPU (for the best performance). Using CPU as a fallback.
+            clDevices = webcl.getDevicesByType("GPU") || webcl.getDevicesByType("CPU");
+        } catch (e) {
+            return false;
+        }
+
+        if (!clDevices) {
+            return false;
+        }
+
+        // Creating a new WebCL context
+        try {
+            clCtx = webcl.createContext({devices: clDevices});
+        } catch (e) {
+            return false;
+        }
+
+        // Creating a command queue for WebCL processing
+        try {
+            cmdQueue = webcl.createCommandQueue(clDevices[0], clCtx);
+        } catch (e) {
+            return false;
+        }
+
+        /**
+         *  TODO: Maybe we should just store the cl-platform objects in XFlow.cl so they are more easily available and
+         *  to avoid long prototype chains. Or we could pass the graph context to each node of the graph.
+         *  However, it would be good to allow each Graph object to have at least own context, cmdQueue and kernelManager.
+         */
+        graph.cl = {
+            API: webcl,
+            kernelManager: new webcl.KernelManager(clCtx, clDevices),
+            platforms: clPlatforms,
+            devices: clDevices,
+            ctx: clCtx,
+            cmdQueue: cmdQueue
+        };
+
+        return true;
+    }
+
+    return false;
+}
+
+ /**
  * @return {Xflow.InputNode}
  */
 Graph.prototype.createInputNode = function(){
@@ -12413,6 +13515,8 @@ Xflow.DataNode = function(graph, protoNode){
     this._substitutionNodes = {};
     this._paramNames = null;
     this._globalParamNames = null;
+
+    this._platform = null;
 
     this._listeners = [];
 
@@ -12668,6 +13772,34 @@ DataNode.prototype.detachFromParents = function(){
         }
     }
     this._children = [];
+};
+
+    /**
+     * Sets platform of a DataNode. If _platform is defined, it will override the default platform setting of
+     * an Xflow graph.
+     *
+     * @param {String|Xflow.PLATFORM|null} platformSrc
+     */
+
+DataNode.prototype.setPlatform = function(platformSrc) {
+    if (typeof platformSrc === 'string') {
+        if (platformSrc === "cl") {
+            this._platform = Xflow.PLATFORM.CL;
+        }
+        else if (platformSrc === "gl") {
+            this._platform = Xflow.PLATFORM.GLSL;
+        }
+        else if (platformSrc === "js") {
+            this._platform = Xflow.PLATFORM.JAVASCRIPT;
+        }
+    } else if (!isNaN(parseFloat(platformSrc)) && isFinite(platformSrc)) {
+        this._platform = platformSrc;
+    } else {
+        this._platform = null;
+    }
+
+    this.notify(Xflow.RESULT_STATE.CHANGED_STRUCTURE);
+    Xflow._callListedCallback();
 };
 
 /**
@@ -13379,10 +14511,11 @@ ComputeRequest.prototype._onResultChanged = function(notification){
 
 
 var c_vsConnectNodeCount = {},
+    c_vsConnectNodeKey = {},
     c_vsConnectNodeCache = {};
 
 /**
- * A VertexShaderRequest is a Request for a VertexShaderResult, used to generate a vertex shader that includes
+ * A VertexShaderRequest is a Request for a VSDataResult, used to generate a Xflow.VertexShader that includes
  * dataflow processing
  * @constructor
  * @extends {Xflow.Request}
@@ -13402,6 +14535,10 @@ var VertexShaderRequest = function(dataNode, vsConfig, callback){
 Xflow.createClass(VertexShaderRequest, Xflow.Request);
 Xflow.VertexShaderRequest = VertexShaderRequest;
 
+VertexShaderRequest.prototype.getConfig = function(){
+    return this._vsConfig;
+}
+
 VertexShaderRequest.prototype.getResult = function(){
     return swapResultRequest(this, this._vsConnectNode._getResult(Xflow.RESULT_TYPE.VS, this._filter));
 }
@@ -13410,11 +14547,19 @@ VertexShaderRequest.prototype._onDataNodeChange = function(notification){
     if(notification == Xflow.RESULT_STATE.CHANGED_STRUCTURE){
         var newVSConnectedNode = getVsConnectNode(this._dataNode, this._vsConfig, this._filter);
         if(newVSConnectedNode != this._vsConnectNode){
-            clearVsConnectNode(this._vsConnectNode, this._dataNode, this._vsConfig);
+            clearVsConnectNode(this._vsConnectNode);
             this._vsConnectNode = newVSConnectedNode;
         }
     }
     Request.prototype._onDataNodeChange.call(this, notification);
+}
+
+VertexShaderRequest.prototype.getVertexShader = function(){
+    this.getResult(); // Update the result first
+    if(!this._vertexShader){
+        this._vertexShader = this._result.getVertexShader(this._vsConfig);
+    }
+    return this._vertexShader;
 }
 
 VertexShaderRequest.prototype._onResultChanged = function(result, notification){
@@ -13431,15 +14576,13 @@ function getVsConnectNode(dataNode, vsConfig, filter){
         connectNode = graph.createDataNode(false);
         connectNode.appendChild(forwardNode);
 
-        var operator = vsConfig.getOperator();
-        connectNode.computeOperator = operator;
-        connectNode.computeInputMapping = new Xflow.OrderMapping();
-        connectNode.computeOutputMapping = new Xflow.OrderMapping();
-        vsConfig.setInputMapping(connectNode._computeInputMapping);
-        vsConfig.setOutputMapping(connectNode._computeOutputMapping);
+        connectNode.computeOperator = vsConfig.getOperator();
+        connectNode.computeInputMapping = null;
+        connectNode.computeOutputMapping = null;
 
         c_vsConnectNodeCache[key] = connectNode;
         c_vsConnectNodeCount[connectNode.id] = 1;
+        c_vsConnectNodeKey[connectNode.id] = key;
     }
     else{
         c_vsConnectNodeCount[connectNode.id]++;
@@ -13448,10 +14591,10 @@ function getVsConnectNode(dataNode, vsConfig, filter){
     return connectNode;
 }
 
-function clearVsConnectNode(connectNode, dataNode, vsConfig){
+function clearVsConnectNode(connectNode){
     c_vsConnectNodeCount[connectNode.id]--;
     if(!c_vsConnectNodeCount[connectNode.id]){
-        var key = getDataNodeShaderKey(dataNode, vsConfig);
+        var key = c_vsConnectNodeKey[connectNode.id];
         c_vsConnectNodeCache[key] = null;
         connectNode.clearChildren();
     }
@@ -13563,65 +14706,39 @@ ComputeResult.prototype.getOutputMap = function() {
 
 
 /**
- * VertexShaderResult is used to generate a VertexShader that includes dataflow processing
+ * VSDataResult is used to analyse the output of a VertexShader
+ * Note that the VSDataResult is not used to generate the VertexShader directly.
+ * For that, the Xflow.VertexShader structure must be created from Xflow.VertexShaderRequest
  * @constructor
  * @extends {Xflow.Result}
  */
-Xflow.VertexShaderResult = function(){
+Xflow.VSDataResult = function(){
     Xflow.Result.call(this);
-    this._shaderInputNames = null;
     this._program = null;
     this._programData = null;
-
 };
-Xflow.createClass(Xflow.VertexShaderResult, Xflow.Result);
-var VertexShaderResult = Xflow.VertexShaderResult;
+Xflow.createClass(Xflow.VSDataResult, Xflow.Result);
+var VSDataResult = Xflow.VSDataResult;
 
-Object.defineProperty(VertexShaderResult.prototype, "shaderInputNames", {
-    set: function(v){
-        throw new Error("shaderInputNames is readonly");
-    },
-    get: function(){ return this._program._shaderInputNames; }
-});
-Object.defineProperty(VertexShaderResult.prototype, "shaderOutputNames", {
+Object.defineProperty(VSDataResult.prototype, "outputNames", {
     set: function(v){
         throw new Error("shaderOutputNames is readonly");
     },
-    get: function(){ return this._program._shaderOutputNames; }
+    get: function(){ return this._program.getOutputNames(); }
 });
 
-
-VertexShaderResult.prototype.getShaderInputData = function(name){
-    return this._program.getInputData(name, this._programData);
-};
-
-VertexShaderResult.prototype.isShaderInputUniform = function(name){
-    return this._program.isInputUniform(name);
-}
-
-VertexShaderResult.prototype.isShaderOutputUniform = function(name){
+VSDataResult.prototype.isOutputUniform = function(name){
     return this._program.isOutputUniform(name);
 }
-VertexShaderResult.prototype.getShaderOutputType = function(name){
-    return this._program.getShaderOutputType(name);
-}
-VertexShaderResult.prototype.getShaderOutputSourceName = function(name){
-    return this._program.getShaderOutputSourceName(name);
-}
-
-VertexShaderResult.prototype.getUniformOutputData = function(name){
-    return this._program.getUniformOutputData(name, this._programData);
-}
-VertexShaderResult.prototype.isShaderOutputNull = function(name){
+VSDataResult.prototype.isOutputNull = function(name){
     return this._program.isOutputNull(name);
 }
-
-
-
-VertexShaderResult.prototype.getGLSLCode = function(){
-    return this._program._glslCode;
+VSDataResult.prototype.getOutputType = function(name){
+    return this._program.getOutputType(name);
 }
-
+VSDataResult.prototype.getVertexShader = function(vsConfig){
+    return this._program.createVertexShader(this._programData, vsConfig);
+}
 
 
 })();
@@ -13641,37 +14758,48 @@ Xflow.setShaderConstant = function(type, name){
     Xflow.shaderConstant[type] = name;
 }
 
+
 /**
  * The output configuration of a VertexShader generated by Xflow.
  * @constructor
  */
 Xflow.VSConfig = function(){
+    this._attributes = {};
     this._blockedNames = [];
-    this._attributes = [];
+    this._addInput = {};
+    this._addOutput = {};
+    this._codeFragments = [];
+    this._outputChanneling = {};
 };
-    
-    
-Xflow.VSConfig.prototype.addAttribute = function(type, inputName, outputName, optional, transform){
-    this._attributes.push({
-        type: type,
-        inputName: inputName,
-        outputName: outputName,
-        optional: optional || false,
-        transform: transform || Xflow.VS_ATTRIB_TRANSFORM.NONE
-    });
+
+Xflow.VSConfig.prototype.addAttribute = function(type, name, optional){
+    if(this._attributes[name]){
+        if(this._attributes[name].type != type)
+            throw new Error("Tries to add two attributes with different types of name '" + name + '"');
+        this._attributes[name].optional = this._attributes[name].optional && optional;
+        return;
+    }
+    this._attributes[name] = {type: type, optional: optional, channeling: []};
 }
 
-Xflow.VSConfig.prototype.getAttributeCount = function(){
-    return this._attributes.length;
+Xflow.VSConfig.prototype.channelAttribute = function(inputName, outputName, code){
+    this._attributes[inputName].channeling.push( { outputName : outputName, code : code });
 }
 
-
-Xflow.VSConfig.prototype.getAttribute = function(i){
-    return this._attributes[i];
+Xflow.VSConfig.prototype.addInputParameter = function(type, name, uniform){
+    if(this._addInput[name])
+        return;
+    this._addInput[name] = { type: type, uniform: uniform };
+    this._blockedNames.push(name);
 }
-
-Xflow.VSConfig.prototype.isAttributeTransformed = function(i){
-    return !!this._attributes[i].transform;
+Xflow.VSConfig.prototype.addOutputParameter = function(type, name){
+    if(this._addOutput[name])
+        return;
+    this._addOutput[name] = { type: type };
+    this._blockedNames.push(name);
+}
+Xflow.VSConfig.prototype.addCodeFragment = function(codeFragment){
+    this._codeFragments.push(codeFragment);
 }
 
 Xflow.VSConfig.prototype.addBlockedName = function(name){
@@ -13683,17 +14811,13 @@ Xflow.VSConfig.prototype.getBlockedNames = function(){
 }
 
 Xflow.VSConfig.prototype.getFilter = function(){
-    var result = [];
-    for(var i = 0; i < this._attributes.length; ++i)
-        result.push(this._attributes[i].outputName);
-    return result;
+    return Object.keys(this._attributes);
 }
 Xflow.VSConfig.prototype.getKey = function(){
-    var key = this._blockedNames.join(";");
-
-    for(var i=0; i< this._attributes.length; ++i){
-        key += ";" + this._attributes.type + "," + this._attributes.inputName + "," + this._attributes.outputName
-            + "," + this._attributes.optional;
+    var key = "";
+    for(var name in this._attributes){
+        var attr = this._attributes[name];
+        key += ";" + attr.type + "," + name + "," + attr.optional;
     }
     return key;
 }
@@ -13706,84 +14830,72 @@ Xflow.VSConfig.prototype.getOperator = function(){
         return c_vs_operator_cache[key];
 
     var outputs = [], params = [], glslCode = "\t// VS Connector\n";
-
-    var inputAdded = {}, outputInputMap = [], fragments = {};
-
-    for(var i = 0; i < this._attributes.length; ++i){
-        var attr = this._attributes[i];
+    name = "VSConnect";
+    for(var name in this._attributes){
+        var attr = this._attributes[name];
         var type = Xflow.getTypeName(attr.type);
-        outputs.push( { type: type, name: attr.outputName} );
-        if(inputAdded[attr.inputName] === undefined){
-            var idx = params.length;
-            outputInputMap[i] = idx;
-            params.push({ type: type, source: attr.inputName, optional: attr.optional} );
-            inputAdded[attr.inputName] = idx;
-        }
-        else{
-            outputInputMap[i] = inputAdded[attr.inputName];
-        }
-        var line = "\t#O{" + attr.outputName + "} = ";
-
-        if(attr.transform && attr.type != Xflow.DATA_TYPE.FLOAT3)
-            throw new Error("Xflow VS Shader only supports transformation of float3 values at this point");
-        switch(attr.transform){
-            case Xflow.VS_ATTRIB_TRANSFORM.VIEW_NORMAL:
-                line += "normalize( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM_NORMAL] + "} "
-                    + "* #I{" + attr.inputName + "} );"; break;
-            case Xflow.VS_ATTRIB_TRANSFORM.VIEW_POINT:
-                line += "( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM] + "} "
-                    + "* vec4( #I{" + attr.inputName + "} , 1.0)).xyz;"; break;
-            case Xflow.VS_ATTRIB_TRANSFORM.WORLD_NORMAL:
-                line += "normalize( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM_NORMAL] + "} "
-                    + "* #I{" + attr.inputName + "} );"; break;
-            case Xflow.VS_ATTRIB_TRANSFORM.WORLD_POINT:
-                line += "( #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM] + "} "
-                    + "* vec4( #I{" + attr.inputName + "} , 1.0)).xyz;"; break;
-            default:
-                line += "#I{" + attr.inputName + "};";
-        }
-        fragments[attr.outputName] = line;
+        outputs.push( { type: type, name: name} );
+        params.push( { type: type, source: name, optional: attr.optional} );
+        name += "T" + type + "N" + name + "O" + attr.optional + ".";
     }
-
-    if(!inputAdded["position"]){
-
-    }
-
-    glslCode += "\tgl_Position = #G{" + Xflow.shaderConstant[Xflow.SHADER_CONSTANT_KEY.SCREEN_TRANSFORM]
-             + "} * vec4(#I{position}, 1.0);\n";
-
-    var operator = Xflow.initAnonymousOperator({
+    var operator = Xflow.initAnonymousOperator(name,
+    {
         outputs: outputs,
         params:  params,
-        evaluate_glsl: glslCode,
-        glsl_fragments: fragments,
-        blockedNames: this._blockedNames,
-        vsConfig: this,
-        outputInputMap: outputInputMap
+        evaluate_glsl: glslCode
     });
-
     c_vs_operator_cache[key] = operator;
-
     return operator;
 }
 
-Xflow.VSConfig.prototype.setInputMapping = function(orderMapping){
-    var inputAdded = {};
-    for(var i = 0; i < this._attributes.length; ++i){
-        var name = this._attributes[i].inputName;
-        if(!inputAdded[name]){
-            orderMapping.setName(i, name);
-            inputAdded[name] = true;
-        }
-
-    }
-}
-Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
-    for(var i = 0; i < this._attributes.length; ++i){
-        orderMapping.setName(i, this._attributes[i].outputName);
-    }
+Xflow.VertexShader = function(programData){
+    this._programData = programData;
+    this._glslCode = null;
+    this._inputNames = [];
+    this._outputNames = [];
+    this._inputInfo = {};
+    this._outputInfo = {};
 }
 
+Object.defineProperty(Xflow.VertexShader.prototype, "inputNames", {
+    set: function(v){
+        throw new Error("inputNames is readonly");
+    },
+    get: function(){ return this._inputNames; }
+});
+
+Object.defineProperty(Xflow.VertexShader.prototype, "outputNames", {
+    set: function(v){
+        throw new Error("outputNames is readonly");
+    },
+    get: function(){ return this._outputNames; }
+});
+
+Xflow.VertexShader.prototype.isInputUniform = function(name){
+    return this._inputInfo[name].uniform;
+}
+Xflow.VertexShader.prototype.getInputData = function(name){
+    return this._programData.getDataEntry(this._inputInfo[name].index);
+}
+
+Xflow.VertexShader.prototype.isOutputNull = function(name){
+    return this._outputInfo[name].iteration == Xflow.ITERATION_TYPE.NULL;
+}
+Xflow.VertexShader.prototype.isOutputFragmentUniform = function(name){
+    return this._outputInfo[name].iteration == Xflow.ITERATION_TYPE.ONE;
+}
+Xflow.VertexShader.prototype.getUniformOutputData = function(name){
+    return this._programData.getDataEntry(this._outputInfo[name].index);
+}
+Xflow.VertexShader.prototype.getOutputType = function(name){
+    return this._outputInfo[name].type;
+}
+Xflow.VertexShader.prototype.getOutputSourceName = function(name){
+    return this._outputInfo[name].sourceName;
+}
+Xflow.VertexShader.prototype.getGLSLCode = function(){
+    return this._glslCode;
+}
 
 
 }());(function(){
@@ -14144,6 +15256,7 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
      */
     Xflow.ChannelNode = function(dataNode, substitution){
         this.owner = dataNode;
+        this.platform = Xflow.PLATFORM.JAVASCRIPT;
         this.substitution = substitution;
         this.loading = false;
         this.inputSlots = {};
@@ -14162,7 +15275,9 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
 
 
     Xflow.ChannelNode.prototype.synchronize = function(){
+
         if(this.outOfSync){
+            updatePlatform(this);
             synchronizeChildren(this);
             updateInputChannels(this);
             updateComputedChannels(this);
@@ -14271,6 +15386,23 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
     }
 
 
+    function updatePlatform(channelNode) {
+        var platform;
+        var owner = channelNode.owner;
+        var graph = owner._graph;
+
+        // Platforms other than JavaScript are available only for computing operators
+        if(!channelNode.owner._computeOperator) {
+            return;
+        }
+
+        //TODO: Add better platform selection logic: Apply forced platform attribute value from Xml3D Data/Dataflow adapter
+
+        platform = graph.platform;
+
+        channelNode.platform = platform;
+    }
+
 
     function synchronizeChildren(channelNode){
 
@@ -14351,18 +15483,28 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
     }
 
     function updateOperator(channelNode){
+        var operatorName, operator;
         var owner = channelNode.owner;
+
         if(typeof owner._computeOperator == "string"){
-            var operatorName = owner._computeOperator, operator = null;
+            operatorName = owner._computeOperator;
+            operator = null;
+
+            // Getting a correct operator for the selected platform. If operator is not available, we'll try to get
+            // the default JavaScript platform operator
             if(operatorName){
-                operator = Xflow.getOperator(operatorName);
+                operator = Xflow.getOperator(operatorName, channelNode.platform) ||
+                    Xflow.getOperator(operatorName, Xflow.PLATFORM.JAVASCRIPT);
+
                 if(!operator){
                     Xflow.notifyError("Unknown operator: '" + operatorName+"'", channelNode.owner);
                 }
+
+                channelNode.platform = operator.platform;
             }
+
             channelNode.operator = operator;
-        }
-        else{
+        }else{
             channelNode.operator = owner._computeOperator;
         }
     }
@@ -14373,7 +15515,8 @@ Xflow.VSConfig.prototype.setOutputMapping = function(orderMapping){
             var procNode = channelNode.processNode = new Xflow.ProcessNode(channelNode);
             var index = 0;
             for(var name in procNode.outputDataSlots){
-                var destName = owner._computeOutputMapping.getScriptOutputName(index, name);
+                var destName = name;
+                if(owner._computeOutputMapping) destName = owner._computeOutputMapping.getScriptOutputName(index, name);
                 if(destName){
                     channelNode.computedChannels.addOutputDataSlot(destName, procNode.outputDataSlots[name], procNode);
                 }
@@ -14533,9 +15676,10 @@ ProcessNode.prototype.updateState = function(){
 
 ProcessNode.prototype.process = function(){
     // TODO: Fix this with respect to states
-    if(this.status == Xflow.PROCESS_STATE.UNPROCESSED){
+    var executer;
 
-        var executer = getOrCreateExecuter(this, Xflow.PLATFORM.JAVASCRIPT);
+    if(this.status == Xflow.PROCESS_STATE.UNPROCESSED){
+        executer = getOrCreateExecuter(this, this.owner.platform);
         executer.run();
 
         this.status = Xflow.PROCESS_STATE.PROCESSED;
@@ -14705,10 +15849,9 @@ RequestNode.prototype.isReady = function(){
 RequestNode.prototype.getResult = function(resultType){
     this.updateState();
 
-
     if(this.status == Xflow.PROCESS_STATE.UNPROCESSED){
         if(resultType == Xflow.RESULT_TYPE.COMPUTE){
-            var executer = getOrCreateExecuter(this, Xflow.PLATFORM.JAVASCRIPT);
+            var executer = getOrCreateExecuter(this, this.owner.platform);
             executer.run();
         }
         this.status = Xflow.PROCESS_STATE.PROCESSED;
@@ -14782,19 +15925,12 @@ function getRequestVSResult(requestNode)
 {
     var executer = getOrCreateExecuter(requestNode, Xflow.PLATFORM.GLSL);
     if(!requestNode.results[Xflow.RESULT_TYPE.VS])
-        requestNode.results[Xflow.RESULT_TYPE.VS] = new Xflow.VertexShaderResult();
+        requestNode.results[Xflow.RESULT_TYPE.VS] = new Xflow.VSDataResult();
     var result = requestNode.results[Xflow.RESULT_TYPE.VS];
 
     var program = executer.getVertexShader();
     result._program = program;
     result._programData = executer.programData;
-
-    result._dataEntries = {}; result._outputNames = [];
-    for(var name in requestNode.channels){
-        var entry = requestNode.channels[name].getDataEntry();
-        result._dataEntries[name] = entry && !entry.isEmpty() ? entry : null;
-        result._outputNames.push(name);
-    }
     return result;
 }
 
@@ -14815,7 +15951,13 @@ function getRequestVSResult(requestNode)
         this.subNodes = [];
         this.unprocessedDataNames = [];
 
-        this.operatorList =  new Xflow.OperatorList(platform);
+        /**
+         *  TODO: Maybe we should just store the cl-platform objects in XFlow.cl so they are more easily available and
+         *  to avoid long prototype chains. Or we could pass the graph context to each node of the graph.
+         *  However, it would be good to allow each Graph object to have at least own context, cmdQueue and kernelManager.
+         *  e.g. passing graph information here requires a long prototype chain
+         */
+        this.operatorList =  new Xflow.OperatorList(platform, ownerNode.owner.owner._graph);
         this.programData =  new Xflow.ProgramData();
 
         this.program = null;
@@ -14986,8 +16128,9 @@ function getRequestVSResult(requestNode)
                 continue;
             }
 
-            var mappedInputName = node.owner.owner._computeInputMapping.getScriptInputName(mapping[j].paramIdx,
-                mapping[j].source);
+            var mappedInputName = mapping[j].source;
+            if(node.owner.owner._computeInputMapping)
+                mappedInputName = node.owner.owner._computeInputMapping.getScriptInputName(mapping[j].paramIdx, mapping[j].source);
 
             var connection = new Xflow.ProgramInputConnection();
             connection.channel = channel;
@@ -15200,25 +16343,65 @@ Xflow.utils.binarySearch = function(keys, key, maxIndex){
 
 var operators = {};
 
+    /**
+     * Registers Xflow operator.
+     * The operators are stored in collections using their platform as a key. If no platform is defined, the operator
+     * will be registered as a JavaScript-based operator.
+     *
+     * @param name
+     * @param data
+     */
+
 Xflow.registerOperator = function(name, data){
-    var actualName = name;
+    var opCollection, platform;
+
     initOperator(data);
-    operators[actualName] = data;
-    data.name = actualName;
+    if(!operators[name]) {
+        operators[name] = {};
+    }
+
+    platform = data['platform'];
+
+    opCollection = operators[name];
+
+    if (!name) {
+        XML3D.logWarning("Xflow.registerOperator: Operator name undefined.");
+        return;
+    }
+
+    if (!data) {
+        XML3D.logWarning("Xflow.registerOperator: Operator data undefined.");
+        return;
+    }
+
+    data.name = name;
+
+    if (platform && !opCollection.hasOwnProperty(platform)) {
+        opCollection[platform] = data;
+    } else if (!platform) {
+        opCollection[Xflow.PLATFORM.JAVASCRIPT] = data;
+    }
+
 };
 
-Xflow.initAnonymousOperator = function(data){
+Xflow.initAnonymousOperator = function(name, data){
     initOperator(data);
-    data.name = "Anonymous Operator";
+    data.name = name;
     return data;
 }
 
-Xflow.getOperator = function(name){
-    if (name && !operators[name])
-    {
+Xflow.getOperator = function(name, platform){
+    platform = platform || Xflow.PLATFORM.JAVASCRIPT;
+
+    if (name && !operators[name]) {
         return null;
     }
-    return operators[name];
+
+    if(!operators[name][platform]) {
+        return null;
+    }
+
+    return operators[name][platform];
 };
 
 function initOperator(operator){
@@ -15247,6 +16430,9 @@ function initOperator(operator){
         mapping.internalType = type;
         mapping.name = mapping.name || mapping.source;
     }
+
+    //Check/init platform
+    operator.platform = operator.platform || Xflow.PLATFORM.JAVASCRIPT;
 }
 
 })();
@@ -15335,8 +16521,9 @@ function initOperator(operator){
         return key;
     }
 
-    Xflow.OperatorList = function(platform){
-        this.platform = platform
+    Xflow.OperatorList = function(platform, graph){
+        this.graph = graph;
+        this.platform = platform;
         this.entries = [];
         this.inputInfo = {};
     }
@@ -15565,18 +16752,30 @@ function initOperator(operator){
     var c_program_cache = {};
 
     Xflow.createProgram = function(operatorList){
-        if(operatorList.entries.length == 0)
+        var firstOperator;
+
+        if(operatorList.entries.length === 0) {
             return null;
+        }
+
+        firstOperator = operatorList.entries[0].operator;
 
         var key = operatorList.getKey();
         if(!c_program_cache[key]){
-            if(operatorList.platform == Xflow.PLATFORM.GLSL){
+            // GLSL operators are implemented in a different way, so platform information is fetched from the operatorList
+            // as a fallback mode to not break the old implementations
+            if(operatorList.platform === Xflow.PLATFORM.GLSL){
                 c_program_cache[key] = new Xflow.VSProgram(operatorList);
-            }
-            else if(operatorList.entries.length == 1)
+
+            } else if (firstOperator.platform === Xflow.PLATFORM.CL) {
+                c_program_cache[key] = new Xflow.CLProgram(operatorList);
+
+            }else if(firstOperator.platform === Xflow.PLATFORM.JAVASCRIPT && operatorList.entries.length === 1 ) {
                 c_program_cache[key] = new Xflow.SingleProgram(operatorList);
-            else
+
+            }else {
                 Xflow.notifyError("Could not create program from operatorList");
+            }
         }
         return c_program_cache[key];
     }
@@ -15694,6 +16893,8 @@ function initOperator(operator){
             data.iterFlag[i] = doIterate;
         }
         data.iterateCount = list.getIterateCount(programData);
+        if(!data.customData)
+            data.customData = {};
         return data;
     }
 
@@ -15736,27 +16937,16 @@ function initOperator(operator){
 
     Xflow.VSProgram = function(operatorList){
         this.list = operatorList;
-
-        this._glslCode = null;
-        this._shaderInputNames = [];
-        this._shaderOutputNames = [];
-        this._inputInfo = {};
         this._outputInfo = {};
-        constructVS(this);
+        setOutputIterate(this);
     }
 
-    Xflow.VSProgram.prototype.isInputUniform = function(name){
-        return this._inputInfo[name].uniform;
-    }
-    Xflow.VSProgram.prototype.getInputData = function(name, programData){
-        return programData.getDataEntry(this._inputInfo[name].index);
+    Xflow.VSProgram.prototype.getOutputNames = function(){
+        return Object.keys(this._outputInfo);
     }
 
-    Xflow.VSProgram.prototype.getShaderOutputType = function(name){
+    Xflow.VSProgram.prototype.getOutputType = function(name){
         return this._outputInfo[name].type;
-    }
-    Xflow.VSProgram.prototype.getShaderOutputSourceName = function(name){
-        return this._outputInfo[name].sourceName;
     }
 
     Xflow.VSProgram.prototype.isOutputUniform = function(name){
@@ -15767,12 +16957,38 @@ function initOperator(operator){
         return this._outputInfo[name].iteration == Xflow.ITERATION_TYPE.NULL;
     }
 
-    Xflow.VSProgram.prototype.getUniformOutputData = function(name, programData){
-        return programData.getDataEntry(this._outputInfo[name].index);
+    Xflow.VSProgram.prototype.createVertexShader = function(programData, vsConfig){
+        var result = new Xflow.VertexShader(programData);
+        constructVS(result, this, vsConfig)
+        return result;
     }
 
+    function setOutputIterate(program){
+        var operatorList = program.list, entries = operatorList.entries;
 
-    function constructVS(program){
+        var baseEntry = entries[entries.length - 1], baseOperator = baseEntry.operator;
+
+        for( var i = 0; i < baseOperator.params.length; ++i){
+            var entry = baseOperator.params[i],
+                name = entry.source,
+                inputIndex = i,
+                directInputIndex = baseEntry.getDirectInputIndex(inputIndex);
+            program._outputInfo[name] = {type: entry.type};
+            if( baseEntry.isTransferInput(inputIndex) ||
+                operatorList.isInputIterate(directInputIndex))
+            {
+                program._outputInfo[name].iteration = Xflow.ITERATION_TYPE.MANY;
+            }
+            else if(operatorList.isInputUniform(directInputIndex)){
+                program._outputInfo[name].iteration = Xflow.ITERATION_TYPE.ONE;
+            }
+            else{
+                program._outputInfo[name].iteration = Xflow.ITERATION_TYPE.NULL;
+            }
+        }
+    }
+
+    function constructVS(vs, program, vsConfig){
         var operatorList = program.list, entries = operatorList.entries;
 
         var usedNames = [],
@@ -15780,59 +16996,59 @@ function initOperator(operator){
             transferNames = {};
 
         var baseEntry = entries[entries.length - 1], acceptedBaseShaderInput = [], baseOperator = baseEntry.operator;
-        var vsConfig = baseOperator.vsConfig, outputInputMap = baseOperator.outputInputMap;
 
         if(!vsConfig)
             throw new Error("Could not find vsConfig! Attempt to create vertex shader programm without VS operator?");
 
-        for(var i = 0; i < entries.length; ++i){
-            if(entries[i].blockedNames){
-                Xflow.nameset.add(usedNames, entries[i].blockedNames);
-            }
-        }
+        Xflow.nameset.add(usedNames, vsConfig.getBlockedNames());
 
         var code = "";
-        code += "// GLOBALS\n"
-        // Start with Globals
-        for(var type in Xflow.shaderConstant){
-            var name = Xflow.shaderConstant[type];
-            code += "uniform " + c_SHADER_CONSTANT_TYPES[type]  +
-                    " " + name + ";\n";
-            Xflow.nameset.add(usedNames, name);
-        }
-        code += "\n";
         code += "// OUTPUT\n"
         // First: collect output names
-
-        for( var i = 0; i < vsConfig._attributes.length; ++i){
-            var configAttr = vsConfig._attributes[i],
-                inputIndex = outputInputMap[i],
+        for(var name in vsConfig._addOutput){
+            var entry = vsConfig._addOutput[name];
+            code += "varying " + getGLSLType(entry.type) + " " + name + ";\n";
+            Xflow.nameset.add(usedNames, name);
+        }
+        var inputIndex = 0;
+        for( var name in vsConfig._attributes){
+            var configAttr = vsConfig._attributes[name],
                 directInputIndex = baseEntry.getDirectInputIndex(inputIndex);
-            var outputInfo = {type: configAttr.type, iteration: 0, index: 0, sourceName: configAttr.inputName},
-                outputName = configAttr.outputName;
-            if(vsConfig.isAttributeTransformed(i) ||
-                baseEntry.isTransferInput(inputIndex) ||
-                operatorList.isInputIterate(directInputIndex))
-            {
-                acceptedBaseShaderInput[inputIndex] = true;
-                outputInfo.iteration = Xflow.ITERATION_TYPE.MANY;
-
-                code += "varying " + getGLSLType(baseOperator.outputs[i].type) + " " + outputName + ";\n";
-                Xflow.nameset.add(usedNames, outputName);
-                transferNames[baseEntry.getTransferOutputId(i)] = outputName;
+            for(var i = 0; i < configAttr.channeling.length; ++i){
+                var channeling = configAttr.channeling[i];
+                var outputInfo = {type: configAttr.type, iteration: 0, index: 0, sourceName: name},
+                    outputName = channeling.outputName;
+                if( channeling.code ||
+                    baseEntry.isTransferInput(inputIndex) ||
+                    operatorList.isInputIterate(directInputIndex))
+                {
+                    acceptedBaseShaderInput[inputIndex] = true;
+                    outputInfo.iteration = Xflow.ITERATION_TYPE.MANY;
+                    var type = baseOperator.outputs[inputIndex].type;
+                    code += "varying " + getGLSLType(type) + " " + outputName + ";\n";
+                    Xflow.nameset.add(usedNames, outputName);
+                    transferNames[baseEntry.getTransferOutputId(i)] = outputName;
+                }
+                else if(operatorList.isInputUniform(directInputIndex)){
+                    outputInfo.iteration = Xflow.ITERATION_TYPE.ONE;
+                    outputInfo.index = directInputIndex;
+                }
+                else{
+                    outputInfo.iteration = Xflow.ITERATION_TYPE.NULL;
+                }
+                Xflow.nameset.add(vs._outputNames, outputName);
+                vs._outputInfo[outputName] = outputInfo;
             }
-            else if(operatorList.isInputUniform(directInputIndex)){
-                outputInfo.iteration = Xflow.ITERATION_TYPE.ONE;
-                outputInfo.index = directInputIndex;
-            }
-            else{
-                outputInfo.iteration = Xflow.ITERATION_TYPE.NULL;
-            }
-            Xflow.nameset.add(program._shaderOutputNames, outputName);
-            program._outputInfo[outputName] = outputInfo;
+            inputIndex++;
         }
         code += "\n";
         code += "// INPUT\n"
+        // Add additional input
+        for(var name in vsConfig._addInput){
+            var entry = vsConfig._addInput[name];
+            code += (entry.uniform ? "uniform " : "attribute " ) + getGLSLType(entry.type) + " " + name + ";\n";
+            Xflow.nameset.add(usedNames, name);
+        }
         // Second: collect input names
         for(var i = 0; i < entries.length; ++i){
             var entry = entries[i], operator = entry.operator;
@@ -15843,15 +17059,12 @@ function initOperator(operator){
                     var mapEntry = operator.mapping[j];
                     var name = getFreeName(mapEntry.name, usedNames), inputIndex = entry.getDirectInputIndex(j),
                         uniform = !operatorList.isInputIterate(inputIndex);
-                    program._inputInfo[name] = { index: inputIndex, uniform: uniform };
-                    Xflow.nameset.add(program._shaderInputNames, name);
+                    vs._inputInfo[name] = { index: inputIndex, uniform: uniform };
+                    Xflow.nameset.add(vs._inputNames, name);
                     directInputNames[inputIndex] = name;
-
                     code += (uniform ? "uniform " : "attribute ") + getGLSLType(mapEntry.internalType) + " " + name;
-
                     if(mapEntry.array)
-                        code += "[" + operatorList.getInputSize(inputIndex) + "]"
-
+                        code += "[" + operatorList.getInputSize(inputIndex) + "]";
                     code += ";\n";
                 }
             }
@@ -15873,49 +17086,67 @@ function initOperator(operator){
                 }
             }
             // Take Code Fragment
-            var codeFragment = operator.evaluate_glsl, index;
-
-            if(operator.glsl_fragments){
-                for(var outputName in program._outputInfo){
-                    if(program._outputInfo[outputName].iteration == Xflow.ITERATION_TYPE.MANY)
-                        codeFragment += "\n" + operator.glsl_fragments[outputName];
-                }
-            }
-
-            while((index = codeFragment.indexOf("#I{")) != -1){
-                var end = codeFragment.indexOf("}",index);
-                var mappingIndex = getMappingIndex(operator, codeFragment.substring(index+3,end));
-                var replaceName = entry.isTransferInput(mappingIndex) ?
-                    transferNames[entry.getTransferInputId(mappingIndex)] :
-                    directInputNames[entry.getDirectInputIndex(mappingIndex)];
-                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
-            }
-            while((index = codeFragment.indexOf("#O{")) != -1){
-                var end = codeFragment.indexOf("}",index);
-                var outputIndex = getOutputIndex(operator, codeFragment.substring(index+3,end));
-                var replaceName = transferNames[entry.getTransferOutputId(outputIndex)];
-                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
-            }
-            var localNames = [];
-            while((index = codeFragment.indexOf("#L{")) != -1){
-                var end = codeFragment.indexOf("}",index);
-                var key = codeFragment.substring(index+3,end);
-                if(!localNames[key]){
-                    localNames[key] = getFreeName(key, usedNames);
-                }
-                var replaceName = localNames[key];
-                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
-            }
-            while((index = codeFragment.indexOf("#G{")) != -1){
-                var end = codeFragment.indexOf("}",index);
-                var replaceName = codeFragment.substring(index+3,end);
-                codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
-            }
+            var codeFragment = convertCodeFragment(operator.evaluate_glsl, entry,
+                                    transferNames, directInputNames, usedNames);
             code += codeFragment + "\n";
         }
-        code += "}\n";
 
-        program._glslCode = code;
+        // Add attribute channeling code
+        var mappingIndex = 0, conversionCode = "";
+        for( var name in vsConfig._attributes){
+            var entry = vsConfig._attributes[name];
+            for(var i = 0; i < entry.channeling.length; ++i){
+                var channeling = entry.channeling[i], outputName = channeling.outputName;
+                if(vs._outputInfo[outputName].iteration == Xflow.ITERATION_TYPE.MANY){
+                    if(channeling.code)
+                        conversionCode += "\t" + channeling.code + "\n";
+                    else
+                        conversionCode += "\t" + outputName + " = #I{" + name + "};\n";
+                }
+            }
+            mappingIndex++;
+        }
+        for( var i = 0; i < vsConfig._codeFragments.length; ++i){
+            conversionCode += "\t" + vsConfig._codeFragments[i] + "\n";
+        }
+        code += convertCodeFragment(conversionCode, baseEntry, transferNames, directInputNames, usedNames) + "\n";
+
+        code += "}\n";
+        vs._glslCode = code;
+    }
+
+    function convertCodeFragment(codeFragment, entry, transferNames, directInputNames, usedNames){
+        var index, operator = entry.operator;
+        while((index = codeFragment.indexOf("#I{")) != -1){
+            var end = codeFragment.indexOf("}",index);
+            var mappingIndex = getMappingIndex(operator, codeFragment.substring(index+3,end));
+            var replaceName = entry.isTransferInput(mappingIndex) ?
+                transferNames[entry.getTransferInputId(mappingIndex)] :
+                directInputNames[entry.getDirectInputIndex(mappingIndex)];
+            codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+        }
+        while((index = codeFragment.indexOf("#O{")) != -1){
+            var end = codeFragment.indexOf("}",index);
+            var outputIndex = getOutputIndex(operator, codeFragment.substring(index+3,end));
+            var replaceName = transferNames[entry.getTransferOutputId(outputIndex)];
+            codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+        }
+        var localNames = [];
+        while((index = codeFragment.indexOf("#L{")) != -1){
+            var end = codeFragment.indexOf("}",index);
+            var key = codeFragment.substring(index+3,end);
+            if(!localNames[key]){
+                localNames[key] = getFreeName(key, usedNames);
+            }
+            var replaceName = localNames[key];
+            codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+        }
+        while((index = codeFragment.indexOf("#G{")) != -1){
+            var end = codeFragment.indexOf("}",index);
+            var replaceName = codeFragment.substring(index+3,end);
+            codeFragment = codeFragment.substring(0, index) + replaceName + codeFragment.substring(end+1);
+        }
+        return codeFragment;
     }
 
     function getFreeName(name, usedNames){
@@ -15950,11 +17181,635 @@ function initOperator(operator){
             case Xflow.DATA_TYPE.FLOAT2 : return 'vec2';
             case Xflow.DATA_TYPE.FLOAT3 : return 'vec3';
             case Xflow.DATA_TYPE.FLOAT4 : return 'vec4';
+            case Xflow.DATA_TYPE.FLOAT3X3 : return 'mat3';
             case Xflow.DATA_TYPE.FLOAT4X4 : return 'mat4';
             case Xflow.DATA_TYPE.INT : return 'int';
             case Xflow.DATA_TYPE.INT4 : return 'ivec4';
         }
         throw new Error("Type not supported for GLSL " + Xflow.getTypeName(xflowType) );
+    }
+
+
+}());(function () {
+    "use strict";
+
+    /**
+     * CLProgram implements automatic Xflow input/output adaptive WebCL kernel and application code generation.
+     *
+     * @param operatorList
+     * @constructor
+     */
+
+    Xflow.CLProgram = function (operatorList) {
+        this.cl = operatorList.graph.cl; // CL wrapper
+
+        if (!this.cl) {
+            return;
+        }
+
+        this.list = operatorList;
+        this.entry = operatorList.entries[0];
+        this.operator = this.entry.operator;
+
+        this.kernelParamMap = {inputs: [], outputs: []}; // Stores initialised KernelParam objects
+        this.kernelFunctionParams = []; // Stores generated function parameters for kernel function header.
+        this.kernelCode = null; // Generated kernel code
+        this.kernelProgram = null; // Compiled kernel program
+        this.mainProgram = null; // Main WebCL application code
+
+    };
+
+    /**
+     * Map of helper kernel parameters required for certain input data types.
+     *
+     * @type Object
+     */
+    var helperParamMap = {
+        'texture': {type: "uint", params: ["width", "height"]},
+        'buffer': {type: "uint", params: ["length"]}
+    };
+
+    /**
+     * Utility prototype object for mapping Xflow inputs to kernel parameters and for generating kernel code.
+     *
+     * @param {Object} program
+     * @param {String} name
+     * @param {Xflow.DATA_TYPE} xflowType
+     * @param {String} clType
+     * @param entryValue
+     * @param {Boolean} isInput
+     * @name KernelParam
+     * @constructor KernelParam
+     */
+
+    function KernelParam(program, name, xflowType, clType, entryValue, isInput) {
+        this.program = program;
+        this.cl = program.cl;
+        this.name = name;
+        this.type = clType || null;
+        this.isInput = !!isInput;
+        this.needsMemObject = false;
+        this.hasMemObject = false;
+        this.byteSize = null;
+        this.memObjectSize = null;
+        this.arg = null;
+        this.clFunctionParam = null;
+        this.xflowType = xflowType;
+        this.helperMap = null;
+        this.helpers = [];
+        this.entryValue = entryValue || null;
+        this.val = null;
+
+        this.prepareParam();
+        this.initHelperParams();
+        this.initKernelArg();
+        this.updateValue(this.entryValue);
+
+    }
+
+    KernelParam.prototype = {
+        /**
+         * Prepares the kernel parameter data.
+         * Maps the input xflow data type to webcl data type and creates a kernel function header parameter with proper
+         * declarations.
+         */
+        prepareParam: function () {
+            var helperMap;
+            var xflowDataTypes = Xflow.DATA_TYPE;
+            var kernelFuncParam = [];
+            var addressSpace = '';
+            var declarations = '';
+
+            if (!this.type) {
+                switch (this.xflowType) {
+                    case xflowDataTypes.TEXTURE:
+                    {
+                        helperMap = helperParamMap.texture;
+                        this.type = "uchar4*";
+                        addressSpace = "__global";
+                        this.needsMemObject = true;
+                    }
+                        break;
+                    case xflowDataTypes.INT:
+                    {
+                        this.type = "int";
+                    }
+                        break;
+                    case xflowDataTypes.FLOAT:
+                    {
+                        this.type = "float";
+                    }
+                        break;
+                    default:
+                        return;
+                }
+
+                this.helperMap = helperMap;
+            }
+
+            // Arranging parameter parts
+            if (addressSpace) {
+                kernelFuncParam.push(addressSpace);
+            }
+
+            if (this.isInput) {
+                declarations = 'const';
+            }
+
+            if (declarations) {
+                kernelFuncParam.push(declarations);
+            }
+
+            kernelFuncParam.push(this.type);
+            kernelFuncParam.push(this.name);
+            this.clFunctionParam = kernelFuncParam.join(' ');
+        },
+
+        /**
+         * Initialises helper parameters for an input parameter if needed.
+         *
+         */
+
+        initHelperParams: function () {
+            var helperVal;
+            var self = this;
+            var helperMap = this.helperMap;
+
+            if (helperMap && this.isInput) {
+                helperMap.params.forEach(function (p) {
+                    var pName = self.name + '_' + p;
+                    if (p === "width") {
+                        helperVal = self.entryValue.width;
+                    } else if (p === "height") {
+                        helperVal = self.entryValue.height;
+                    } else if (p === "length") {
+                        helperVal = self.entryValue.length;
+                    }
+                    self.helpers.push(new KernelParam(self.program, pName, null, helperMap.type, new Uint32Array([helperVal])));
+                });
+            }
+        },
+
+        /**
+         * Initialises kernel argument that will be passed directly into the compiled kernel.
+         * Creates a WebCL memory object if needed (e.g. for texture).
+         */
+
+        initKernelArg: function () {
+            if (this.needsMemObject) {
+                this.allocateMemObject();
+            } else {
+                this.arg = this.entryValue;
+            }
+        },
+
+        allocateMemObject: function () {
+            var clAPI = this.cl.API;
+            var clCtx = this.cl.ctx;
+            var paramType = this.type;
+            var byteSize = parseInt(paramType.substring(paramType.length - 2, paramType.length - 1), 10);
+            var memObjectMode = this.isInput ? 'r' : 'w';
+            var entryValue = this.entryValue;
+            var memObjectSize, memObject;
+
+            if (this.hasMemObject) {
+                this.arg.release();
+            }
+
+            this.byteSize = byteSize;
+
+            if (this.xflowType === Xflow.DATA_TYPE.TEXTURE) { // Texture is a special case
+                memObjectSize = entryValue.width * entryValue.height * byteSize;
+            } else {
+                memObjectSize = entryValue.length * byteSize;
+            }
+
+            memObject = clAPI.createBuffer(memObjectSize, memObjectMode, clCtx);
+
+            this.memObjectSize = memObjectSize;
+            this.arg = memObject;
+
+            this.hasMemObject = true;
+            this.needsMemObject = false;
+
+        },
+
+        updateValue: function (entry) {
+            if (this.hasMemObject) {
+                this.val = entry.data;
+                this.entryValue = entry;
+                this.checkEntrySize();
+            } else {
+                this.arg = this.entryValue = entry;
+            }
+        },
+        updateHelpers: function() {
+            var helpers = this.helpers;
+            var self = this;
+
+            helpers.forEach(function (p) {
+                var name = p.name;
+                    if (name.indexOf("width") !== -1) {
+                        p.updateValue(new Uint32Array([self.entryValue.width]));
+                    } else if (name.indexOf("height") !== -1) {
+                        p.updateValue(new Uint32Array([self.entryValue.height]));
+                    } else if (name.indexOf("length") !== -1) {
+                        p.updateValue(new Uint32Array([self.entryValue.length]));
+                    }
+                });
+        },
+        checkEntrySize: function() {
+            var newSize;
+            var entryVal = this.entryValue;
+
+            if(this.xflowType === Xflow.DATA_TYPE.TEXTURE) {
+                newSize = entryVal.width * entryVal.height * this.byteSize;
+            } else {
+                newSize = entryVal.length * this.byteSize;
+            }
+            if(this.memObjectSize !== newSize) {
+                this.allocateMemObject();
+                this.updateHelpers();
+                this.program.mainProgram = null; // Forcing CL application program update
+            }
+        }
+    };
+
+
+    /**
+     * Runs CLProgram. WebCL related code initialised in the first run.
+     *
+     * @param programData
+     */
+
+    Xflow.CLProgram.prototype.run = function (programData) {
+        var operatorData = prepareOperatorData(this.list, 0, programData);
+
+        applyDefaultOperation(this.entry, programData, operatorData, this);
+
+    };
+
+    function prepareOperatorData(list, idx, programData) {
+        var doIterate, i;
+        var data = programData.operatorData[0];
+        var entry = list.entries[idx];
+        var mapping = entry.operator.mapping;
+
+        data.iterFlag = {};
+
+        for (i = 0; i < mapping.length; ++i) {
+            doIterate = (entry.isTransferInput(i) || list.isInputIterate(entry.getDirectInputIndex(i)));
+            data.iterFlag[i] = doIterate;
+        }
+
+        data.iterateCount = list.getIterateCount(programData);
+
+        return data;
+    }
+
+    function applyDefaultOperation(entry, programData, operatorData, program) {
+        if (program.operator.evaluate && program.operator.evaluate instanceof Array) {
+            assembleFunctionArgs(entry, programData, program);
+
+            if (program.kernelCode === null) {
+                prepareWebCLKernel(programData, program);
+            }
+            //console.time('CLProgram (' + program.operator.name + ')');
+            if(program.mainProgram === null) {
+                program.mainProgram = createMainWebCLProgram(program);
+            }
+            program.mainProgram();
+            //console.timeEnd('CLProgram (' + program.operator.name + ')');
+        }
+    }
+
+    /**
+     * Maps Xflow inputs and outputs into WebCL kernel inputs and outputs.
+     *
+     * @function assembleFunctionArgs
+     * @param entry
+     * @param programData
+     * @param program
+     */
+
+    function assembleFunctionArgs(entry, programData, program) {
+        var d, dataEntry, i;
+        var kernelFunctionParams = program.kernelFunctionParams;
+        var outputs = program.operator.outputs;
+
+        kernelFunctionParams.length = 0;
+
+        for (i = 0; i < outputs.length; ++i) {
+            d = outputs[i];
+            dataEntry = programData.outputs[entry.getOutputIndex(i)].dataEntry;
+
+            prepareKernelParameter(d, !!(d.source), program, kernelFunctionParams, dataEntry, i);
+        }
+
+        addInputToArgs(entry, programData, program, kernelFunctionParams);
+    }
+
+
+    function addInputToArgs(entry, programData, program, kernelFunctionParams) {
+        var mapEntry, dataEntry, i;
+        var mapping = entry.operator.mapping;
+
+        for (i = 0; i < mapping.length; ++i) {
+            mapEntry = mapping[i];
+            dataEntry = programData.getDataEntry(entry.getDirectInputIndex(i));
+
+            prepareKernelParameter(mapEntry, !!(mapEntry.source), program, kernelFunctionParams, dataEntry, i);
+        }
+    }
+
+    /**
+     * Creates a new KernelParam utility object or updates the existing object if input value has been changed.
+     * Additionally, this is used for generating the WebCL kernel function header.
+     *
+     * @function prepareKernelParameter
+     * @param param
+     * @param input
+     * @param program
+     * @param functionParams
+     * @param arg
+     * @param i
+     */
+
+    function prepareKernelParameter(param, input, program, functionParams, arg, i) {
+        var kernelParams;
+        var entryVal = arg ? arg.getValue() : null;
+
+        if (input) {
+            kernelParams = program.kernelParamMap.inputs;
+        } else {
+            kernelParams = program.kernelParamMap.outputs;
+        }
+
+        if (kernelParams[i]) {
+            kernelParams[i].updateValue(entryVal);
+            return;
+        }
+
+        kernelParams[i] = new KernelParam(program, param.name, param.type, null, entryVal, input);
+
+        // Pushing generated kernel function params into array.
+        // This array is later used in generating the WebCL kernel function header.
+        functionParams.push(kernelParams[i].clFunctionParam);
+
+        kernelParams[i].helpers.forEach(function (p) {
+            functionParams.push(p.clFunctionParam);
+        });
+    }
+
+
+    /** KERNEL CODE PREPARATION **/
+
+
+    /**
+     * Compiles and registers the prepared WebCL kernel code.
+     *
+     * @function prepareWebCLKernel
+     * @param programData
+     * @param program
+     * @returns {boolean}
+     */
+
+    function prepareWebCLKernel(programData, program) {
+        var kernelCode;
+        var kernelManager = program.cl.kernelManager;
+        var inputKernel = program.operator.evaluate;
+        var kernelName = program.kernelName = program.operator.name.split('xflow.')[1];
+
+        if (!inputKernel) {
+            return false;
+        }
+
+        kernelCode = program.kernelCode = prepareKernelCode(kernelName, inputKernel, program);
+
+        try {
+            kernelManager.register(kernelName, kernelCode);
+        } catch (e) {
+            return false;
+        }
+
+        program.kernelProgram = kernelManager.getKernel(program.kernelName);
+
+        return true;
+    }
+
+    /**
+     *
+     * Generates kernel function header and helper kernel code and combines it with user's input kernel code.
+     *
+     * @function prepareKernelCode
+     * @param {String} kernelName
+     * @param {Array} inputKernel
+     * @param program
+     * @returns {String}
+     */
+
+    function prepareKernelCode(kernelName, inputKernel, program) {
+        var result, innerKernelCode;
+
+        result = createKernelHeader(kernelName, program);
+
+        if (!result) {
+            return false;
+        }
+
+        result += '{\n';
+
+        innerKernelCode = createInnerKernelCode(program);
+
+        if (!innerKernelCode) {
+            return false;
+        }
+
+        result += innerKernelCode;
+        result += inputKernel.join('\n');
+        result += '\n}';
+
+        return result;
+    }
+
+    /**
+     * Generates a kernel function header from assembled kernel parameters.
+     *
+     * @function createKernelHeader
+     * @param kernelName
+     * @param program
+     * @returns {string}
+     */
+
+    function createKernelHeader(kernelName, program) {
+        var functionHeader = [];
+
+        functionHeader.push("__kernel void");
+        functionHeader.push(kernelName + '(');
+        functionHeader.push(program.kernelFunctionParams.join(', '));
+        functionHeader.push(')');
+
+        return functionHeader.join(' ');
+    }
+
+    /**
+     * Generates helper kernel code.
+     *
+     * @function createInnerKernelCode
+     * @param program
+     * @returns {string}
+     */
+
+    function createInnerKernelCode(program) {
+        var codeLines = [];
+
+        var firstInput = program.kernelParamMap.inputs[0];
+
+        if (firstInput.type === "uchar4*") {
+            // Add "iterators"
+            codeLines.push("int x = get_global_id(0);");
+            codeLines.push("int y = get_global_id(1);");
+
+            // Add bounds checkers
+            codeLines.push("if (x >= " + firstInput.name + "_width || y >= " + firstInput.name + "_height) return;");
+
+            // Add input iterator
+            codeLines.push("int " + firstInput.name + "_i = y * " + firstInput.name + "_width + x;");
+
+        } else { // Else, assuming that the first input is an 1-dimensional buffer
+
+            codeLines.push("int " + firstInput.name + "_i = get_global_id(0);");
+
+            codeLines.push("if (int " + firstInput.name + "_i >= " + firstInput.name + "_length) return;");
+        }
+
+        return codeLines.join('\n');
+
+    }
+
+
+    /** MAIN WEBCL PROGRAM INITIALISATION **/
+
+    /**
+     * Initialises the main WebCL application code that executes the WebCL kernel
+     *
+     * @function createMainWebCLProgram
+     * @param program
+     * @returns {Function}
+     */
+
+    function createMainWebCLProgram(program) {
+        var cl = program.cl;
+        var kernelManager = cl.kernelManager;
+        var cmdQueue = cl.cmdQueue;
+        var memObjects = {inputs: [], outputs: []};
+        var assembledArgs = assembleKernelArguments(program.kernelParamMap, memObjects);
+        var WSSizes = computeWorkGroupSize(program.kernelParamMap.inputs[0]);
+        var kernel = program.kernelProgram;
+
+        return function () {
+            var i, len, memObj, args;
+            var inputMemObjs = memObjects.inputs;
+            var outputMemObjs = memObjects.outputs;
+
+            if (!kernel) {
+                return false;
+            }
+
+            args = assembledArgs.map(function (a) {
+                return a.arg;
+            });
+
+            kernelManager.setArgs.apply(null, [kernel].concat(args));
+
+            try {
+                // Write the buffer to OpenCL device memory
+                len = inputMemObjs.length;
+                for (i = 0; i < len; i++) {
+                    memObj = inputMemObjs[i];
+                    cmdQueue.enqueueWriteBuffer(memObj.arg, false, 0, memObj.arg.getInfo(WebCL.MEM_SIZE), memObj.val, []);
+                }
+
+                // Execute (enqueue) kernel
+                cmdQueue.enqueueNDRangeKernel(kernel, WSSizes[1].length, [], WSSizes[1], WSSizes[0], []);
+
+                // Read the result buffer from OpenCL device
+                len = outputMemObjs.length;
+                for (i = 0; i < len; i++) {
+                    memObj = outputMemObjs[i];
+                    cmdQueue.enqueueReadBuffer(memObj.arg, false, 0, memObj.arg.getInfo(WebCL.MEM_SIZE), memObj.val, []);
+                }
+
+                cmdQueue.finish(); //Finish all the operations
+
+            } catch (e) {
+                return false;
+            }
+
+            return true;
+        };
+    }
+
+
+    /**
+     * Arranges initialised kernel arguments into helper arrays so they are more easily available in
+     * the main WebCL application.
+     *
+     * @function assembleKernelArguments
+     * @param paramMap
+     * @param memObjects
+     * @returns {Array}
+     */
+
+    function assembleKernelArguments(paramMap, memObjects) {
+        var outputs = paramMap.outputs;
+        var inputs = paramMap.inputs;
+        var kernelArgs = [];
+
+        outputs.forEach(function (p) {
+            mapKernelArgument(p, kernelArgs, memObjects.outputs);
+        });
+
+        inputs.forEach(function (p) {
+            mapKernelArgument(p, kernelArgs, memObjects.inputs);
+        });
+
+        return kernelArgs;
+    }
+
+    function mapKernelArgument(param, kernelArgs, memObjects) {
+        kernelArgs.push(param);
+
+        if (param.hasMemObject) {
+            memObjects.push(param);
+            param.helpers.forEach(function (p) {
+                kernelArgs.push(p);
+            });
+        }
+    }
+
+    /**
+     * Computes a proper WebCL kernel workgroup size for target input buffer
+     *
+     * @function computeWorkGroupSize
+     * @param targetInput
+     * @returns {Array}
+     */
+
+    function computeWorkGroupSize(targetInput) {
+        var localWS, globalWS;
+        var entryVal = targetInput.entryValue;
+
+        if (targetInput.xflowType === Xflow.DATA_TYPE.TEXTURE) {
+            localWS = [16, 4];
+            globalWS = [Math.ceil(entryVal.width / localWS[0]) * localWS[0],
+                Math.ceil(entryVal.height / localWS[1]) * localWS[1]];
+        } else {
+            localWS = [16];
+            globalWS = [Math.ceil(entryVal.length / localWS[0]) * localWS[0]];
+        }
+
+        return [localWS, globalWS];
     }
 
 
@@ -17847,35 +19702,35 @@ Xflow.registerOperator("xflow.debug.createSkinCubes", {
 XML3D.data = XML3D.data || {};
 
 (function() {
-
+"use strict";
 
 XML3D.data.xflowGraph = new Xflow.Graph();
 Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.OBJECT_ID, "objectID");
 Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.SCREEN_TRANSFORM, "modelViewProjectionMatrix");
 Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.SCREEN_TRANSFORM_NORMAL, "modelViewProjectionNormalMatrix");
 Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM, "modelViewMatrix");
-Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM_NORMAL, "normalMatrix");
+Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.VIEW_TRANSFORM_NORMAL, "modelViewMatrixN");
 Xflow.setShaderConstant(Xflow.SHADER_CONSTANT_KEY.WORLD_TRANSFORM, "modelMatrix");
 Xflow.registerErrorCallback(function(message, xflowNode){
     message = "Xflow: " + message;
     var userData = xflowNode.userData;
-    if(userData && userData.ownerDocument){
-        if(userData.ownerDocument == document){
+    if (userData && userData.ownerDocument) {
+        if (userData.ownerDocument === document) {
             XML3D.debug.logError(message, userData);
         }
-        else if(userData.id){
+        else if (userData.id) {
             var uri = new XML3D.URI("#" + userData.id);
             uri = uri.getAbsoluteURI(userData.ownerDocument.documentURI);
             XML3D.debug.logError(message, "External Node: " + uri);
         }
-        else{
+        else {
             XML3D.debug.logError(message, "External Document: " + userData.ownerDocument.documentURI);
         }
     }
-    else if(typeof userData == "string"){
+    else if (typeof userData == "string") {
         XML3D.debug.logError(message, userData);
     }
-    else{
+    else {
         XML3D.debug.logError(message);
     }
 });
@@ -17900,36 +19755,33 @@ IDataAdapter.prototype.getOutputs = function() {
  * @param factory
  * @param node
  */
-XML3D.data.BaseDataAdapter = function(factory, node) {
+XML3D.data.BaseDataAdapter = function (factory, node) {
     XML3D.base.NodeAdapter.call(this, factory, node);
     this.xflowDataNode = null;
 };
 XML3D.createClass(XML3D.data.BaseDataAdapter, XML3D.base.NodeAdapter);
 
 
-XML3D.data.BaseDataAdapter.prototype.getXflowNode = function(){
-    return this.xflowDataNode;
-}
+XML3D.data.BaseDataAdapter.prototype.getXflowNode = function () {
+        return this.xflowDataNode;
+};
 
-XML3D.data.BaseDataAdapter.prototype.getComputeRequest = function(filter, callback){
-    return new Xflow.ComputeRequest(this.xflowDataNode, filter, callback);
-}
+XML3D.data.BaseDataAdapter.prototype.getComputeRequest = function (filter, callback) {
+        return new Xflow.ComputeRequest(this.xflowDataNode, filter, callback);
+};
 
-XML3D.data.BaseDataAdapter.prototype.getComputeResult = function(filter)
-{
+XML3D.data.BaseDataAdapter.prototype.getComputeResult = function (filter) {
     var result = this.xflowDataNode._getResult(Xflow.RESULT_TYPE.COMPUTE, filter);
     return result;
-}
+};
 
-XML3D.data.BaseDataAdapter.prototype.getOutputNames = function()
-{
+XML3D.data.BaseDataAdapter.prototype.getOutputNames = function () {
     return this.xflowDataNode.getOutputNames();
-}
+};
 
-XML3D.data.BaseDataAdapter.prototype.getOutputChannelInfo = function(name)
-{
+XML3D.data.BaseDataAdapter.prototype.getOutputChannelInfo = function (name) {
     return this.xflowDataNode.getOutputChannelInfo(name);
-}
+};
 
 
 /**
@@ -17946,36 +19798,66 @@ XML3D.data.BaseDataAdapter.prototype.getOutputChannelInfo = function(name)
  * @param factory
  * @param node
  */
-XML3D.data.DataAdapter = function(factory, node) {
+XML3D.data.DataAdapter = function (factory, node) {
     XML3D.data.BaseDataAdapter.call(this, factory, node);
     this.xflowDataNode = null;
 };
 XML3D.createClass(XML3D.data.DataAdapter, XML3D.data.BaseDataAdapter);
 
-XML3D.data.DataAdapter.prototype.init = function() {
+XML3D.data.DataAdapter.prototype.init = function () {
     //var xflow = this.resolveScript();
     //if (xflow)
     //    this.scriptInstance = new XML3D.data.ScriptInstance(this, xflow);
 
-    var protoNode = (this.node.localName == "proto");
+    var protoNode = (this.node.localName === "proto");
+
     this.xflowDataNode = XML3D.data.xflowGraph.createDataNode(protoNode);
     this.xflowDataNode.userData = this.node;
 
+    // Setting platform and node type information for a data sequence
+    this.xflowDataNode.setPlatform(this.node.getAttribute("platform"));
+
     updateAdapterHandle(this, "src", this.node.getAttribute("src"));
     this.xflowDataNode.setFilter(this.node.getAttribute("filter"));
+
     updateCompute(this);
     recursiveDataAdapterConstruction(this);
 };
 
-function recursiveDataAdapterConstruction(adapter){
-    for ( var child = adapter.node.firstElementChild; child !== null; child = child.nextElementSibling) {
-        var subadapter = adapter.factory.getAdapter(child);
-        if(subadapter){
-            adapter.xflowDataNode.appendChild(subadapter.getXflowNode());
+    /** Recursively passing platform information to children of a data node
+     *  Requires that the children and the parents of data nodes are defined
+     *
+     * @param {Xflow.DataNode} parentNode
+     */
+function recursiveDataNodeAttrInit(parentNode) {
+    var children = parentNode._children, NChildren, i;
+
+    if (children && children.length > 0) {
+        NChildren = children.length;
+
+        for (i = NChildren; i--;) {
+            if (children[i] instanceof Xflow.DataNode) {
+                children[i].setPlatform(parentNode._platform);
+                recursiveDataNodeAttrInit(children[i]);
+            }
         }
     }
 }
 
+function recursiveDataAdapterConstruction(adapter) {
+    for (var child = adapter.node.firstElementChild; child !== null; child = child.nextElementSibling) {
+        var subadapter = adapter.factory.getAdapter(child);
+        if (subadapter) {
+            adapter.xflowDataNode.appendChild(subadapter.getXflowNode());
+
+            // Passes _platform values to children nodes starting from the node
+            // where these attributes are first defined
+            if (adapter.xflowDataNode._platform !== null) {
+                recursiveDataNodeAttrInit(adapter.xflowDataNode);
+            }
+        }
+    }
+}
 
 /**
  * The notifyChanged() method is called by the XML3D data structure to
@@ -17986,98 +19868,119 @@ function recursiveDataAdapterConstruction(adapter){
  *
  * @param evt notification of type XML3D.Notification
  */
-XML3D.data.DataAdapter.prototype.notifyChanged = function(evt) {
-    if(evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED){
+XML3D.data.DataAdapter.prototype.notifyChanged = function (evt) {
+    if (evt.type === XML3D.events.ADAPTER_HANDLE_CHANGED) {
         this.connectedAdapterChanged(evt.key, evt.adapter, evt.handleStatus);
-        if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+        if (evt.handleStatus === XML3D.base.AdapterHandle.STATUS.NOT_FOUND) {
             XML3D.debug.logError("Could not find <data> element of url '" + evt.url + "' for " + evt.key, this.node);
         }
-        return;
-    }
-    else if (evt.type == XML3D.events.NODE_INSERTED) {
+
+    } else if (evt.type === XML3D.events.NODE_INSERTED) {
         var insertedNode = evt.wrapped.target;
         var adapter = this.factory.getAdapter(insertedNode);
-        if(!adapter) return;
+        if (!adapter) {
+            return;
+        }
+
         var insertedXflowNode = adapter.getXflowNode();
         var sibling = insertedNode, followUpAdapter = null;
-        do{
+
+        do {
             sibling = sibling.nextSibling;
-        }while(sibling && !(followUpAdapter = this.factory.getAdapter(sibling)))
-        if(followUpAdapter)
+        } while (sibling && !(followUpAdapter = this.factory.getAdapter(sibling)));
+
+        if (followUpAdapter) {
             this.xflowDataNode.insertBefore(insertedXflowNode, followUpAdapter.getXflowNode());
-        else
+        } else {
             this.xflowDataNode.appendChild(insertedXflowNode);
-        return;
-    }
-    else if (evt.type == XML3D.events.NODE_REMOVED) {
+        }
+
+    } else if (evt.type === XML3D.events.NODE_REMOVED) {
         var adapter = this.factory.getAdapter(evt.wrapped.target);
-        if(!adapter) return;
+        if (!adapter) {
+            return;
+        }
+
         var removedXflowNode = adapter.getXflowNode();
         this.xflowDataNode.removeChild(removedXflowNode);
-        return;
-    } else if (evt.type == XML3D.events.VALUE_MODIFIED) {
+
+    } else if (evt.type === XML3D.events.VALUE_MODIFIED) {
         var attr = evt.wrapped.attrName;
-        if(attr == "filter"){
-            this.xflowDataNode.setFilter(this.node.getAttribute(attr))
+
+        if (attr === "filter") {
+            this.xflowDataNode.setFilter(this.node.getAttribute(attr));
         }
-        else if(attr == "compute"){
+        else if (attr === "compute") {
             updateCompute(this);
         }
-        else if(attr == "src"){
+        else if (attr === "src") {
             updateAdapterHandle(this, attr, this.node.getAttribute(attr));
+        } else if (attr === "platform") {
+            updatePlatform(this);
         }
-        return;
-    } else if (evt.type == XML3D.events.THIS_REMOVED) {
+
+    } else if (evt.type === XML3D.events.THIS_REMOVED) {
         this.clearAdapterHandles();
     }
 };
 
-XML3D.data.DataAdapter.prototype.connectedAdapterChanged = function(key, adapter, status) {
-    if(key == "src"){
+XML3D.data.DataAdapter.prototype.connectedAdapterChanged = function (key, adapter, status) {
+    if (key === "src") {
         this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
     }
-    if(key == "dataflow"){
+    if (key === "dataflow") {
         this.xflowDataNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
     }
     updateLoadState(this);
 };
+
 /**
  * Returns String representation of this DataAdapter
  */
-XML3D.data.DataAdapter.prototype.toString = function() {
+XML3D.data.DataAdapter.prototype.toString = function () {
     return "XML3D.data.DataAdapter";
 };
 
-function updateCompute(dataAdapter){
+function updateCompute(dataAdapter) {
     var xflowNode = dataAdapter.xflowDataNode;
     xflowNode.setCompute(dataAdapter.node.getAttribute("compute"));
-    if(xflowNode.computeDataflowUrl){
+    if (xflowNode.computeDataflowUrl) {
         updateAdapterHandle(dataAdapter, "dataflow", xflowNode.computeDataflowUrl);
     }
-    else{
+    else {
         dataAdapter.disconnectAdapterHandle("dataflow");
         updateLoadState(dataAdapter);
     }
 }
 
-function updateLoadState(dataAdpater){
-    var loading = false;
-    var handle = dataAdpater.getConnectedAdapterHandle("src");
-    if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
+function updatePlatform(dataAdapter) {
+    var xflowNode = dataAdapter.xflowDataNode;
+
+    xflowNode.setPlatform(dataAdapter.node.getAttribute("platform"));
+    recursiveDataNodeAttrInit(xflowNode);
+}
+
+function updateLoadState(dataAdpater) {
+    var loading = false, handle;
+
+    handle = dataAdpater.getConnectedAdapterHandle("src");
+    if (handle && handle.status === XML3D.base.AdapterHandle.STATUS.LOADING) {
         loading = true;
     }
 
-    var handle = dataAdpater.getConnectedAdapterHandle("dataflow");
-    if(handle && handle.status == XML3D.base.AdapterHandle.STATUS.LOADING){
+    handle = dataAdpater.getConnectedAdapterHandle("dataflow");
+    if (handle && handle.status === XML3D.base.AdapterHandle.STATUS.LOADING) {
         loading = true;
     }
+
     dataAdpater.xflowDataNode.setLoading(loading);
 }
 
-function updateAdapterHandle(adapter, key, url){
-    var adapterHandle = adapter.getAdapterHandle(url);
-    var status = (adapterHandle && adapterHandle.status);
-    if(status == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+function updateAdapterHandle(adapter, key, url) {
+    var adapterHandle = adapter.getAdapterHandle(url),
+        status = (adapterHandle && adapterHandle.status);
+
+    if (status === XML3D.base.AdapterHandle.STATUS.NOT_FOUND) {
         XML3D.debug.logError("Could not find element of url '" + adapterHandle.url + "' for " + key, adapter.node);
     }
     adapter.connectAdapterHandle(key, adapterHandle);
@@ -18091,7 +19994,7 @@ function updateAdapterHandle(adapter, key, url){
  * @param node
  * @constructor
  */
-XML3D.data.DataflowDataAdapter = function(factory, node) {
+XML3D.data.DataflowDataAdapter = function (factory, node) {
     XML3D.data.BaseDataAdapter.call(this, factory, node);
     this.xflowDataNode = null;
 };
@@ -18106,14 +20009,15 @@ XML3D.data.DataflowDataAdapter.prototype.init = function() {
 /**
  * @param evt notification of type XML3D.Notification
  */
-XML3D.data.DataflowDataAdapter.prototype.notifyChanged = function(evt) {
-    if(evt.type == XML3D.events.ADAPTER_HANDLE_CHANGED){
-
+XML3D.data.DataflowDataAdapter.prototype.notifyChanged = function (evt) {
+    if (evt.type === XML3D.events.ADAPTER_HANDLE_CHANGED) {
+        //TODO: Handle ADAPTER_HANDLE_CHANGED
     }
-    switch(evt.type){
+
+    switch (evt.type) {
         case XML3D.events.ADAPTER_HANDLE_CHANGED:
             this.connectedAdapterChanged(evt.key, evt.adapter, evt.handleStatus);
-            if(evt.handleStatus == XML3D.base.AdapterHandle.STATUS.NOT_FOUND){
+            if (evt.handleStatus === XML3D.base.AdapterHandle.STATUS.NOT_FOUND) {
                 XML3D.debug.logError("Could not find dataflow of url '" + evt.url, this.node);
             }
             break;
@@ -18122,76 +20026,96 @@ XML3D.data.DataflowDataAdapter.prototype.notifyChanged = function(evt) {
         case XML3D.events.NODE_REMOVED:
             updateDataflowXflowNode(this);
             break;
+
         case XML3D.events.VALUE_MODIFIED:
             var attr = evt.wrapped.attrName;
-            if(attr == "out"){
+            if (attr === "out") {
                 updateDataflowOut(this);
+            } else if (attr === "platform") {
+                updateDataflowXflowNode(this, this.node);
             }
             break;
     }
 };
 
-XML3D.data.DataflowDataAdapter.prototype.updateXflowNode = function(){
+XML3D.data.DataflowDataAdapter.prototype.updateXflowNode = function () {
     updateDataflowXflowNode(this, this.node);
-}
+};
 
-XML3D.data.DataflowDataAdapter.prototype.connectedAdapterChanged = function(key, adapter, status) {
+XML3D.data.DataflowDataAdapter.prototype.connectedAdapterChanged = function (key, adapter, status) {
     var xflowNode = this.dataflowRefs[key];
-    if(xflowNode){
+    if (xflowNode) {
         xflowNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
-        xflowNode.setLoading(status == XML3D.base.AdapterHandle.STATUS.LOADING);
+        xflowNode.setLoading(status === XML3D.base.AdapterHandle.STATUS.LOADING);
     }
 };
 
-function updateDataflowOut(adapter){
+function updateDataflowOut(adapter) {
     var out = adapter.node.getAttribute("out");
-    if(out)
+    if (out) {
         adapter.xflowDataNode.setFilter("keep(" + out + ")");
-    else
+    } else {
         adapter.xflowDataNode.setFilter("");
+    }
 }
 
-function updateDataflowXflowNode(adapter, node){
+function updateDataflowXflowNode(adapter, node) {
+    // Getting platform and node type information for a Dataflow node
+    var platform = node.getAttribute("platform");
+
     adapter.xflowDataNode.clearChildren();
     adapter.xflowDataNode.setCompute("");
     adapter.clearAdapterHandles();
     adapter.dataflowRefs = [];
     updateDataflowOut(adapter);
 
-    var child = node.lastElementChild, firstNode = true, prevNode = null, currentNode = adapter.xflowDataNode;
-    do{
-        var subAdapter = adapter.factory.getAdapter(child);
-        if(!subAdapter) continue;
+    var child = node.lastElementChild, firstNode = true, prevNode = null, currentNode = adapter.xflowDataNode,
+        subAdapter, xflowNode;
 
-        if(subAdapter.getXflowNode){
-             var xflowNode = subAdapter.getXflowNode();
-             if(prevNode)
-                currentNode.insertBefore(xflowNode, prevNode);
-             else
-                currentNode.appendChild(xflowNode);
-             prevNode = xflowNode;
+    do {
+        subAdapter = adapter.factory.getAdapter(child);
+        if (!subAdapter) {
+            continue;
         }
-        else if(subAdapter.getComputeCode){
+
+        if (subAdapter.getXflowNode) {
+            xflowNode = subAdapter.getXflowNode();
+
+            if (prevNode) {
+                currentNode.insertBefore(xflowNode, prevNode);
+            } else {
+                currentNode.appendChild(xflowNode);
+            }
+            prevNode = xflowNode;
+        } else if (subAdapter.getComputeCode) {
             var statements = subAdapter.getComputeCode().split(";");
             var j = statements.length;
-            while(j--)
-            {
+
+            while (j--) {
                 var compute = statements[j].trim();
-                if(!compute) continue;
-                if(firstNode){
-                    firstNode = false;
+                if (!compute) {
+                    continue;
                 }
-                else{
-                    var xflowNode = XML3D.data.xflowGraph.createDataNode();
-                    if(prevNode)
+
+                if (firstNode) {
+                    firstNode = false;
+                } else {
+                    xflowNode = XML3D.data.xflowGraph.createDataNode();
+                    if (prevNode) {
                         currentNode.insertBefore(xflowNode, prevNode);
-                    else
+                    } else {
                         currentNode.appendChild(xflowNode);
-                    currentNode = xflowNode; prevNode = null;
+                    }
+                    currentNode = xflowNode;
+                    prevNode = null;
                 }
                 currentNode.userData = child;
+
+                currentNode.setPlatform(platform);
+
                 currentNode.setCompute(statements[j].trim());
-                if(currentNode.computeDataflowUrl){
+
+                if (currentNode.computeDataflowUrl) {
                     var idx = adapter.dataflowRefs.length;
                     adapter.dataflowRefs.push(currentNode);
                     updateAdapterHandle(adapter, idx, currentNode.computeDataflowUrl);
@@ -18199,34 +20123,34 @@ function updateDataflowXflowNode(adapter, node){
             }
         }
 
-    }while(child = child.previousElementSibling);
+    } while (child = child.previousElementSibling);
 }
 
 /**
- * DataAdapter handling a <dataflow> element
+ * DataAdapter handling a <compute> element
  * @param factory
  * @param node
  * @constructor
  */
-XML3D.data.ComputeDataAdapter = function(factory, node) {
+XML3D.data.ComputeDataAdapter = function (factory, node) {
     XML3D.base.NodeAdapter.call(this, factory, node);
 };
 XML3D.createClass(XML3D.data.ComputeDataAdapter, XML3D.base.NodeAdapter);
 
-XML3D.data.ComputeDataAdapter.prototype.getComputeCode = function(){
+XML3D.data.ComputeDataAdapter.prototype.getComputeCode = function () {
     return this.node.value;
-}
+};
 
 /**
  * @param evt notification of type XML3D.Notification
  */
-XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
-    switch(evt.type){
+XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function (evt) {
+    switch (evt.type) {
         case XML3D.events.VALUE_MODIFIED:
         case XML3D.events.NODE_INSERTED:
         case XML3D.events.NODE_REMOVED:
             var parent = this.node.parentNode;
-            if(parent){
+            if (parent) {
                 var parentAdapter = this.factory.getAdapter(parent);
                 parentAdapter && parentAdapter.updateXflowNode();
             }
@@ -18373,8 +20297,9 @@ XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
         config.wrapS = clampToGL(node.wrapS);
         config.wrapT = clampToGL(node.wrapT);
         config.minFilter = filterToGL(node.filterMin);
-        config.magFilter = filterToGL(node.filterMin);
+        config.magFilter = filterToGL(node.filterMag);
         config.textureType = Xflow.TEX_TYPE.TEXTURE_2D;
+        config.generateMipMap = 1;
 
         var imageAdapter = this.factory.getAdapter(this.node.firstElementChild, XML3D.data.XML3DDataAdapterFactory.prototype);
         if(imageAdapter) {
@@ -18438,7 +20363,8 @@ XML3D.data.ComputeDataAdapter.prototype.notifyChanged = function(evt) {
     // Export
     XML3D.data.TextureDataAdapter = TextureDataAdapter;
 
-}());// data/sink.js
+}());
+// data/sink.js
 (function() {
     "use strict";
 
@@ -19121,7 +21047,7 @@ XML3D.webgl.MAXFPS = 30;
 
     var CONTEXT_OPTIONS = {
         alpha: true,
-        premultipliedAlpha: true,
+        premultipliedAlpha: false,
         antialias: true,
         stencil: true,
         preserveDrawingBuffer: true
@@ -19170,6 +21096,7 @@ XML3D.webgl.MAXFPS = 30;
     function CanvasHandler(canvas, xml3dElem) {
         this.canvas = canvas;
         this.xml3dElem = xml3dElem;
+        this.renderInterface = {};
 
         this.id = ++globalCanvasId; // global canvas id starts at 1
         XML3D.webgl.handlers[this.id] = this;
@@ -19197,7 +21124,7 @@ XML3D.webgl.MAXFPS = 30;
         } catch (e) {
             return null;
         }
-    }
+    };
 
     /**
      *
@@ -19230,15 +21157,14 @@ XML3D.webgl.MAXFPS = 30;
         // Create renderer
         /** @type XML3D.webgl.IRenderer */
         this.renderer = XML3D.webgl.rendererFactory.createRenderer(context, scene, this.canvas);
+        this.renderOptions = this.renderer.renderInterface.options;
         factory.setRenderer(this.renderer);
 
         var xml3dAdapter = factory.getAdapter(this.xml3dElem);
         xml3dAdapter.traverse(function(){});
 
         scene.rootNode.setVisible(true);
-
-
-    }
+    };
 
     /*
     CanvasHandler.prototype.redraw = function(reason, forcePickingRedraw) {
@@ -19263,7 +21189,7 @@ XML3D.webgl.MAXFPS = 30;
      * @return {Drawable|null} newly picked object
      */
     CanvasHandler.prototype.getPickObjectByPoint = function(canvasX, canvasY) {
-        if (this._pickingDisabled)
+        if (!this.renderOptions.pickingEnabled)
             return null;
         return this.renderer.getRenderObjectFromPickingBuffer(canvasX, canvasY);
     };
@@ -19415,7 +21341,6 @@ XML3D.webgl.stopEvent = function(ev) {
         ev.preventDefault();
     if (ev.stopPropagation)
         ev.stopPropagation();
-    ev.returnValue = false;
 };
 (function () {
 
@@ -19533,6 +21458,9 @@ XML3D.webgl.stopEvent = function(ev) {
 }());(function () {
 
     var module = XML3D.webgl;
+
+    var OPTION_MOUSEMOVE_PICKING = "renderer-mousemove-picking";
+    XML3D.options.register(OPTION_MOUSEMOVE_PICKING, true);
 
     module.events.available.push("click", "dblclick", "mousedown", "mouseup", "mouseover", "mousemove", "mouseout", "mousewheel");
 
@@ -19669,14 +21597,14 @@ XML3D.webgl.stopEvent = function(ev) {
          * @param {MouseEvent} evt
          */
         mouseup:function (evt) {
-            this.dispatchMouseEventOnPickedObject(evt);
+            this.dispatchMouseEventOnPickedObject(evt, {omitUpdate : !this.renderOptions.pickingEnabled});
         },
 
         /**
          * @param {MouseEvent} evt
          */
         mousedown:function (evt) {
-            this.dispatchMouseEventOnPickedObject(evt);
+            this.dispatchMouseEventOnPickedObject(evt, {omitUpdate : !this.renderOptions.pickingEnabled});
         },
 
 
@@ -19709,7 +21637,13 @@ XML3D.webgl.stopEvent = function(ev) {
          */
         mousemove:function (evt) {
             var pos = this.getMousePosition(evt);
-            this.dispatchMouseEventOnPickedObject(evt);
+
+            var doMouseMovePick = XML3D.options.getValue(OPTION_MOUSEMOVE_PICKING);
+
+            this.dispatchMouseEventOnPickedObject(evt, {omitUpdate : !doMouseMovePick});
+            if (!doMouseMovePick)
+                return;
+
             var curObj = this.renderer.pickedObject ? this.renderer.pickedObject.node : null;
 
             // trigger mouseover and mouseout
@@ -19762,8 +21696,10 @@ XML3D.webgl.stopEvent = function(ev) {
          * @param {MouseEvent} evt
          */
         mouseover:function (evt) {
+            var doMouseMovePick = XML3D.options.getValue(OPTION_MOUSEMOVE_PICKING);
+
             var pos = this.getMousePosition(evt);
-            this.dispatchMouseEventOnPickedObject(evt);
+            this.dispatchMouseEventOnPickedObject(evt, {omitUpdate : !doMouseMovePick});
         },
 
         /**
@@ -19777,7 +21713,8 @@ XML3D.webgl.stopEvent = function(ev) {
 
     });
 
-}());// Utility functions
+}());
+// Utility functions
 (function(webgl) {
 
     /**
@@ -20183,6 +22120,41 @@ XML3D.webgl.stopEvent = function(ev) {
     };
 
 })(XML3D.webgl);
+(function (webgl) {
+
+    // Note: This context should only be used to access GL constants
+    var gl = window.WebGLRenderingContext;
+
+    var RenderInterface = function (context, scene) {
+        this.context = context;
+        this.scene = scene;
+        this.options = {
+            pickingEnabled          : true,
+            mouseMovePickingEnabled : true,
+            glBlendFuncSeparate     : [gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA]
+        };
+        this.renderPipeline = null;
+    };
+
+    XML3D.extend(RenderInterface.prototype, {
+        getRenderPipeline: function() {
+            return (this.renderPipeline = this.renderPipeline || new XML3D.webgl.RenderPipeline(this.context));
+        },
+
+        setRenderPipeline: function(pipeline) {
+            //TODO cleanup old pipeline
+            this.renderPipeline = pipeline;
+            this.context.requestRedraw("Pipeline changed");
+        },
+
+        getRenderOptions: function() {
+            return this.options;
+        }
+    });
+
+    webgl.RenderInterface = RenderInterface;
+
+})(XML3D.webgl);
 (function(webgl){
 
     /**
@@ -20359,6 +22331,11 @@ XML3D.webgl.stopEvent = function(ev) {
         remove: function() {
             this.parent.removeChild(this);
             this.scene.freePageEntry({ page: this.page, offset: this.offset, size: this.entrySize });
+        },
+
+        findRayIntersections: function(ray, closestIntersection) {
+            //This function is overridden by groups and drawables
+            return;
         }
 
     });
@@ -20372,7 +22349,8 @@ XML3D.webgl.stopEvent = function(ev) {
     var IRenderObject = function() {};
     IRenderObject.prototype.getModelViewMatrix = function() {};
     IRenderObject.prototype.getModelViewProjectionMatrix = function() {};
-    IRenderObject.prototype.getNormalMatrix = function() {};
+    IRenderObject.prototype.getModelMatrixN = function() {};
+    IRenderObject.prototype.getModelViewMatrixN = function() {};
     IRenderObject.prototype.getObjectSpaceBoundingBox = function() {};
     IRenderObject.prototype.getWorldSpaceBoundingBox = function() {};
     IRenderObject.prototype.updateWorldSpaceMatrices = function() {};
@@ -20393,9 +22371,11 @@ XML3D.webgl.stopEvent = function(ev) {
     /** @const */
     var MODELVIEWPROJECTION_MATRIX_OFFSET = MODELVIEW_MATRIX_OFFSET + 16;
     /** @const */
-    var NORMAL_MATRIX_OFFSET = MODELVIEWPROJECTION_MATRIX_OFFSET + 16;
+    var MODEL_MATRIX_N_OFFSET = MODELVIEWPROJECTION_MATRIX_OFFSET + 16;
     /** @const */
-    var ENTRY_SIZE = NORMAL_MATRIX_OFFSET + 16;
+    var MODELVIEW_MATRIX_N_OFFSET = MODEL_MATRIX_N_OFFSET + 16;
+    /** @const */
+    var ENTRY_SIZE = MODELVIEW_MATRIX_N_OFFSET + 16;
 
     //noinspection JSClosureCompilerSyntax,JSClosureCompilerSyntax
     /**
@@ -20452,8 +22432,10 @@ XML3D.webgl.stopEvent = function(ev) {
         this.drawable = this.createDrawable();
 
         this.shaderHandle = opt.shaderHandle || null;
-        // Set start values;
-        this.initialize();
+
+        /** {Object?} **/
+        this.override = null;
+
     };
     RenderObject.ENTRY_SIZE = ENTRY_SIZE;
 
@@ -20473,14 +22455,13 @@ XML3D.webgl.stopEvent = function(ev) {
                         that.scene.moveFromReadyToQueue(that);
                     }
                 });
+                result.updateTypeRequest();
+                result.calculateBoundingBox();
+                result.addEventListener(webgl.Scene.EVENT_TYPE.SCENE_SHAPE_CHANGED, function(evt){
+                    that.scene.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.SCENE_SHAPE_CHANGED })
+                })
             }
             return result;
-        },
-        initialize: function () {
-            this.setObjectSpaceBoundingBox(XML3D.math.EMPTY_BOX);
-
-            /** {Object?} **/
-            this.override = null;
         },
         setType: function(type) {
             this.object.type = type;
@@ -20503,9 +22484,8 @@ XML3D.webgl.stopEvent = function(ev) {
                 target[i] = this.page[o];
             }
         },
-
-        getNormalMatrix: function(target) {
-            var o = this.offset + NORMAL_MATRIX_OFFSET;
+        getModelMatrixN: function(target) {
+            var o = this.offset + MODEL_MATRIX_N_OFFSET;
             target[0] = this.page[o];
             target[1] = this.page[o+1];
             target[2] = this.page[o+2];
@@ -20516,6 +22496,19 @@ XML3D.webgl.stopEvent = function(ev) {
             target[7] = this.page[o+9];
             target[8] = this.page[o+10];
         },
+        getModelViewMatrixN: function(target) {
+            var o = this.offset + MODELVIEW_MATRIX_N_OFFSET;
+            target[0] = this.page[o];
+            target[1] = this.page[o+1];
+            target[2] = this.page[o+2];
+            target[3] = this.page[o+4];
+            target[4] = this.page[o+5];
+            target[5] = this.page[o+6];
+            target[6] = this.page[o+8];
+            target[7] = this.page[o+9];
+            target[8] = this.page[o+10];
+        },
+
 
         getModelViewProjectionMatrix: function(dest) {
             var o = this.offset + MODELVIEWPROJECTION_MATRIX_OFFSET;
@@ -20529,7 +22522,8 @@ XML3D.webgl.stopEvent = function(ev) {
                 this.updateWorldMatrix();
             }
             this.updateModelViewMatrix(view);
-            this.updateNormalMatrix();
+            this.updateModelMatrixN();
+            this.updateModelViewMatrixN();
             this.updateModelViewProjectionMatrix(projection);
         },
 
@@ -20553,19 +22547,34 @@ XML3D.webgl.stopEvent = function(ev) {
             XML3D.math.mat4.multiplyOffset(page, offset+MODELVIEW_MATRIX_OFFSET, page, offset+WORLD_MATRIX_OFFSET,  view, 0);
         },
 
-        /** Relies on an up-to-date view matrix **/
-        updateNormalMatrix: (function() {
+        updateModelMatrixN: (function() {
             var c_tmpMatrix = XML3D.math.mat4.create();
             return function () {
-                this.getModelViewMatrix(c_tmpMatrix);
+                this.getWorldMatrix(c_tmpMatrix);
                 var normalMatrix = XML3D.math.mat4.invert(c_tmpMatrix, c_tmpMatrix);
                 normalMatrix = normalMatrix ? XML3D.math.mat4.transpose(normalMatrix, normalMatrix) : RenderObject.IDENTITY_MATRIX;
-                var o = this.offset + NORMAL_MATRIX_OFFSET;
+                var o = this.offset + MODEL_MATRIX_N_OFFSET;
                 for(var i = 0; i < 16; i++, o++) {
                     this.page[o] = normalMatrix[i];
                 }
             }
         })(),
+
+        /** Relies on an up-to-date view matrix **/
+        updateModelViewMatrixN: (function() {
+            var c_tmpMatrix = XML3D.math.mat4.create();
+            return function () {
+                this.getModelViewMatrix(c_tmpMatrix);
+                var normalMatrix = XML3D.math.mat4.invert(c_tmpMatrix, c_tmpMatrix);
+                normalMatrix = normalMatrix ? XML3D.math.mat4.transpose(normalMatrix, normalMatrix) : RenderObject.IDENTITY_MATRIX;
+                var o = this.offset + MODELVIEW_MATRIX_N_OFFSET;
+                for(var i = 0; i < 16; i++, o++) {
+                    this.page[o] = normalMatrix[i];
+                }
+            }
+        })(),
+
+
 
         /** Relies on an up-to-date view matrix **/
         updateModelViewProjectionMatrix: function(projection) {
@@ -20577,6 +22586,7 @@ XML3D.webgl.stopEvent = function(ev) {
         setTransformDirty: function() {
             this.transformDirty = true;
             this.setBoundingBoxDirty();
+            this.scene.dispatchEvent({type: webgl.Scene.EVENT_TYPE.SCENE_SHAPE_CHANGED});
             this.scene.requestRedraw("Transformation changed");
         },
         /**
@@ -20723,13 +22733,25 @@ XML3D.webgl.stopEvent = function(ev) {
             webgl.SystemNotifier.setNode(this.node);
             this.setShader(this.parent.getShaderHandle());
             try{
-                this.drawable.update(this.scene);
+                this.drawable && this.drawable.update(this.scene);
             }
             catch(e){
                 XML3D.debug.logError("Mesh Error: " + e.message, this.node);
             }
             webgl.SystemNotifier.setNode(null);
-        }
+        },
+
+        findRayIntersections: (function() {
+            var bbox = XML3D.math.bbox.create();
+            var opt = {dist:0};
+
+            return function(ray, intersections) {
+                this.getWorldSpaceBoundingBox(bbox);
+                if (XML3D.math.bbox.intersects(bbox, ray, opt)) {
+                   intersections.push(this);
+                }
+            }
+        })()
 
     });
 
@@ -20874,7 +22896,7 @@ XML3D.webgl.stopEvent = function(ev) {
                 return;
             }
             this.children.forEach(function(obj) {
-                obj.setShader(newHandle);
+                obj.setShader && obj.setShader(newHandle);
             });
         },
 
@@ -20899,7 +22921,20 @@ XML3D.webgl.stopEvent = function(ev) {
                 this.setVisible(newVal);
                 this.setBoundingBoxDirty();
             }
-        }
+        },
+
+        findRayIntersections: (function() {
+            var bbox = XML3D.math.bbox.create();
+
+            return function(ray, intersections) {
+                this.getWorldSpaceBoundingBox(bbox);
+                if (XML3D.math.bbox.intersects(bbox, ray)) {
+                    for (var i=0; i < this.children.length; i++) {
+                        this.children[i].findRayIntersections(ray, intersections);
+                    }
+                }
+            }
+        })()
 
     });
 
@@ -20919,12 +22954,24 @@ XML3D.webgl.stopEvent = function(ev) {
     /** @const */
     var LIGHT_DEFAULT_ATTENUATION = XML3D.math.vec3.fromValues(0,0,1);
     /** @const */
+    var LIGHT_DEFAULT_SHADOW_BIAS = 0.001;
+    /** @const */
     var SPOTLIGHT_DEFAULT_FALLOFFANGLE = Math.PI / 4.0;
     /** @const */
     var SPOTLIGHT_DEFAULT_SOFTNESS = 0.0;
 
     /** @const */
-    var LIGHT_PARAMETERS = ["intensity", "attenuation", "softness", "falloffAngle", "direction", "position"];
+    var LIGHT_PARAMETERS = ["intensity", "attenuation", "softness", "falloffAngle", "direction", "position", "castShadow", "shadowBias"];
+
+    var SHADOWMAP_OFFSET_MATRIX = new Float32Array([
+        0.5, 0.0, 0.0, 0.0,
+        0.0, 0.5, 0.0, 0.0,
+        0.0, 0.0, 0.5, 0.0,
+        0.5, 0.5, 0.5, 1.0
+    ]);
+
+    /** @const */
+    var CLIPPLANE_NEAR_MIN = 1.0;
 
     /** @const */
     var ENTRY_SIZE = 16;
@@ -20950,6 +22997,9 @@ XML3D.webgl.stopEvent = function(ev) {
         this.position    = XML3D.math.vec3.fromValues(0,0,0);
         this.direction   = XML3D.math.vec3.clone(XML3D_DIRECTIONALLIGHT_DEFAULT_DIRECTION);
         this.attenuation = XML3D.math.vec3.clone(LIGHT_DEFAULT_ATTENUATION);
+        this.castShadow = false;
+        this.fallOffAngle = SPOTLIGHT_DEFAULT_FALLOFFANGLE;
+        this.userData = null;
 
         if (this.light.data) {
             // Bounding Box annotated
@@ -20968,12 +23018,35 @@ XML3D.webgl.stopEvent = function(ev) {
     XML3D.createClass(RenderLight, webgl.RenderNode);
     XML3D.extend(RenderLight.prototype, {
 
+        getFrustum: function(aspect) {
+            return new XML3D.webgl.Frustum(1.0, 200.0, 0, this.fallOffAngle*2, aspect)
+            var t_mat = XML3D.math.mat4.create();
+            var bb = new XML3D.math.bbox.create();
+            this.scene.getBoundingBox(bb);
+
+            if (XML3D.math.bbox.isEmpty(bb)) {
+                return new XML3D.webgl.Frustum(1.0, 110.0, 0, this.fallOffAngle*2, aspect)
+            }
+            this.getWorldToLightMatrix(t_mat);
+
+            XML3D.math.bbox.transform(bb, t_mat, bb);
+
+            var near = -bb[5],
+                far = -bb[2],
+                expand = Math.max((far - near) * 0.30, 0.05);
+
+            // Expand the view frustum a bit to ensure 2D objects parallel to the camera are rendered
+            far += expand;
+            near -= expand;
+            return new XML3D.webgl.Frustum(1.0, far, 0, this.fallOffAngle*2, aspect);
+        },
+
         addLightToScene : function() {
             var lightEntry = this.scene.lights[this.light.type];
             if (Array.isArray(lightEntry)) {
                 lightEntry.push(this);
                 this.updateWorldMatrix(); // Implicitly fills light position/direction
-                this.lightStructureChanged();
+                this.lightStructureChanged(false);
             } else {
                 XML3D.debug.logError("Unsupported light shader script: urn:xml3d:lightshader:" + this.light.type);
             }
@@ -20981,8 +23054,11 @@ XML3D.webgl.stopEvent = function(ev) {
         removeLightFromScene : function() {
             var container = this.scene.lights[this.light.type];
             if (Array.isArray(container)) {
-                container = container.splice(this);
-                this.lightStructureChanged();
+                var index = container.indexOf(this);
+                if (index > -1) {
+                    container.splice(container.indexOf(this), 1);
+                }
+                this.lightStructureChanged(true);
             }
         },
         lightParametersChanged: function(request, changeType) {
@@ -20998,14 +23074,17 @@ XML3D.webgl.stopEvent = function(ev) {
                 entry = result.getOutputData("direction");
                 entry && XML3D.math.vec3.copy(this.srcDirection, entry.getValue());
                 this.updateWorldMatrix();
+                entry = result.getOutputData("castShadow");
+                if(entry)
+                    this.castShadow = entry.getValue()[0];
                 changeType && this.lightValueChanged();
             }
         },
         lightValueChanged: function() {
             this.scene.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.LIGHT_VALUE_CHANGED, light: this });
         },
-        lightStructureChanged: function() {
-            this.scene.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.LIGHT_STRUCTURE_CHANGED, light: this });
+        lightStructureChanged: function(removed) {
+            this.scene.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.LIGHT_STRUCTURE_CHANGED, light: this, removed: removed });
         },
         getLightData: function(target, offset) {
             var off3 = offset*3;
@@ -21039,13 +23118,48 @@ XML3D.webgl.stopEvent = function(ev) {
                 if (this.light.data) {
                     result = this.lightParameterRequest.getResult();
                     data = result.getOutputData("falloffAngle");
-                    target["falloffAngle"][offset] = data ? data.getValue()[0] : SPOTLIGHT_DEFAULT_FALLOFFANGLE;
+                    var fallOffAngle = data ? data.getValue()[0] : SPOTLIGHT_DEFAULT_FALLOFFANGLE;
+                    target["falloffAngle"][offset] = fallOffAngle;
+                    this.fallOffAngle = fallOffAngle;
+                }
+            }
+            if (target["castShadow"]) {
+                target["castShadow"][offset] = this.castShadow;
+                if(this.castShadow) {
+                    if(target["shadowBias"]) {
+                        result = this.lightParameterRequest.getResult();
+                        data = result.getOutputData("shadowBias");
+                        target["shadowBias"][offset] = data ? data.getValue()[0] : LIGHT_DEFAULT_SHADOW_BIAS;
+                    }
+                    if(target["lightMatrix"]) {
+                        var tmp = XML3D.math.mat4.create();
+                        this.getShadowMapLightMatrix(tmp);
+                        var off16 = offset*16;
+                        for(var i = 0; i < 16; i++) {
+                            target["lightMatrix"][off16+i] = tmp[i];
+                        }
+                    }
+                }
+                else{
+                    target["shadowBias"][offset] = 0;
+                    var off16 = offset*16;
+                    for(var i = 0; i < 16; i++) {
+                        target["lightMatrix"][off16+i] = 0;
+                    }
                 }
             }
         },
 
         setTransformDirty: function() {
             this.updateWorldMatrix();
+        },
+
+        getShadowMapLightMatrix: function(target) {
+            var L = XML3D.math.mat4.create();
+            this.getWorldToLightMatrix(L);
+            var lightProjectionMatrix = XML3D.math.mat4.create();
+            this.getFrustum(1).getProjectionMatrix(lightProjectionMatrix);
+            XML3D.math.mat4.multiply(target, lightProjectionMatrix, L);
         },
 
         updateWorldMatrix: (function() {
@@ -21058,6 +23172,11 @@ XML3D.webgl.stopEvent = function(ev) {
                 }
             }
         })(),
+
+        getWorldToLightMatrix: function (mat4) {
+            this.getWorldMatrix(mat4);
+            XML3D.math.mat4.invert(mat4, mat4);
+        },
 
         updateLightTransformData: function(transform) {
             switch (this.light.type) {
@@ -21118,6 +23237,7 @@ XML3D.webgl.stopEvent = function(ev) {
             this.parent.removeChild(this);
             this.removeLightFromScene();
         },
+
 
         getWorldSpaceBoundingBox: function(bbox) {
             XML3D.math.bbox.empty(bbox);
@@ -21382,6 +23502,7 @@ XML3D.webgl.stopEvent = function(ev) {
         VIEW_CHANGED: "view_changed",
         LIGHT_STRUCTURE_CHANGED: "light_structure_changed",
         LIGHT_VALUE_CHANGED: "light_value_changed",
+        SCENE_SHAPE_CHANGED: "scene_shape_changed",
         SCENE_STRUCTURE_CHANGED: "scene_structure_changed",
         DRAWABLE_STATE_CHANGED: "drawable_state_changed"
     };
@@ -21414,8 +23535,7 @@ XML3D.webgl.stopEvent = function(ev) {
          */
         createRenderObject: function (opt) {
             var pageEntry = this.getPageEntry(webgl.RenderObject.ENTRY_SIZE);
-            var renderObject = new webgl.RenderObject(this, pageEntry, opt);
-            return renderObject;
+            return new webgl.RenderObject(this, pageEntry, opt);
         },
 
         createRenderGroup: function (opt) {
@@ -21430,8 +23550,7 @@ XML3D.webgl.stopEvent = function(ev) {
 
         createRenderLight: function (opt) {
             var pageEntry = this.getPageEntry(webgl.RenderLight.ENTRY_SIZE);
-            var renderLight = new webgl.RenderLight(this, pageEntry, opt);
-            return renderLight;
+            return new webgl.RenderLight(this, pageEntry, opt);
         },
         createShaderInfo: function (opt) {
             return new webgl.ShaderInfo(this, opt);
@@ -21468,6 +23587,17 @@ XML3D.webgl.stopEvent = function(ev) {
         },
         traverse: function(callback) {
             this.rootNode.traverse(callback);
+        },
+
+        /**
+         * Returns all objects intersected by the given ray, based on their bounding boxes
+         * @param ray
+         * @returns {Array} An array of RenderObjects that were hit by this ray
+         */
+        findRayIntersections: function(ray) {
+            var intersections = [];
+            this.rootNode.findRayIntersections(ray, intersections);
+            return intersections;
         }
     });
 
@@ -21581,7 +23711,10 @@ XML3D.webgl.stopEvent = function(ev) {
 
     var EXTENSIONS = GLContext.EXTENSIONS = {};
     EXTENSIONS.STANDARD_DERIVATES = 'OES_standard_derivatives';
-
+    EXTENSIONS.MULTIPLE_RENDER_TARGETS = 'WEBGL_draw_buffers';
+    EXTENSIONS.DEPTH_TEXTURE = 'WEBGL_depth_texture';
+    EXTENSIONS.FLOAT_COLOR_BUFFER = 'WEBGL_color_buffer_float';
+    EXTENSIONS.FLOAT_TEXTURES = 'OES_texture_float';
 
     XML3D.extend(GLContext.prototype, {
         getXflowEntryWebGlData: function (entry) {
@@ -21632,6 +23765,8 @@ XML3D.webgl.stopEvent = function(ev) {
     var GLTexture = function(gl) {
         Xflow.SamplerConfig.call(this);
         this.setDefaults();
+        this.width = 0;
+        this.height = 0;
         this.gl = gl;
         this.handle = null;
     };
@@ -21724,7 +23859,7 @@ XML3D.webgl.stopEvent = function(ev) {
          * @returns {boolean}
          */
         needsScale: function(width, height) {
-            return (this.wrapS != this.gl.CLAMP_TO_EDGE || this.wrapT != this.gl.CLAMP_TO_EDGE) &&
+            return (this.generateMipMap || this.wrapS != this.gl.CLAMP_TO_EDGE || this.wrapT != this.gl.CLAMP_TO_EDGE) &&
             (!isPowerOfTwo(width) || !isPowerOfTwo(height))
         },
 
@@ -21732,11 +23867,11 @@ XML3D.webgl.stopEvent = function(ev) {
          * @param {Image|HTMLVideoElement} image
          */
         updateTex2DFromImage : function(image) {
-            var gl = this.gl;
+            var gl = this.gl,
+            width = this.width = image.videoWidth || image.width,
+            height = this.height = image.videoHeight || image.height;
+            
             gl.bindTexture(gl.TEXTURE_2D, this.handle);
-
-            var width = image.videoWidth || image.width;
-            var height = image.videoHeight || image.height;
 
             if(this.needsScale(width, height)) {
                 image = scaleImage(image, width, height);
@@ -21786,7 +23921,8 @@ XML3D.webgl.stopEvent = function(ev) {
                     texels = new Uint8Array(width * height * 4);
                 }
             }
-
+            this.width = width;
+            this.height = height;
             this.handle = gl.createTexture();
             this.textureType = gl.TEXTURE_2D;
             gl.bindTexture(gl.TEXTURE_2D, this.handle);
@@ -21797,13 +23933,11 @@ XML3D.webgl.stopEvent = function(ev) {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, opt.minFilter);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, opt.magFilter);
 
-            gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, sourceFormat, sourceType, texels);
+            if (!opt.isDepth)
+                gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, sourceFormat, sourceType, texels);
+            else
+                gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, sourceFormat, sourceType, null);
 
-            if (opt.isDepth) {
-                gl.texParameteri(gl.TEXTURE_2D, gl.DEPTH_TEXTURE_MODE, opt.depthMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, opt.depthCompareMode);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, opt.depthCompareFunc);
-            }
             if (opt.generateMipmap) {
                 gl.generateMipmap(gl.TEXTURE_2D);
             }
@@ -22037,7 +24171,7 @@ XML3D.webgl.stopEvent = function(ev) {
             else if(this.samplers[name]){
                 var sampler = this.samplers[name];
 
-                if (value && sampler.texture !== value) {
+                if (value && sampler.texture !== value && value instanceof Array) {
                     sampler.texture = value;
                     for(var i = 0; i < sampler.texture.length; i++) {
                         sampler.texture[i] && sampler.texture[i].bind(sampler.unit[i]);
@@ -22166,7 +24300,7 @@ XML3D.webgl.stopEvent = function(ev) {
             } else {
                 //opt.generateMipmap = opt.generateColorsMipmap;
                 var ctex = new XML3D.webgl.GLTexture(gl);
-                ctex.createTex2DFromData(colorFormat, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, this.opt);
+                ctex.createTex2DFromData(colorFormat, this.width, this.height, gl.RGBA, this.opt.colorType || gl.UNSIGNED_BYTE, this.opt);
                 gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, ctex.handle, 0);
                 this.colorTarget = {
                     handle: ctex,
@@ -22338,7 +24472,8 @@ XML3D.webgl.stopEvent = function(ev) {
     webgl.GLScaledRenderTarget = GLScaledRenderTarget;
 
 
-}(XML3D.webgl));(function (ns) {
+}(XML3D.webgl));
+(function (ns) {
 
     var vec3 = XML3D.math.vec3;
     var tmp1 = vec3.create();
@@ -23020,11 +25155,244 @@ XML3D.webgl.stopEvent = function(ev) {
 
 })(XML3D.webgl);
 (function (webgl) {
+
+    var FullscreenQuad = function (context) {
+       this.gl = context.gl;
+       this.createGLAssets(this.gl);
+    };
+
+    XML3D.extend(FullscreenQuad.prototype, {
+
+		createGLAssets: function(gl) {
+			this.posBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 1,1,0, -1,1,0, 1,-1,0, -1,-1,0 ]), gl.STATIC_DRAW);
+		},
+
+		draw: function(program) {
+			var gl = this.gl;
+			var posAttr = program.attributes["position"];
+			gl.enableVertexAttribArray(posAttr.location);
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+			gl.vertexAttribPointer(posAttr.location, 3, gl.FLOAT, false, 0, 0);
+
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+			gl.disableVertexAttribArray(posAttr.location);
+		}
+
+    });
+
+    webgl.FullscreenQuad = FullscreenQuad;
+
+})(XML3D.webgl);
+(function (webgl) {
+    "use strict";
+
+    var BaseRenderTree = function (renderInterface) {
+        this.mainRenderPass = null;
+        this.renderInterface = renderInterface;
+    };
+
+    XML3D.extend(BaseRenderTree.prototype, {
+        render: function(scene) {
+            this.mainRenderPass.renderTree(scene);
+        }
+    });
+
+    webgl.BaseRenderTree = BaseRenderTree;
+
+})(XML3D.webgl);
+(function (webgl) {
+
+    /**
+     *
+     * @param {GLContext} context
+     * @param {GLScene} scene
+     * @constructor
+     */
+    var ForwardRenderTree = function (renderInterface, enableSSAO) {
+        webgl.BaseRenderTree.call(this, renderInterface);
+        var scene = renderInterface.scene;
+        scene.addEventListener(webgl.Scene.EVENT_TYPE.LIGHT_STRUCTURE_CHANGED, this.onLightStructureChange.bind(this));
+        scene.addEventListener(webgl.Scene.EVENT_TYPE.LIGHT_VALUE_CHANGED, this.onLightValueChange.bind(this));
+        scene.addEventListener(webgl.Scene.EVENT_TYPE.SCENE_SHAPE_CHANGED, this.onSceneShapeChange.bind(this));
+        scene.addEventListener(webgl.ShaderComposerFactory.EVENT_TYPE.MATERIAL_INITIALIZED, this.onShaderChange.bind(this));
+		this._enableSSAO = enableSSAO;
+        this.mainPass = null;
+		this.createMainPass();
+    };
+
+    XML3D.createClass(ForwardRenderTree, webgl.BaseRenderTree);
+
+    XML3D.extend(ForwardRenderTree.prototype, {
+        onLightStructureChange: function(evt){
+            var light = evt.light;
+            if(evt.removed){
+                // TODO: Proper clean up ShadowPass
+                light.userData = null;
+            }
+            else{
+                if(light.light.type == "spot")
+                    light.userData = this.createLightPass(light)
+            }
+            this.reassignLightPasses(evt.target);
+        },
+        onLightValueChange: function(evt){
+            // TODO: Would be great to check of the light position or orientation specifically changed
+            // We don't need to invalidate the lightPass otherwise
+            if(evt.light.castShadow){
+                evt.light.userData && evt.light.userData.setProcessed(false);
+            }
+        },
+        onSceneShapeChange: function(evt){
+            var scene = evt.target;
+            for (var i = 0; i < scene.lights.spot.length; i++) {
+                var spotLight = scene.lights.spot[i];
+                if(spotLight.castShadow)
+                    spotLight.userData && spotLight.userData.setProcessed(false);
+            }
+        },
+        onShaderChange: function(evt) {
+            this.reassignLightPasses(evt.target);
+        },
+
+        createLightPass: function(light){
+            var context = this.renderInterface.context
+			var dimension = Math.max(context.canvasTarget.width, context.canvasTarget.height) * 2;
+			var lightFramebuffer  = new webgl.GLRenderTarget(context, {
+				width: dimension,
+				height: dimension,
+				colorFormat: context.gl.RGBA,
+				depthFormat: context.gl.DEPTH_COMPONENT16,
+				stencilFormat: null,
+				depthAsRenderbuffer: true
+			});
+            var lightPass = new webgl.LightPass(this.renderInterface, lightFramebuffer, light);
+            lightPass.init(context);
+            return lightPass;
+        },
+
+        reassignLightPasses: function(scene){
+            var context = this.renderInterface.context;
+
+            this.mainPass.clearLightPasses();
+            for (var i = 0; i < scene.lights.spot.length; i++) {
+                var spotLight = scene.lights.spot[i];
+                this.mainPass.addLightPass("spotLightShadowMap", spotLight.userData);
+            }
+        },
+
+        createMainPass: function() {
+            var outputTarget = this.renderInterface.context.canvasTarget;
+			if (this._enableSSAO) {
+				var positionPass = this.createVertexAttributePass("render-position");
+				var normalPass = this.createVertexAttributePass("render-normal");
+				var ssaoPass = this.createSSAOPass(positionPass.output, normalPass.output);
+				ssaoPass.addPrePass(positionPass);
+				ssaoPass.addPrePass(normalPass);
+				var blurPass = this.createBlurPass(ssaoPass.output);
+				blurPass.addPrePass(ssaoPass);
+				this._blurPass = blurPass;
+				this._ssaoPass = ssaoPass;
+				this._positionPass = positionPass;
+				this._normalPass = normalPass;
+				this.mainPass = new webgl.ForwardRenderPass(this.renderInterface, outputTarget, {
+					inputs: {
+						ssaoMap: blurPass.output
+					}
+				});
+				this.mainPass.addPrePass(blurPass);
+			} else {
+				this.mainPass = new webgl.ForwardRenderPass(this.renderInterface, outputTarget);
+			}
+            this.mainRenderPass = this.mainPass;
+        },
+
+		createVertexAttributePass: function (programName) {
+			var context = this.renderInterface.context;
+			var buffer= new webgl.GLRenderTarget(context, {
+				width: context.canvasTarget.width,
+				height: context.canvasTarget.height,
+				colorFormat: context.gl.RGBA,
+				colorType: context.gl.FLOAT,
+				depthFormat: context.gl.DEPTH_COMPONENT16,
+				stencilFormat: null,
+				depthAsRenderbuffer: true
+			});
+			return new webgl.VertexAttributePass(this.renderInterface, buffer, {
+				programName: programName
+			});
+		},
+
+		createSSAOPass: function (positionBuffer, normalBuffer) {
+			var context = this.renderInterface.context;
+			var ssaoBuffer = new webgl.GLRenderTarget(context, {
+				width: context.canvasTarget.width,
+				height: context.canvasTarget.height,
+				colorFormat: context.gl.RGBA,
+				depthFormat: context.gl.DEPTH_COMPONENT16,
+				stencilFormat: null,
+				depthAsRenderbuffer: true
+			});
+
+			return new webgl.SSAOPass(this.renderInterface, ssaoBuffer, {
+				inputs: {
+					positionBuffer: positionBuffer,
+					normalBuffer: normalBuffer
+				}
+			});
+		},
+
+		createBlurPass: function (inputBuffer) {
+			var context = this.renderInterface.context;
+			var blurBuffer = new webgl.GLRenderTarget(context, {
+				width: inputBuffer.width,
+				height: inputBuffer.height,
+				colorFormat: context.gl.RGBA,
+				depthFormat: context.gl.DEPTH_COMPONENT16,
+				stencilFormat: null,
+				depthAsRenderbuffer: true
+			});
+
+			return new webgl.BoxBlurPass(this.renderInterface, blurBuffer, {
+				inputs: {
+					buffer: inputBuffer
+				}
+			});
+		},
+
+        render: function(scene){
+			if (this._enableSSAO) {
+				this._positionPass.setProcessed(false);
+				this._normalPass.setProcessed(false);
+				this._ssaoPass.setProcessed(false);
+				this._blurPass.setProcessed(false);
+			}
+			this.mainRenderPass.setProcessed(false);
+			webgl.BaseRenderTree.prototype.render.call(this, scene);
+        },
+
+        getRenderStats: function(){
+            return this.mainPass.getRenderStats();
+        }
+    });
+
+    webgl.ForwardRenderTree = ForwardRenderTree;
+
+})(XML3D.webgl);
+(function (webgl) {
+
+	var OPTION_SSAO = "renderer-ssao";
+	var FLAGS = {};
+	FLAGS[OPTION_SSAO] = {defaultValue: false, recompileOnChange: true };
+	for(var flag in FLAGS){
+		XML3D.options.register(flag, FLAGS[flag].defaultValue);
+	}
     /**
      * @interface
      */
     var IRenderer = function () {
-
     };
 
     IRenderer.prototype.renderToCanvas = function () {
@@ -23064,11 +25432,16 @@ XML3D.webgl.stopEvent = function(ev) {
         this.needsPickingDraw = true;
         this.context.requestRedraw = this.requestRedraw.bind(this);
 
+        //Currently used as a helper to calculate view and projection matrices for ray casting, since the scene
+        //must be rendered from the point of view of the ray
+        this.rayCamera = this.scene.createRenderView();
 
         this.initGL();
         this.changeListener = new XML3D.webgl.DataChangeListener(this);
 
-        this.createRenderPasses(context);
+        this.renderInterface = this.createRenderInterface();
+        this.createDefaultPipelines();
+		XML3D.options.addObserver(this.onFlagsChange.bind(this));
     };
 
     // Just to satisfy jslint
@@ -23098,7 +25471,7 @@ XML3D.webgl.stopEvent = function(ev) {
             gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
             gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
             gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
 
         },
@@ -23106,16 +25479,29 @@ XML3D.webgl.stopEvent = function(ev) {
             this.width = width;
             this.height = height;
             this.context.handleResizeEvent(width, height);
-            this.createRenderPasses(this.context);
+            this.createDefaultPipelines();
             this.scene.handleResizeEvent(width, height);
             this.needsDraw = this.needsPickingDraw = true;
         },
-        createRenderPasses: function (context) {
-            this.mainPass = new webgl.ForwardRenderPass(context);
-            var pickingTarget = this.createPickingTarget();
-            this.pickObjectPass = new webgl.PickObjectRenderPass(context, { target: pickingTarget });
-            this.pickPositionPass = new webgl.PickPositionRenderPass(context, { target: pickingTarget });
-            this.pickNormalPass = new webgl.PickNormalRenderPass(context, { target: pickingTarget });
+        createDefaultPipelines: function () {
+            var pipeline = new XML3D.webgl.ForwardRenderTree(this.renderInterface, XML3D.options.getValue(OPTION_SSAO));
+            this.renderInterface.setRenderPipeline(pipeline);
+
+            var pickTarget = new webgl.GLScaledRenderTarget(this.context, webgl.MAX_PICK_BUFFER_DIMENSION, {
+                width: this.context.canvasTarget.width,
+                height: this.context.canvasTarget.height,
+                colorFormat: this.context.gl.RGBA,
+                depthFormat: this.context.gl.DEPTH_COMPONENT16,
+                stencilFormat: null,
+                depthAsRenderbuffer: true
+            });
+            this.pickObjectPass = new webgl.PickObjectRenderPass(this.renderInterface, pickTarget);
+            this.pickPositionPass = new webgl.PickPositionRenderPass(this.renderInterface, pickTarget);
+            this.pickNormalPass = new webgl.PickNormalRenderPass(this.renderInterface, pickTarget);
+        },
+        createRenderInterface: function () {
+            return new XML3D.webgl.RenderInterface(this.context, this.scene);
+            //TODO need to provide an interface for creating shaders, buffers and so on
         },
         requestRedraw: function (reason) {
             XML3D.debug.logDebug("Request redraw because:", reason);
@@ -23127,7 +25513,8 @@ XML3D.webgl.stopEvent = function(ev) {
             if (!obj)
                 return null;
             y = webgl.canvasToGlY(this.canvas, y);
-            this.pickNormalPass.renderObject(obj);
+            this.pickNormalPass.render(obj);
+            this.needsPickingDraw = true;
             return this.pickNormalPass.readNormalFromPickingBuffer(x, y);
         },
         getWorldSpacePositionByPoint: function (x, y, object) {
@@ -23135,16 +25522,78 @@ XML3D.webgl.stopEvent = function(ev) {
             if (!obj)
                 return null;
             y = webgl.canvasToGlY(this.canvas, y);
-            this.pickPositionPass.renderObject(obj);
+            this.pickPositionPass.render(obj);
+            this.needsPickingDraw = true;
             return this.pickPositionPass.readPositionFromPickingBuffer(x, y);
         },
+
+        getRenderObjectByRay: function(xml3dRay, viewMat, projMat) {
+            var intersectedObjects = this.scene.findRayIntersections(xml3dRay);
+            this.pickObjectPass.render(intersectedObjects, viewMat, projMat);
+            //Target the middle of the buffer
+            var x = Math.floor(this.pickObjectPass.output.getWidth() / 2 / this.pickObjectPass.output.getScale());
+            var y = Math.floor(this.pickObjectPass.output.getHeight() / 2 / this.pickObjectPass.output.getScale());
+            return this.pickObjectPass.getRenderObjectFromPickingBuffer(x, y, intersectedObjects);
+
+        },
+
+        getWorldSpaceNormalByRay: function (ray, intersectedObject, viewMat, projMat) {
+            if (!intersectedObject)
+                return null;
+            this.pickNormalPass.render(intersectedObject, viewMat, projMat);
+            var x = Math.floor(this.pickNormalPass.output.getWidth() / 2 / this.pickNormalPass.output.getScale());
+            var y = Math.floor(this.pickNormalPass.output.getHeight() / 2 / this.pickNormalPass.output.getScale());
+            return this.pickNormalPass.readNormalFromPickingBuffer(x, y);
+
+        },
+        getWorldSpacePositionByRay: function (ray, intersectedObject, viewMat, projMat) {
+            if (!intersectedObject)
+                return null;
+            this.pickPositionPass.render(intersectedObject, viewMat, projMat);
+            var x = Math.floor(this.pickPositionPass.output.getWidth() / 2 / this.pickPositionPass.output.getScale());
+            var y = Math.floor(this.pickPositionPass.output.getHeight() / 2 / this.pickPositionPass.output.getScale());
+            return this.pickPositionPass.readPositionFromPickingBuffer(x, y);
+
+        },
+
+        calculateMatricesForRay: function(ray, viewMat, projMat) {
+            this.rayCamera.updatePosition(ray.origin._data);
+            this.rayCamera.updateOrientation( this.calculateOrientationForRayDirection(ray) );
+            this.rayCamera.getWorldToViewMatrix(viewMat);
+            var aspect = this.pickObjectPass.output.getWidth() / this.pickObjectPass.output.getHeight();
+            this.rayCamera.getProjectionMatrix(projMat, aspect);
+        },
+
+        calculateOrientationForRayDirection: (function() {
+            var tmpX = XML3D.math.vec3.create();
+            var tmpY = XML3D.math.vec3.create();
+            var tmpZ = XML3D.math.vec3.create();
+            var up = XML3D.math.vec3.create();
+            var q = XML3D.math.quat.create();
+            var m = XML3D.math.mat4.create();
+
+            return function(ray) {
+                XML3D.math.vec3.set(up, 0, 1, 0);
+                XML3D.math.vec3.cross(tmpX, ray.direction._data, up);
+                if(!XML3D.math.vec3.length(tmpX)) {
+                    XML3D.math.vec3.set(tmpX, 1,0,0);
+                }
+                XML3D.math.vec3.cross(tmpY, tmpX, ray.direction._data);
+                XML3D.math.vec3.negate(tmpZ, ray.direction._data);
+
+                XML3D.math.quat.setFromBasis(tmpX, tmpY, tmpZ, q);
+                XML3D.math.mat4.fromRotationTranslation(m, q, [0, 0, 0]);
+                return m;
+            }
+        })(),
 
         needsRedraw: function () {
             return this.needsDraw;
         },
         renderToCanvas: function () {
             this.prepareRendering();
-            var stats = this.mainPass.renderScene(this.scene);
+            this.renderInterface.getRenderPipeline().render(this.scene);
+            var stats = this.renderInterface.getRenderPipeline().getRenderStats();
             XML3D.debug.logDebug("Rendered to Canvas");
             this.needsDraw = false;
             return stats;
@@ -23153,27 +25602,16 @@ XML3D.webgl.stopEvent = function(ev) {
             y = webgl.canvasToGlY(this.canvas, y);
             if(this.needsPickingDraw) {
                 this.prepareRendering();
-                this.pickObjectPass.renderScene(this.scene);
+                this.scene.updateReadyObjectsFromActiveView(this.pickObjectPass.output.getWidth() / this.pickObjectPass.output.getHeight());
+                this.pickObjectPass.render(this.scene.ready);
                 this.needsPickingDraw = false;
+                XML3D.debug.logDebug("Rendered Picking Buffer");
             }
-            this.pickedObject = this.pickObjectPass.getRenderObjectFromPickingBuffer(x, y, this.scene);
+            this.pickedObject = this.pickObjectPass.getRenderObjectFromPickingBuffer(x, y, this.scene.ready);
             return this.pickedObject;
         },
         prepareRendering: function () {
             this.scene.update();
-        },
-        createPickingTarget: function () {
-            var gl = this.context.gl;
-
-            var target = new webgl.GLScaledRenderTarget(this.context, webgl.MAX_PICK_BUFFER_DIMENSION, {
-                width: this.width,
-                height: this.height,
-                colorFormat: gl.RGBA,
-                depthFormat: gl.DEPTH_COMPONENT16,
-                stencilFormat: null,
-                depthAsRenderbuffer: true
-            });
-            return target;
         },
         /**
          * Uses gluUnProject() to transform the 2D screen point to a 3D ray.
@@ -23230,27 +25668,41 @@ XML3D.webgl.stopEvent = function(ev) {
         }()),
         dispose: function () {
             this.scene.clear();
-        }
+        },
 
-    })
+        getRenderInterface: function() {
+            return this.renderInterface;
+        },
+
+		onFlagsChange: function(key, value){
+			if(key == OPTION_SSAO) {
+				this.scene.shaderFactory.setShaderRecompile();
+				this.createDefaultPipelines();
+			}
+		}
+    });
 
     webgl.GLRenderer = GLRenderer;
 
 }(XML3D.webgl));
 (function (webgl) {
 
-    var StateMachine = window.StateMachine;
+    var OPTION_FRUSTUM_CULLING = "renderer-frustumCulling";
+    var OPTION_SHADEJS_EXTRACT_UNIFORMS = "shadejs-extractUniformExpressions";
+    var OPTION_SHADEJS_TRANSFORM_SPACES =  "shadejs-transformSpaces";
+    var OPTION_SHADEJS_CACHE = "shadejs-cache";
 
-    var omitCulling = (function () {
-        var params = {},
-            p = window.location.search.substr(1).split('&');
 
-        p.forEach(function (e, i, a) {
-            var keyVal = e.split('=');
-            params[keyVal[0].toLowerCase()] = decodeURIComponent(keyVal[1]);
-        });
-        return params.hasOwnProperty("xml3d_noculling");
-    }());
+    // All the shader flags
+    var FLAGS = {};
+    FLAGS[OPTION_SHADEJS_EXTRACT_UNIFORMS] = {defaultValue: false, recompileOnChange: true };
+    FLAGS[OPTION_SHADEJS_TRANSFORM_SPACES] = {defaultValue: true, recompileOnChange: true };
+    FLAGS[OPTION_FRUSTUM_CULLING] = {defaultValue: true, recompileOnChange: false };
+    FLAGS[OPTION_SHADEJS_CACHE] = {defaultValue: true, recompileOnChange: false };
+
+    for(var flag in FLAGS){
+        XML3D.options.register(flag, FLAGS[flag].defaultValue);
+    }
 
 
     /**
@@ -23273,6 +25725,9 @@ XML3D.webgl.stopEvent = function(ev) {
         this.queue = [];
         this.lightsNeedUpdate = true;
         this.systemUniforms = {};
+        this.deferred = window['XML3D_DEFERRED'] || false;
+        this.colorClosureSignatures = [];
+        this.doFrustumCulling = !!XML3D.options.getValue(OPTION_FRUSTUM_CULLING);
         this.addListeners();
     };
     var EVENT_TYPE = webgl.Scene.EVENT_TYPE;
@@ -23282,7 +25737,8 @@ XML3D.webgl.stopEvent = function(ev) {
     GLScene.LIGHT_PARAMETERS = ["pointLightPosition", "pointLightAttenuation", "pointLightIntensity", "pointLightOn",
          "directionalLightDirection", "directionalLightIntensity", "directionalLightOn",
          "spotLightAttenuation", "spotLightPosition", "spotLightIntensity", "spotLightDirection",
-         "spotLightOn", "spotLightSoftness", "spotLightCosFalloffAngle", "spotLightCosSoftFalloffAngle"];
+         "spotLightOn", "spotLightSoftness", "spotLightCosFalloffAngle", "spotLightCosSoftFalloffAngle", "spotLightCastShadow", "spotLightMatrix", "spotLightShadowBias"];
+
 
 
     XML3D.extend(GLScene.prototype, {
@@ -23332,7 +25788,7 @@ XML3D.webgl.stopEvent = function(ev) {
 
             this.updateObjectsForRendering();
             // Make sure that shaders are updates AFTER objects
-            // Because unused shader closures are cleared on updae
+            // Because unused shader closures are cleared on update
             this.updateShaders();
         },
         updateLightParameters: function(){
@@ -23355,7 +25811,7 @@ XML3D.webgl.stopEvent = function(ev) {
             parameters["directionalLightIntensity"] = directionalLightData.intensity;
             parameters["directionalLightOn"] = directionalLightData.on;
 
-            var spotLightData = { position: [], attenuation: [], direction: [], intensity: [], on: [], softness: [], falloffAngle: [] };
+            var spotLightData = { position: [], attenuation: [], direction: [], intensity: [], on: [], softness: [], falloffAngle: [], castShadow: [], lightMatrix: [], shadowBias: [] };
             lights.spot.forEach(function (light, index) {
                 light.getLightData(spotLightData, index);
             });
@@ -23366,6 +25822,9 @@ XML3D.webgl.stopEvent = function(ev) {
             parameters["spotLightOn"] = spotLightData.on;
             parameters["spotLightSoftness"] = spotLightData.softness;
             parameters["spotLightCosFalloffAngle"] = spotLightData.falloffAngle.map(Math.cos);
+            parameters["spotLightCastShadow"] = spotLightData.castShadow;
+            parameters["spotLightMatrix"] = spotLightData.lightMatrix;
+            parameters["spotLightShadowBias"] = spotLightData.shadowBias;
 
             var softFalloffAngle = spotLightData.softness.slice();
             for (var i = 0; i < softFalloffAngle.length; i++)
@@ -23373,6 +25832,9 @@ XML3D.webgl.stopEvent = function(ev) {
             parameters["spotLightCosSoftFalloffAngle"] = softFalloffAngle.map(Math.cos);
         },
 
+        updateSystemUniforms: function(names){
+            this.shaderFactory.updateSystemUniforms(names, this);
+        },
 
         updateShaders: function() {
             this.shaderFactory.update(this);
@@ -23402,7 +25864,8 @@ XML3D.webgl.stopEvent = function(ev) {
                 activeView.getWorldToViewMatrix(c_worldToViewMatrix);
                 readyObjects.forEach(function (obj) {
                     obj.updateModelViewMatrix(c_worldToViewMatrix);
-                    obj.updateNormalMatrix();
+                    obj.updateModelMatrixN();
+                    obj.updateModelViewMatrixN();
                 });
 
                 this.updateBoundingBox();
@@ -23418,10 +25881,19 @@ XML3D.webgl.stopEvent = function(ev) {
                     var obj = readyObjects[i];
                     obj.updateModelViewProjectionMatrix(c_projMat_tmp);
                     obj.getWorldSpaceBoundingBox(c_bbox);
-                    obj.inFrustum = omitCulling ? true : c_frustumTest.isBoxVisible(c_bbox);
+                    obj.inFrustum = this.doFrustumCulling ? c_frustumTest.isBoxVisible(c_bbox) : true;
                 };
             }
         }()),
+        updateReadyObjectsFromMatrices: function (worldToViewMatrix, projectionMatrix) {
+            var readyObjects = this.ready;
+            for(var i = 0, l = readyObjects.length; i < l; i++) {
+                var obj = readyObjects[i];
+                obj.updateModelViewMatrix(worldToViewMatrix);
+                obj.updateModelMatrixN();
+                obj.updateModelViewProjectionMatrix(projectionMatrix);
+            };
+        },
         addListeners: function() {
             this.addEventListener( EVENT_TYPE.SCENE_STRUCTURE_CHANGED, function(event){
                 if(event.newChild !== undefined) {
@@ -23442,6 +25914,7 @@ XML3D.webgl.stopEvent = function(ev) {
                 this.shaderFactory.setLightValueChanged();
                 this.context.requestRedraw("Light value changed.");
             });
+            XML3D.options.addObserver(this.onFlagsChange.bind(this));
         },
         addChildEvent: function(child) {
             if(child.type == webgl.Scene.NODE_TYPE.OBJECT) {
@@ -23464,6 +25937,13 @@ XML3D.webgl.stopEvent = function(ev) {
         },
         requestRedraw: function(reason) {
             return this.context.requestRedraw(reason);
+        },
+        onFlagsChange: function(key, value){
+            if(FLAGS[key] && FLAGS[key].recompileOnChange)
+                this.shaderFactory.setShaderRecompile();
+            if(key == OPTION_FRUSTUM_CULLING) {
+                this.doFrustumCulling = !!value;
+            }
         }
     });
     webgl.GLScene = GLScene;
@@ -23538,17 +26018,63 @@ XML3D.webgl.stopEvent = function(ev) {
 
 }(XML3D.webgl));
 (function (webgl) {
+    "use strict";
 
     /**
-     * @contructor
+     * @constructor
      */
-    var BaseRenderPass = function(context, opt) {
+    var BaseRenderPass = function(renderInterface, output, opt) {
+        this.renderInterface = renderInterface;
+        this.output = output;
         opt = opt || {};
-        this.context = context;
-        this.target = opt.target || context.canvasTarget;
+        this.inputs = opt.inputs || {};
+        this.id = opt.id || "";
+        this.prePasses = [];
+        this.postPasses = [];
+        this.processed = false;
     };
 
     XML3D.extend(BaseRenderPass.prototype, {
+        addPrePass: function(pass){
+            if (this.prePasses.indexOf(pass) === -1) {
+                this.prePasses.push(pass);
+                pass.postPasses.push(this);
+            }
+        },
+
+        removePrePass: function(pass){
+            var idx = this.prePasses.indexOf(pass);
+            if (idx !== -1) {
+                this.prePasses.splice(idx, 1);
+                pass.postPasses.splice(pass.postPasses.indexOf(this), 1);
+            }
+        },
+
+        clearPrePasses: function(){
+            var i = this.prePasses.length;
+            while (i--)
+                this.removePrePass(this.prePasses[i]);
+        },
+
+		setProcessed: function(processed){
+			if(this.processed && !processed){
+				var i = this.postPasses.length;
+				while (i--)
+					this.postPasses[i].setProcessed(false);
+			}
+			this.processed = processed;
+		},
+
+        renderTree: function(scene){
+            if(this.processed)
+                return;
+            this.processed = true;
+            var i = this.prePasses.length;
+            while (i--)
+                this.prePasses[i].renderTree(scene);
+            this.render(scene);
+        },
+
         /**
          * Reads pixels from the pass's target
          *
@@ -23559,100 +26085,90 @@ XML3D.webgl.stopEvent = function(ev) {
         readPixelDataFromBuffer : (function() {
             var c_data = new Uint8Array(8);
 
-            return function (glX, glY) {
-                var gl = this.context.gl;
-                var scale = this.target.getScale();
+            return function (glX, glY, target) {
+                var gl = this.renderInterface.context.gl;
+                var scale = target.getScale();
                 var x = glX * scale;
                 var y = glY * scale;
 
-                this.target.bind();
+                target.bind();
                 try {
                     gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, c_data);
-                    this.target.unbind();
+                    target.unbind();
                     return c_data;
                 } catch (e) {
                     XML3D.debug.logException(e);
-                    this.target.unbind();
+                    target.unbind();
                     return null;
                 }
             }
         }())
+
     });
 
     webgl.BaseRenderPass = BaseRenderPass;
 
-}(XML3D.webgl));(function (webgl) {
+}(XML3D.webgl));
+(function (webgl) {
+
+    var OPTION_FACECULLING = "renderer-faceculling";
+    var OPTION_FRONTFACE = "renderer-frontface";
+
+    XML3D.options.register(OPTION_FACECULLING, "none");
+    XML3D.options.register(OPTION_FRONTFACE, "ccw");
 
     /**
-     *
      * @constructor
      */
-    var ForwardRenderPass = function (context, opt) {
-        webgl.BaseRenderPass.call(this, context, opt);
-        this.sorter = new webgl.ObjectSorter();
+    var SceneRenderPass = function (renderInterface, output, opt) {
+        webgl.BaseRenderPass.call(this, renderInterface, output, opt);
+        /**
+         * @type {function}
+         */
+        this.setFaceCulling = getGlobalFaceCullingSetter(XML3D.options.getValue(OPTION_FACECULLING));
+        /**
+         * @type {function}
+         */
+        this.setFrontFace = getGlobalFrontFaceSetter(XML3D.options.getValue(OPTION_FRONTFACE));
+
+        var that = this;
+        XML3D.options.addObserver(OPTION_FACECULLING, function (key, value) {
+            that.setFaceCulling = getGlobalFaceCullingSetter(value);
+        });
+        XML3D.options.addObserver(OPTION_FRONTFACE, function (key, value) {
+            that.setFrontFace = getGlobalFrontFaceSetter(value);
+        });
     };
-    XML3D.createClass(ForwardRenderPass, webgl.BaseRenderPass);
 
-    XML3D.extend(ForwardRenderPass.prototype, {
-        renderScene: (function () {
-            /**
-             * @type Float32Array
-             */
-            var c_worldToViewMatrix = XML3D.math.mat4.create();
-
-            return function (scene) {
-                var gl = this.context.gl,
-                    target = this.target,
-                    width = target.getWidth(),
-                    height = target.getHeight(),
-                    aspect = width / height,
-                    count = { objects: 0, primitives: 0 };
-
-                target.bind();
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-                gl.viewport(0, 0, width, height);
-                gl.enable(gl.DEPTH_TEST);
-
-                scene.updateReadyObjectsFromActiveView(aspect);
-                scene.getActiveView().getWorldToViewMatrix(c_worldToViewMatrix);
-
-                var sorted = this.sorter.sortScene(scene, c_worldToViewMatrix);
-
-                //Render opaque objects
-                for (var program in sorted.opaque) {
-                    this.renderObjectsToActiveBuffer(sorted.opaque[program], scene, { transparent: false, stats: count });
-                }
-
-                //Render transparent objects
-                for (var k = 0; k < sorted.transparent.length; k++) {
-                    var objectArray = [sorted.transparent[k]];
-                    this.renderObjectsToActiveBuffer(objectArray, scene, { transparent: true, stats: count });
-                }
-                scene.lights.changed = false;
-                return { count: count };
-            }
-        }()),
+    XML3D.createClass(SceneRenderPass, webgl.BaseRenderPass, {
+        setGLStates: function () {
+            var gl = this.renderInterface.context.gl;
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+            this.setFaceCulling(gl);
+            this.setFrontFace(gl);
+            gl.enable(gl.DEPTH_TEST);
+        },
+        /**
+         * @param Array
+         */
         renderObjectsToActiveBuffer: (function () {
-
-            var c_viewMat_tmp = XML3D.math.mat4.create();
-            var c_projMat_tmp = XML3D.math.mat4.create();
             var tmpModelMatrix = XML3D.math.mat4.create();
+            var tmpModelMatrixN = XML3D.math.mat3.create();
             var tmpModelView = XML3D.math.mat4.create();
             var tmpModelViewProjection = XML3D.math.mat4.create();
-            var tmpNormalMatrix = XML3D.math.mat3.create();
-            var c_programSystemUniforms = ["viewMatrix", "projectionMatrix", "screenWidth", "cameraPosition"],
-                c_objectSystemUniforms = ["modelMatrix", "modelViewMatrix", "modelViewProjectionMatrix", "normalMatrix"];
+            var tmpModelViewN = XML3D.math.mat3.create();
+            var c_objectSystemUniforms = ["modelMatrix", "modelMatrixN", "modelViewMatrix", "modelViewProjectionMatrix", "modelViewMatrixN"];
 
-            return function (objectArray, scene, opts) {
+            return function (objectArray, scene, target, systemUniforms, sceneParameterFilter, opt) {
                 var objCount = 0;
                 var primitiveCount = 0;
-                var systemUniforms = scene.systemUniforms;
-                var stats = opts.stats || {};
-                var transparent = opts.transparent === true || false;
-                var gl = this.context.gl;
+                var stats = opt.stats || {};
+                var transparent = opt.transparent === true || false;
+                var gl = this.renderInterface.context.gl;
+                var program = opt.program || objectArray[0].getProgram();
 
                 if (objectArray.length == 0) {
-                    return;
+                    return stats;
                 }
 
                 if (transparent) {
@@ -23660,21 +26176,11 @@ XML3D.webgl.stopEvent = function(ev) {
                     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
                 }
 
-                // At this point, we have to gurantee (via FSM), that the RenderObject has a valid shader
-                var program = objectArray[0].getProgram();
-
+                // At this point, we guarantee that the RenderObject has a valid shader
                 program.bind();
-                //this.shaderManager.updateActiveShader(shader);
-                scene.getActiveView().getWorldToViewMatrix(c_viewMat_tmp);
-                scene.getActiveView().getProjectionMatrix(c_projMat_tmp, this.target.getWidth() / this.target.getHeight());
-
-                systemUniforms["viewMatrix"] = c_viewMat_tmp;
-                systemUniforms["projectionMatrix"] = c_projMat_tmp;
-                systemUniforms["cameraPosition"] = scene.getActiveView().getWorldSpacePosition();
-                systemUniforms["screenWidth"] = this.target.width;
 
                 //Set global data that is shared between all objects using this shader
-                program.setSystemUniformVariables(c_programSystemUniforms, systemUniforms);
+                program.setSystemUniformVariables(sceneParameterFilter, systemUniforms);
 
                 var prevOverride = null;
 
@@ -23684,10 +26190,13 @@ XML3D.webgl.stopEvent = function(ev) {
                         continue;
 
                     var mesh = obj.mesh;
-                    XML3D.debug.assert(mesh, "We need a mesh at his point.");
+                    XML3D.debug.assert(mesh, "We need a mesh at this point.");
 
                     obj.getWorldMatrix(tmpModelMatrix);
                     systemUniforms["modelMatrix"] = tmpModelMatrix;
+
+                    obj.getModelMatrixN(tmpModelMatrixN);
+                    systemUniforms["modelMatrixN"] = tmpModelMatrixN;
 
                     obj.getModelViewMatrix(tmpModelView);
                     systemUniforms["modelViewMatrix"] = tmpModelView;
@@ -23695,8 +26204,8 @@ XML3D.webgl.stopEvent = function(ev) {
                     obj.getModelViewProjectionMatrix(tmpModelViewProjection);
                     systemUniforms["modelViewProjectionMatrix"] = tmpModelViewProjection;
 
-                    obj.getNormalMatrix(tmpNormalMatrix);
-                    systemUniforms["normalMatrix"] = tmpNormalMatrix;
+                    obj.getModelViewMatrixN(tmpModelViewN);
+                    systemUniforms["modelViewMatrixN"] = tmpModelViewN;
 
                     program.setSystemUniformVariables(c_objectSystemUniforms, systemUniforms);
 
@@ -23720,6 +26229,241 @@ XML3D.webgl.stopEvent = function(ev) {
             }
         }())
 
+
+    });
+
+    function getGlobalFrontFaceSetter(mode) {
+        if (mode.toLowerCase() == "cw") {
+            return function (gl) {
+                gl.frontFace(gl.CW);
+            };
+        }
+        return function (gl) {
+            gl.frontFace(gl.CCW);
+        };
+    }
+
+    function getGlobalFaceCullingSetter(mode) {
+        //noinspection FallthroughInSwitchStatementJS
+        switch (mode.toLowerCase()) {
+            case "back":
+                return function (gl) {
+                    gl.enable(gl.CULL_FACE);
+                    gl.cullFace(gl.BACK);
+                };
+                break;
+            case "front":
+                return function (gl) {
+                    gl.enable(gl.CULL_FACE);
+                    gl.cullFace(gl.FRONT);
+                };
+                break;
+            case "both":
+                return function (gl) {
+                    gl.enable(gl.CULL_FACE);
+                    gl.cullFace(gl.FRONT_AND_BACK);
+                };
+                break;
+            case "none":
+            default:
+                return function (gl) {
+                    gl.disable(gl.CULL_FACE);
+                };
+        }
+    }
+
+    webgl.SceneRenderPass = SceneRenderPass;
+
+}(XML3D.webgl));
+(function (webgl) {
+
+    /**
+     * @param {RenderPipeline} pipeline
+     * @param {string} output
+     * @param {RenderLight} light
+     * @param {*} opt
+     * @extends {SceneRenderPass}
+     * @constructor
+     */
+    var LightPass = function (renderInterface, output, light, opt) {
+        webgl.SceneRenderPass.call(this, renderInterface, output, opt);
+        this.light = light;
+        this.program = null;
+    };
+
+    XML3D.createClass(LightPass, webgl.SceneRenderPass, {
+
+        init: function (context) {
+            this.sorter = new webgl.ObjectSorter();
+            this.program = context.programFactory.getProgramByName("light-depth");
+        },
+
+        render:  (function () {
+            var c_viewMat_tmp = XML3D.math.mat4.create();
+            var c_projMat_tmp = XML3D.math.mat4.create();
+            var c_programSystemUniforms = ["viewMatrix", "projectionMatrix"];
+
+            return function (scene) {
+                var gl = this.renderInterface.context.gl,
+                    target = this.output,
+                    width = target.getWidth(),
+                    height = target.getHeight(),
+                    aspect = width / height,
+                    frustum = this.light.getFrustum(aspect),
+                    program = this.program;
+
+                target.bind();
+                gl.clear(this.clearBits);
+                gl.viewport(0, 0, width, height);
+                gl.enable(gl.DEPTH_TEST);
+
+                var count = { objects: 0, primitives: 0 };
+
+                this.light.getWorldToLightMatrix(c_viewMat_tmp);
+                frustum.getProjectionMatrix(c_projMat_tmp, aspect);
+
+                scene.updateReadyObjectsFromMatrices(c_viewMat_tmp, c_projMat_tmp);
+                var objects = this.sorter.sortScene(scene);
+
+                var parameters = {};
+                parameters["viewMatrix"] = c_viewMat_tmp;
+                parameters["projectionMatrix"] = c_projMat_tmp;
+
+                //Render opaque objects
+                for (var shader in objects.opaque) {
+                    this.renderObjectsToActiveBuffer(objects.opaque[shader], scene, target, parameters, c_programSystemUniforms, { transparent: false, stats: count, program: program });
+                }
+
+                // Do not render transparent objects (considered to not throw shadows
+                target.unbind();
+                return { count: count };
+            }
+        }())
+    });
+
+
+
+
+    webgl.LightPass = LightPass;
+
+}(XML3D.webgl));
+(function (webgl) {
+
+    var ForwardRenderPass = function (renderInterface, output, opt) {
+        webgl.SceneRenderPass.call(this, renderInterface, output, opt);
+        this.sorter = new webgl.ObjectSorter();
+        this.reassignShadowMaps = {};
+        this.lightPasses = {};
+        this.lastRenderStats = {};
+    };
+
+    XML3D.createClass(ForwardRenderPass, webgl.SceneRenderPass);
+
+    XML3D.extend(ForwardRenderPass.prototype, {
+        clearLightPasses: function() {
+			var self = this;
+			Object.keys(this.lightPasses).forEach(function (uniformName) {
+				self.removePrePass(self.lightPasses[uniformName]);
+			});
+            this.lightPasses = {};
+            for(var name in this.reassignShadowMaps)
+                this.reassignShadowMaps[name] = true;
+        },
+
+        addLightPass: function(uniformName, pass) {
+            if(!this.lightPasses[uniformName])
+                this.lightPasses[uniformName] = [];
+            this.lightPasses[uniformName].push(pass);
+            if(pass)
+                this.addPrePass(pass);
+            this.reassignShadowMaps[uniformName] = true;
+        },
+
+        setShadowMapReassign: function(uniformName){
+            this.reassignShadowMaps[uniformName] = true;
+        },
+
+        updateShadowMapUniforms: function(scene){
+            var reassignShadowNames = [];
+            for(var name in this.reassignShadowMaps){
+                if(this.reassignShadowMaps[name]){
+                    this.reassignShadowMaps[name] = false;
+                    reassignShadowNames.push(name);
+                    var lightPasses = this.lightPasses[name];
+                    scene.systemUniforms[name] = [];
+                    for(var i = 0; i < lightPasses.length; ++i){
+                        var output = lightPasses[i].output;
+                        var handle = output && output.colorTarget && output.colorTarget.handle;
+                        scene.systemUniforms[name].push(handle);
+                    }
+                }
+            }
+            if(reassignShadowNames.length > 0){
+                scene.updateSystemUniforms(reassignShadowNames);
+            }
+        },
+
+        render: (function () {
+            /**
+             * @type Float32Array
+             */
+            var c_worldToViewMatrix = XML3D.math.mat4.create();
+            var c_viewToWorldMatrix = XML3D.math.mat4.create();
+            var c_projectionMatrix = XML3D.math.mat4.create();
+            var c_programSystemUniforms = ["viewMatrix", "viewInverseMatrix", "projectionMatrix", "cameraPosition", "coords", "ssaoMap", "width"];
+
+            return function (scene) {
+                var gl = this.renderInterface.context.gl,
+                    count = { objects: 0, primitives: 0 },
+                    target = this.output,
+                    systemUniforms = scene.systemUniforms,
+                    width = target.getWidth(),
+                    height = target.getHeight(),
+                    aspect = width / height;
+
+                this.updateShadowMapUniforms(scene);
+
+
+                target.bind();
+                this.setGLStates();
+                gl.viewport(0, 0, width, height);
+
+                scene.updateReadyObjectsFromActiveView(aspect);
+                scene.getActiveView().getWorldToViewMatrix(c_worldToViewMatrix);
+                scene.getActiveView().getViewToWorldMatrix(c_viewToWorldMatrix);
+                scene.getActiveView().getProjectionMatrix(c_projectionMatrix, aspect);
+
+                var sorted = this.sorter.sortScene(scene, c_worldToViewMatrix);
+
+                systemUniforms["viewMatrix"] = c_worldToViewMatrix;
+                systemUniforms["viewInverseMatrix"] = c_viewToWorldMatrix;
+                systemUniforms["projectionMatrix"] = c_projectionMatrix;
+                systemUniforms["cameraPosition"] = scene.getActiveView().getWorldSpacePosition();
+                systemUniforms["coords"] = [target.width, target.height, 1];
+
+				if (this.inputs.ssaoMap)
+					systemUniforms["ssaoMap"] = [this.inputs.ssaoMap.colorTarget.handle];
+
+                //Render opaque objects
+                for (var program in sorted.opaque) {
+                    this.renderObjectsToActiveBuffer(sorted.opaque[program], scene, target, systemUniforms, c_programSystemUniforms, { transparent: false, stats: count });
+                }
+
+                //Render transparent objects
+                for (var k = 0; k < sorted.transparent.length; k++) {
+                    var objectArray = [sorted.transparent[k]];
+                    this.renderObjectsToActiveBuffer(objectArray, scene, target, systemUniforms, c_programSystemUniforms, { transparent: true, stats: count });
+                }
+                scene.lights.changed = false;
+                target.unbind();
+                this.lastRenderStats.count = count;
+            }
+        }()),
+
+        getRenderStats: function(){
+            return this.lastRenderStats;
+        }
+
     });
 
 
@@ -23728,52 +26472,41 @@ XML3D.webgl.stopEvent = function(ev) {
 }(XML3D.webgl));
 (function (webgl) {
 
-
-    /**
-     *
-     * @param {XML3D.webgl.GLContext} context
-     * @param {number} width
-     * @param {number} height
-     * @constructor
-     */
-    var PickObjectRenderPass = function (context, opt) {
-        webgl.BaseRenderPass.call(this, context, opt);
-        this.program = context.programFactory.getPickingObjectIdProgram();
-        var gl = this.context.gl;
-        this.clearBits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT;
+    var PickObjectRenderPass = function (renderInterface, output, opt) {
+        webgl.BaseRenderPass.call(this, renderInterface, output, opt);
     };
     XML3D.createClass(PickObjectRenderPass, webgl.BaseRenderPass);
 
     XML3D.extend(PickObjectRenderPass.prototype, {
-        renderScene: (function () {
-
+        render: (function () {
             var c_mvp = XML3D.math.mat4.create(),
                 c_uniformCollection = {envBase: {}, envOverride: null, sysBase: {}},
                 c_systemUniformNames = ["id", "modelViewProjectionMatrix"];
 
-            return function (scene) {
-                var gl = this.context.gl;
-                this.target.bind();
+            return function (objects, viewMatrix, projMatrix) {
+                var gl = this.renderInterface.context.gl,
+                    target = this.output;
+                target.bind();
 
                 gl.enable(gl.DEPTH_TEST);
                 gl.disable(gl.CULL_FACE);
                 gl.disable(gl.BLEND);
+                gl.viewport(0, 0, target.getWidth(), target.getHeight());
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-                gl.viewport(0, 0, this.target.getWidth(), this.target.getHeight());
-                gl.clear(this.clearBits);
-
-                scene.updateReadyObjectsFromActiveView(this.target.getWidth() / this.target.getHeight());
-
-
-                this.program.bind();
-                var objects = scene.ready;
-
+                var program = this.renderInterface.context.programFactory.getPickingObjectIdProgram();
+                program.bind();
                 for (var j = 0, n = objects.length; j < n; j++) {
                     var obj = objects[j];
                     var mesh = obj.mesh;
 
                     if (!obj.isVisible())
                         continue;
+
+                    if (viewMatrix && projMatrix) {
+                        obj.updateModelViewMatrix(viewMatrix);
+                        obj.updateModelViewProjectionMatrix(projMatrix);
+                    }
 
                     obj.getModelViewProjectionMatrix(c_mvp);
 
@@ -23787,11 +26520,11 @@ XML3D.webgl.stopEvent = function(ev) {
                     c_uniformCollection.sysBase["id"] = [c3 / 255.0, c2 / 255.0, c1 / 255.0];
                     c_uniformCollection.sysBase["modelViewProjectionMatrix"] = c_mvp;
 
-                    this.program.setUniformVariables(null, c_systemUniformNames, c_uniformCollection);
-                    mesh.draw(this.program);
+                    program.setUniformVariables(null, c_systemUniformNames, c_uniformCollection);
+                    mesh.draw(program);
                 }
-                this.program.unbind();
-                this.target.unbind();
+                program.unbind();
+                target.unbind();
             };
         }()),
 
@@ -23800,11 +26533,11 @@ XML3D.webgl.stopEvent = function(ev) {
          *
          * @param {number} x Screen Coordinate of color buffer
          * @param {number} y Screen Coordinate of color buffer
-         * @param {XML3D.webgl.GLScene} scene Scene
+         * @param {Array} objects List of objects that were rendered in the previous picking pass
          * @returns {XML3D.webgl.RenderObject|null} Picked Object
          */
-        getRenderObjectFromPickingBuffer: function (x, y, scene) {
-            var data = this.readPixelDataFromBuffer(x, y);
+        getRenderObjectFromPickingBuffer: function (x, y, objects) {
+            var data = this.readPixelDataFromBuffer(x, y, this.output);
 
             if (!data)
                 return null;
@@ -23813,7 +26546,7 @@ XML3D.webgl.stopEvent = function(ev) {
             var objId = data[0] * 65536 + data[1] * 256 + data[2];
 
             if (objId > 0) {
-                var pickedObj = scene.ready[objId - 1];
+                var pickedObj = objects[objId - 1];
                 result = pickedObj;
             }
             return result;
@@ -23822,48 +26555,53 @@ XML3D.webgl.stopEvent = function(ev) {
 
     webgl.PickObjectRenderPass = PickObjectRenderPass;
 
-}(XML3D.webgl));(function(webgl){
+}(XML3D.webgl));
+(function(webgl){
 
-    var PickPositionRenderPass = function(context, opt) {
-        webgl.BaseRenderPass.call(this, context, opt);
-        this.program = context.programFactory.getPickingPositionProgram();
+    var PickPositionRenderPass = function(renderInterface, output, opt) {
+        webgl.BaseRenderPass.call(this, renderInterface, output, opt);
         this.objectBoundingBox = XML3D.math.bbox.create();
     };
     XML3D.createClass(PickPositionRenderPass, webgl.BaseRenderPass, {
-
-        renderObject: (function() {
+        render: (function() {
 
             var c_modelMatrix = XML3D.math.mat4.create();
             var c_modelViewProjectionMatrix = XML3D.math.mat4.create(),
                 c_uniformCollection = {envBase: {}, envOverride: null, sysBase: {}},
                 c_systemUniformNames = ["bbox", "modelMatrix", "modelViewProjectionMatrix"];
 
-            return function(obj) {
-                var gl = this.context.gl;
+            return function(obj, viewMatrix, projMatrix) {
+                var gl = this.renderInterface.context.gl,
+                    target = this.output;
 
-                this.target.bind();
+                target.bind();
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
                 gl.enable(gl.DEPTH_TEST);
                 gl.disable(gl.CULL_FACE);
                 gl.disable(gl.BLEND);
 
+                if (viewMatrix && projMatrix) {
+                    obj.updateModelViewMatrix(viewMatrix);
+                    obj.updateModelViewProjectionMatrix(projMatrix);
+                }
                 obj.getWorldMatrix(c_modelMatrix);
 
                 obj.getObjectSpaceBoundingBox(this.objectBoundingBox);
                 XML3D.math.bbox.transform(this.objectBoundingBox, c_modelMatrix, this.objectBoundingBox);
 
-                this.program.bind();
+                var program = this.renderInterface.context.programFactory.getPickingPositionProgram();
+                program.bind();
                 obj.getModelViewProjectionMatrix(c_modelViewProjectionMatrix);
 
                 c_uniformCollection.sysBase["bbox"] = this.objectBoundingBox;
                 c_uniformCollection.sysBase["modelMatrix"] = c_modelMatrix;
                 c_uniformCollection.sysBase["modelViewProjectionMatrix"] = c_modelViewProjectionMatrix;
 
-                this.program.setUniformVariables(null, c_systemUniformNames, c_uniformCollection);
-                obj.mesh.draw(this.program);
+                program.setUniformVariables(null, c_systemUniformNames, c_uniformCollection);
+                obj.mesh.draw(program);
 
-                this.program.unbind();
-                this.target.unbind();
+                program.unbind();
+                target.unbind();
             };
         }()),
 
@@ -23872,7 +26610,7 @@ XML3D.webgl.stopEvent = function(ev) {
             var c_vec3 = XML3D.math.vec3.create();
 
             return function(x,y) {
-                var data = this.readPixelDataFromBuffer(x, y);
+                var data = this.readPixelDataFromBuffer(x, y, this.output);
                 if(data){
 
                     c_vec3[0] = data[0] / 255;
@@ -23893,34 +26631,39 @@ XML3D.webgl.stopEvent = function(ev) {
 
     webgl.PickPositionRenderPass = PickPositionRenderPass;
 
-}(XML3D.webgl));(function (webgl) {
+}(XML3D.webgl));
+(function (webgl) {
 
-    var PickNormalRenderPass = function (context, opt) {
-        webgl.BaseRenderPass.call(this, context, opt);
-        this.program = context.programFactory.getPickingNormalProgram();
+    var PickNormalRenderPass = function (renderInterface, output, opt) {
+        webgl.BaseRenderPass.call(this, renderInterface, output, opt);
     };
 
     XML3D.createClass(PickNormalRenderPass, webgl.BaseRenderPass, {
-        renderObject: (function () {
-
+        render: (function () {
             var c_modelViewProjectionMatrix = XML3D.math.mat4.create();
             var c_worldMatrix = XML3D.math.mat4.create();
             var c_normalMatrix3 = XML3D.math.mat3.create();
             var c_uniformCollection = {envBase: {}, envOverride: null, sysBase: {}},
-                c_systemUniformNames = ["modelViewProjectionMatrix", "normalMatrix"];
+                c_systemUniformNames = ["modelViewProjectionMatrix", "modelViewMatrixN"];
 
-            return function (object) {
-                var gl = this.context.gl;
-                this.target.bind();
+            return function (object, viewMatrix, projMatrix) {
+                var gl = this.renderInterface.context.gl,
+                    target = this.output;
 
+                target.bind();
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
                 gl.enable(gl.DEPTH_TEST);
                 gl.disable(gl.CULL_FACE);
                 gl.disable(gl.BLEND);
 
-                object.getModelViewProjectionMatrix(c_modelViewProjectionMatrix);
-                object.getWorldMatrix(c_worldMatrix);
+                if (viewMatrix && projMatrix) {
+                    object.updateModelViewMatrix(viewMatrix);
+                    object.updateModelViewProjectionMatrix(projMatrix);
+                }
 
+                object.getModelViewProjectionMatrix(c_modelViewProjectionMatrix);
+
+                object.getWorldMatrix(c_worldMatrix);
                 if (XML3D.math.mat4.invert(c_worldMatrix, c_worldMatrix)) {
                     XML3D.math.mat3.fromMat4(c_normalMatrix3, c_worldMatrix);
                     XML3D.math.mat3.transpose(c_normalMatrix3, c_normalMatrix3);
@@ -23928,17 +26671,17 @@ XML3D.webgl.stopEvent = function(ev) {
                     XML3D.math.mat3.identity(c_normalMatrix3);
                 }
 
-                var program = this.program;
+                var program = this.renderInterface.context.programFactory.getPickingNormalProgram();
                 program.bind();
 
                 c_uniformCollection.sysBase["modelViewProjectionMatrix"] = c_modelViewProjectionMatrix;
-                c_uniformCollection.sysBase["normalMatrix"] = c_normalMatrix3;
+                c_uniformCollection.sysBase["modelViewMatrixN"] = c_normalMatrix3;
 
                 program.setUniformVariables(null, c_systemUniformNames, c_uniformCollection);
                 object.mesh.draw(program);
 
                 program.unbind();
-                this.target.unbind();
+                target.unbind();
             }
         }()),
         /**
@@ -23952,7 +26695,7 @@ XML3D.webgl.stopEvent = function(ev) {
             var c_one = XML3D.math.vec3.fromValues(1, 1, 1);
 
             return function (glX, glY) {
-                var data = this.readPixelDataFromBuffer(glX, glY);
+                var data = this.readPixelDataFromBuffer(glX, glY, this.output);
                 if (!data) {
                     return null;
                 }
@@ -23970,6 +26713,246 @@ XML3D.webgl.stopEvent = function(ev) {
     webgl.PickNormalRenderPass = PickNormalRenderPass;
 
 }(XML3D.webgl));(function (webgl) {
+
+    var VertexAttributePass = function (renderInterface, output, opt) {
+		webgl.BaseRenderPass.call(this, renderInterface, output, opt);
+		this._program = this.renderInterface.context.programFactory.getProgramByName(opt.programName);
+    };
+
+    XML3D.createClass(VertexAttributePass, webgl.SceneRenderPass);
+
+    XML3D.extend(VertexAttributePass.prototype, {
+        render: function (scene) {
+                var gl = this.renderInterface.context.gl;
+                var target = this.output;
+                var width = target.getWidth();
+                var height = target.getHeight();
+                var aspect = width / height;
+
+                target.bind();
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                gl.viewport(0, 0, target.getWidth(), target.getHeight());
+                gl.enable(gl.DEPTH_TEST);
+
+                scene.updateReadyObjectsFromActiveView(aspect);
+
+                this.renderObjectsToActiveBuffer(scene.ready, scene, target, scene.systemUniforms, [], { transparent: false, program: this._program });
+
+                target.unbind();
+            }
+    });
+
+    webgl.VertexAttributePass = VertexAttributePass;
+
+}(XML3D.webgl));
+(function (webgl) {
+	"use strict";
+
+	var base64RandomNormals = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAAACXBIWXMAAAsTAAALEwEAmpwYAAAKT2lDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjanVNnVFPpFj333vRCS4iAlEtvUhUIIFJCi4AUkSYqIQkQSoghodkVUcERRUUEG8igiAOOjoCMFVEsDIoK2AfkIaKOg6OIisr74Xuja9a89+bN/rXXPues852zzwfACAyWSDNRNYAMqUIeEeCDx8TG4eQuQIEKJHAAEAizZCFz/SMBAPh+PDwrIsAHvgABeNMLCADATZvAMByH/w/qQplcAYCEAcB0kThLCIAUAEB6jkKmAEBGAYCdmCZTAKAEAGDLY2LjAFAtAGAnf+bTAICd+Jl7AQBblCEVAaCRACATZYhEAGg7AKzPVopFAFgwABRmS8Q5ANgtADBJV2ZIALC3AMDOEAuyAAgMADBRiIUpAAR7AGDIIyN4AISZABRG8lc88SuuEOcqAAB4mbI8uSQ5RYFbCC1xB1dXLh4ozkkXKxQ2YQJhmkAuwnmZGTKBNA/g88wAAKCRFRHgg/P9eM4Ors7ONo62Dl8t6r8G/yJiYuP+5c+rcEAAAOF0ftH+LC+zGoA7BoBt/qIl7gRoXgugdfeLZrIPQLUAoOnaV/Nw+H48PEWhkLnZ2eXk5NhKxEJbYcpXff5nwl/AV/1s+X48/Pf14L7iJIEyXYFHBPjgwsz0TKUcz5IJhGLc5o9H/LcL//wd0yLESWK5WCoU41EScY5EmozzMqUiiUKSKcUl0v9k4t8s+wM+3zUAsGo+AXuRLahdYwP2SycQWHTA4vcAAPK7b8HUKAgDgGiD4c93/+8//UegJQCAZkmScQAAXkQkLlTKsz/HCAAARKCBKrBBG/TBGCzABhzBBdzBC/xgNoRCJMTCQhBCCmSAHHJgKayCQiiGzbAdKmAv1EAdNMBRaIaTcA4uwlW4Dj1wD/phCJ7BKLyBCQRByAgTYSHaiAFiilgjjggXmYX4IcFIBBKLJCDJiBRRIkuRNUgxUopUIFVIHfI9cgI5h1xGupE7yAAygvyGvEcxlIGyUT3UDLVDuag3GoRGogvQZHQxmo8WoJvQcrQaPYw2oefQq2gP2o8+Q8cwwOgYBzPEbDAuxsNCsTgsCZNjy7EirAyrxhqwVqwDu4n1Y8+xdwQSgUXACTYEd0IgYR5BSFhMWE7YSKggHCQ0EdoJNwkDhFHCJyKTqEu0JroR+cQYYjIxh1hILCPWEo8TLxB7iEPENyQSiUMyJ7mQAkmxpFTSEtJG0m5SI+ksqZs0SBojk8naZGuyBzmULCAryIXkneTD5DPkG+Qh8lsKnWJAcaT4U+IoUspqShnlEOU05QZlmDJBVaOaUt2ooVQRNY9aQq2htlKvUYeoEzR1mjnNgxZJS6WtopXTGmgXaPdpr+h0uhHdlR5Ol9BX0svpR+iX6AP0dwwNhhWDx4hnKBmbGAcYZxl3GK+YTKYZ04sZx1QwNzHrmOeZD5lvVVgqtip8FZHKCpVKlSaVGyovVKmqpqreqgtV81XLVI+pXlN9rkZVM1PjqQnUlqtVqp1Q61MbU2epO6iHqmeob1Q/pH5Z/YkGWcNMw09DpFGgsV/jvMYgC2MZs3gsIWsNq4Z1gTXEJrHN2Xx2KruY/R27iz2qqaE5QzNKM1ezUvOUZj8H45hx+Jx0TgnnKKeX836K3hTvKeIpG6Y0TLkxZVxrqpaXllirSKtRq0frvTau7aedpr1Fu1n7gQ5Bx0onXCdHZ4/OBZ3nU9lT3acKpxZNPTr1ri6qa6UbobtEd79up+6Ynr5egJ5Mb6feeb3n+hx9L/1U/W36p/VHDFgGswwkBtsMzhg8xTVxbzwdL8fb8VFDXcNAQ6VhlWGX4YSRudE8o9VGjUYPjGnGXOMk423GbcajJgYmISZLTepN7ppSTbmmKaY7TDtMx83MzaLN1pk1mz0x1zLnm+eb15vft2BaeFostqi2uGVJsuRaplnutrxuhVo5WaVYVVpds0atna0l1rutu6cRp7lOk06rntZnw7Dxtsm2qbcZsOXYBtuutm22fWFnYhdnt8Wuw+6TvZN9un2N/T0HDYfZDqsdWh1+c7RyFDpWOt6azpzuP33F9JbpL2dYzxDP2DPjthPLKcRpnVOb00dnF2e5c4PziIuJS4LLLpc+Lpsbxt3IveRKdPVxXeF60vWdm7Obwu2o26/uNu5p7ofcn8w0nymeWTNz0MPIQ+BR5dE/C5+VMGvfrH5PQ0+BZ7XnIy9jL5FXrdewt6V3qvdh7xc+9j5yn+M+4zw33jLeWV/MN8C3yLfLT8Nvnl+F30N/I/9k/3r/0QCngCUBZwOJgUGBWwL7+Hp8Ib+OPzrbZfay2e1BjKC5QRVBj4KtguXBrSFoyOyQrSH355jOkc5pDoVQfujW0Adh5mGLw34MJ4WHhVeGP45wiFga0TGXNXfR3ENz30T6RJZE3ptnMU85ry1KNSo+qi5qPNo3ujS6P8YuZlnM1VidWElsSxw5LiquNm5svt/87fOH4p3iC+N7F5gvyF1weaHOwvSFpxapLhIsOpZATIhOOJTwQRAqqBaMJfITdyWOCnnCHcJnIi/RNtGI2ENcKh5O8kgqTXqS7JG8NXkkxTOlLOW5hCepkLxMDUzdmzqeFpp2IG0yPTq9MYOSkZBxQqohTZO2Z+pn5mZ2y6xlhbL+xW6Lty8elQfJa7OQrAVZLQq2QqboVFoo1yoHsmdlV2a/zYnKOZarnivN7cyzytuQN5zvn//tEsIS4ZK2pYZLVy0dWOa9rGo5sjxxedsK4xUFK4ZWBqw8uIq2Km3VT6vtV5eufr0mek1rgV7ByoLBtQFr6wtVCuWFfevc1+1dT1gvWd+1YfqGnRs+FYmKrhTbF5cVf9go3HjlG4dvyr+Z3JS0qavEuWTPZtJm6ebeLZ5bDpaql+aXDm4N2dq0Dd9WtO319kXbL5fNKNu7g7ZDuaO/PLi8ZafJzs07P1SkVPRU+lQ27tLdtWHX+G7R7ht7vPY07NXbW7z3/T7JvttVAVVN1WbVZftJ+7P3P66Jqun4lvttXa1ObXHtxwPSA/0HIw6217nU1R3SPVRSj9Yr60cOxx++/p3vdy0NNg1VjZzG4iNwRHnk6fcJ3/ceDTradox7rOEH0x92HWcdL2pCmvKaRptTmvtbYlu6T8w+0dbq3nr8R9sfD5w0PFl5SvNUyWna6YLTk2fyz4ydlZ19fi753GDborZ752PO32oPb++6EHTh0kX/i+c7vDvOXPK4dPKy2+UTV7hXmq86X23qdOo8/pPTT8e7nLuarrlca7nuer21e2b36RueN87d9L158Rb/1tWeOT3dvfN6b/fF9/XfFt1+cif9zsu72Xcn7q28T7xf9EDtQdlD3YfVP1v+3Njv3H9qwHeg89HcR/cGhYPP/pH1jw9DBY+Zj8uGDYbrnjg+OTniP3L96fynQ89kzyaeF/6i/suuFxYvfvjV69fO0ZjRoZfyl5O/bXyl/erA6xmv28bCxh6+yXgzMV70VvvtwXfcdx3vo98PT+R8IH8o/2j5sfVT0Kf7kxmTk/8EA5jz/GMzLdsAAAAgY0hSTQAAeiUAAICDAAD5/wAAgOkAAHUwAADqYAAAOpgAABdvkl/FRgAAnRxJREFUeNoE4XeMpnmCGOb90pvDl3N9lau6qrs6T3dP3tmd3b3bS7yjjqIYZJKwLMKWLcuCSdiwDMg2LEA2DQMGBFiwqT8s+cR4PpG35OaZ2cnTuatD5fjl/L05/IKfB/7D/zX/AfZcU/p/LrtXs1qhr11w9vf7071c7r8KJne98t8ORl+ykvdurNrJl9M0e2h/2OCN5f7PuKXtZr1jHjrJX79KD5j57apf7OunMPgwNMgIWBLnCLC62FOFmOLlCH57HtXqalaHsJmkj6R3i/4/i9Wdq3T1WPw3c/4/rfMxV54tUQZA13Ljnvp3j+S2q+zeTe4eSv9dMt/ck//4J+y4b/vLaeM5/IuF9GOorNQnn9UForgmwDevjdYr7x8epbSo/6NScuOedcvBnxrJ33HoEKq/Mbg+VM5x8LeptKEPP8fVp4UoU0iAHR5fSitutjEnhXooQhykWDg4n4kjRxrNyGs/eZ7t/NXZsh6JRZx+Z0srEEwp3MvE/+Ew/MeuphH0H1Ym51eU/1sr2kGFxUPywoj/QW3WiTP/9UVy5WlsmKpb1wwdIwQcn92RBYQgV2KkQom6JvolgECaU5EbgQ2ZWSfSkBjiAt4bFcyXg8cL9ptbrGQnpaGSpxIVQunirlRmGKxVo9OempmTPU8da/DqwAifMSbocUNcV0GdBd/E5kyniwymCjhNAb4NLSisC5COJDykl2VtpsVE524TVRfRQOfVkxgC8tL1t/JYCUynSlMF6gyZHr3W0cHA+fqrfLQNyvm4VALLA7M7Fotd/TzhVSRZBR/qvHxNT66AiYUziJf6SmkvKLdFV8OjAum/7a5lpJKGx3O8ZAK3EiLO8q56OZXzZ3LTlS9nzLGU20lCLbBHRNOIghzrbNFGLA3Os5Xd2KHgxYIMMUhW0/JjfJpDB6ZdXedBCCZYdSRoV3EuAWoFNruSwzQwYWVDmywS3VRro8Qbp22F46YCFKSmvJuRQQ7iP0z+0zfUPNRRZaqv/BypL9PRSCTXZF0Rd7vuGdBfGSK5Jsg32tWv/flr5HgMRvJhC+oG+UE0SVN9iHDYoa2M0OfY2IBTGVFbbGuirIaHE/UsobUzUs6yaA9IXOrvJ24Rb/XSyoLwvgmPR0n0Ql6LsBEow98AoCmtPmEHsPFTFJ7xbEUGmjhqw+ayADeg+yFJB7JGUNxRmoU434VfKCyVdDohxbbMLjWikLsxRhh8onCQosZArvf9he78eES/ktNRNdkqKllXyvbgwqm/d1ToPBeF71B7N8mFyj0neBVB9E18oxWwzyP3i4h+K7oX+tkCszA2Y/W+m3hc+iLvr04VUYAOxU2KUAhAG/UQ96GWIKyl6sKAhDGscCB6XGGsdUWjVwG5ygZFqXIHOTUi26hsQGCCNEHpPiajqi7e+OpUrU0TtS63BmJhXXozgbU19lal1+TrvzqfSOf4e5ni4lby38dyAnjlBu2H0MMs2FfpqvCvhZsJ1o6UuSaCeryiS+ctdn4kqh/C6gz2fBIOKFNwrwRCQXPLyg2bebfJqyz7Qz+ZnOh/QdrvnFfVCm4paGUlncbQXsL1nPpEFU8o+EHK1hfxZ9n0Rjm67+HLut5+HgOPgnUUX4FKI3Cz7pWDnNFl+8/TbgIlJhdVmbjs/hgvZeL52zr692liwPncUXpG5UAWrxMzjg8Xi5cyu7WukgTGClUQzFxQHKt+LDGb9+oW4DBeBgcgSmeo0NF2Ih4+EOCAZJDiTtLsr4B3DZWpeLXI9C55i5DJDMJLgoW4zIBlKIqLqbcjxeU0ewCTxygNxNoSSX3gzuLllmhruFAmTRbNR4CM3gZ8qLtRmoNy5n4a2mwcA3EgeS15vqFiLSguRdpBSSn6rou1XGTN1PG5jC7TpXYyXVf2ZbA4U662/X/znLGQ0l8noaVklzWrgKKnUrgIVvpYs+CbS6rdksGV0B+K5JCY52GwpFnl6CMq/tlZ9Aojto6kba8z0PQ++r7POhy2XO/dc6Uw6/8yUGYoOSrkqwX16mqcX5N3x/iFRKp92jzIPh/PdiBTNtHZW+JmotoZ7mRYHLGcDzsjab9Jf0KSGiTgwiw+0dW+17dV66YeXUvqQqgJ9HeVZlueTbxQpUYOjLbxaFGaXetZttslSW5mXf188aTF9csEa9osD5Z0Mq9yOSLGBKqCV06k5AqNdnFf54CI2xaYeVC6jI+bSn+Bfz/LbSym98XU5aUArD1yQT+ZZJTTLF6vqB/OJkFeIoPd+E7e1Dja3UjHh7LeELdPw18h+aKXuJ2CdE3TqWzNZO8Z2r2uEy0oatAU4o4C5Tz6KlXOXoY3UilNhP5A11UxOBOUCBdxKQfiPXDuircMPrkGD3mi5+L6vrXQFrrB5RLu0OhFrrR543Itql1MQRpFW4GUS4W6TMlzgAWAHJB3ZSm28t1sOo2kAPoS7BYIArxSRvANH3dBGiVlqCiGmMwxXY58yPgplh6xUgzzZtgrmeRnvM3yByFrXJF3NElbSx1Cws2kO8O/04fmC++/V1jDVtUdeyRTU4dH2D+DeuYXtS6rybtJIUM45zUJ0fvqywm4mmfsHP4LNXy3YNYpPwuQtO+h1xAn7Fpe/q6GBpe45IQXEunHNAWifZm9Wp5Bbj4dQdXmsz+RoYHVoVJ9Ced77KBWtH44I0t/zI0Tpn5JkzEbRfE7h/JUx7abhCX8BGe8Mcx7ZMeDZpx+eYaDtlSvSysiSmX0zTW1m4nKkqRmw+ww8vKyvqf9LvL+0ShKwvhPg1xwj/RmsWohJSbAQ1uvdfraOVszIpOsfhiABBzXk0Uo1pec9ihJdq3iU8PRAG8m2bdnSWChU2QPQdKA4VJcdeT2CfPCcP3XkGcIxUgUEVuBVoP1tKTv6FEbZV/IDQmKkJ5dx2aLsEVxMEi/LwHTD/9iCdlXYZ0LeonHg1R8DpcDVMp6B+vZYlVkDd7qIzgDo3MwK1AQSzIT2eOECyAPE3xNneeAUmSrXRgMwB7nN8ckgNFQI1sNtv+BGbticCvBYykKkwIl5YwY5UT+kbTXD8+IVFb0YCI3zllURlMTVSuzsBBk5IxyKF1WYSaLCH1pxFlw9Vb6PNLSN7Ffk0eLoFhI+5j2taQkUE3i/kARtmAdYfWJ9Eh4CGp1ATCgmG/vq3zIDkJJJ6Qw98KMUDEp2Ho3kYNvxWqWjM/Y50W6M1BW2tOvdCmwOKsznUg5Jqq/UXsHKIbylYI8iFngxtOiFByDZMvwgLKTIO2p8+Zz5l6F9ia6V4HHI9ItAr6IBAMLxWgvVA7HfGWWteqxHnN1C784YQ9uQIwE3wIYMFDA9WvBianM+079yAQzHi0idJuXejIbiVFWC7aTgRytvMlcf52c6FJY4RlDsUKxBoPdht66wrYvpJMEKF9G9TCZQBzfNGmd3gzIdy18UEiu21yXyLGVVhBfLsXyWPEmMDiWXqtgjcB1Vz0Q3odTvNigJ5s4mICjh2n6tFRbBrWGD4vi512IvrNI5uc+XTQ678iJGRmbaKWX/NxDUCMrETw6Z42RGNrydAX87pQqR+Q3TnAsqSur/GRBvhzHd79RS4f9U6iwH+eaJltW2XPZmOTPt+SSNwDTgVTKMeBiEwDtJpdN6Fpe2KO3upnZ1+o8jrbxzCnJR0q6M4Ymhwc6LMwYyaJXz5TsXVDapOYNaF6a4gS8iIKrGY28FQmZU5Uu9NT4THpJo2ZRrrpi/FK2Q14toM4GE1goLxAtopGv2jXITmS3qOk0/ngvkKb+Ly4Usm2tJ1R0418QpX8W/U1Jk4LkuKGgFTaIA4NJjXH4hmgnayyrimItsc7wL2qooVnZVf5vy6PNebZcmXl6Lq174kJXsAh9Fj9VtSmTJskgBVwk9wURiB2bYlaOxlq+b0IQgW1OxSWYB/PzV5AsmNeCaU3JviQx4b9rjS+F8RjzDYA34/wE1nva/nP3A1lbzhDHT3gOd2fJyFCuotmrTDYexR2h7e+J23UlUxf8er6Jwb8y3BqRd2znWALKVL9DpUsPy/U04rC34FXOTLsLjng2yvmlQJXGsNaJowmdFMjFTSNZ6VMVqBEu9VU6RTFL4yvkLIQGE7HOc9uzilY6uXAziZFq8iFMPzjS8lHaSmE9ryRnIjRhaoDwDh2OscqQdc40CQ6gUCmTQunS04rn6UKqGnLy6vu1wWz2ICaA0va2ERbj9XN9wsR0GRWawTGEpZfaSht5Mi8S1t1Hbi+mBdRqSNIDL8vS9lQLPkMb/fRsrdDO+u++KU0DOlCxWUPNCbLNNEnAeEl9vUgSja4NybtfsfkxaLF4tKHChlg23fPt3PgScoscKHDrI0JUBigjd0Typqw8PY0Wf81OfpOe38revpEcRwp5A6UNmGXEicXs2Sh9UIveRrrEzC81uBumCe25Rr6Ekhx/IUGtpZQUyfWysikbh9jxZCDgrC4JSWSQes1N+mM5eu5nbBhqqbUF4D1MIvWVLkKd5yPD1VBeYnDbyU1UN0B6GyAKTh+KbN2Wq3Hj+iS3yCZvhPE1VAOgKSkpcoChuZ+O0/S0qmxdQemp0jyi8jx52lS0DbE1ByclmVww9A7tMAJMKpmxbUzzUwim/JChlYazPyS+RjINeu7IakiktmTn+eJMECqezRDjbC3m0ZBFIZ53QRtrSyNv1UMOT1unkNRQcx4HHEYoTQK4OAwNkT7CRrsY3UgkXEuicgBuM/JaNU+1+WUaT4Gfk9O7ifQOvf9GunzGvv65OV3HugFI9qErLDLeTD5YMFuefBzD+0BUUqV7F1jfsmYteX0IpzdQcsKop2BPUj9KOhN1fY70N/RXw/AGMlYWKbTghRKXPb0agRUgC1U4Y84kOJmxhaE0wkJaYZsVZXAJ2557xrXiQrjJEi+UfnPCM5eSOueHkrxew5LLXgk2AKhQIdkcoS+T8VjxPyOlDQgxMNbR0lDNTd1vEqu7lb5/m36p8e7UX8V606HdVWmGSVSgicp3Eq5g8kZHg4GSnXP9Nvx1mAGC/u6FOiPwzSlfODfhKGneB8eh7Mn8wS9jkYiUCyUL2pIsraKNPJ3Y6lPE/YTfvDAhEXxZazTBJRdkKmkO4AaxIhakEB1GdhZ28sb5jWCJq/ld8OwvYQNp9T9EuXyypjsj1zqO/eMlQ26jnEFK30wGxPosnVan+UWhEP5AKbSgk8bQNFYr+LuXrnVu3xPpnJNXRXh7KUbX9MJYX7wMjr+iEEaxayfL6G4Y/mVFmadpLsO/64pMDr53IAU6wq/TnEGfUMireO0Zi9xE703mN0vnLvr4B/OMZQvAg5Ho9JXqLK3uuS9HxAiZKlgA4Nklv1ZW8r4It+R4wEa32RWZxAxGPVH7MuIqhkzEZaXvEwVy8QLuvyOJKTYgDcZErPkVOerowOvImx212hudzTIa5LM5d6bJxhfBLhHrGdPYYt9OxPVhmsVM6rjzca4fRzt3c3ZNuK7UhUn7upTJxbirDA6xq4DgPVctBQsr+HJudhKIsklEkkXLYAFS97hUEtYlcre0VzWyKCUwwqNv2MfNuJfXfAyf/RMvrpKsna4TvrsAL47Axix+PkuTD8zF5cRAkn/GBAPkIjSADhnnu3240xCNd6XSIZ9l8PmRqL1P6QmZIGEeygulsU8K/3olXeiI0kykGsrfoh0X+lwAJCwFNCZe7zGdjKLp3eqwQasPouyuaim6lxjTUFAmvN9YVhObVJu6fOsVLwgHAuE1zaCM35IYp9I4J6wwNhTtq9b01mpOj0C6wophEm9it2/S55RCuHQ+z2+p/yx1QRnp+2beI4YlS+c07avRBZVVgqPUMigFsBFEraLer9HfL2J6nD1PHTSHCwVUNaXyXbrLjJULC0zYN2y2w8B8nei5pKJSeC4rn2Ec046Eu4t0fASKx/maFMOZ/LQkGg8VeYm5IbabSbxBsw79wIv/7VDae+LXDSJ7CawZvk7qa1B0+RMoWor/ZqOA1gI9Zvnv0GYheJ61/7IR3+bSu/vmo+NwImISXo2yZnCtnSldoIO2aMvJTxR4iGV6ixGHXFRgtktqvxNMUtxdmlQ5K4sg62gv7Wh+bl/LKfgh8vJx5jHWm8zfzClbYdAH2T2C/1t+voZXQ56WxKTLvGu0O9M4BdlILiKMl1CvYDfN+a1E+oQGT5ZQtjJPYuJ35Cylq8IeZOJgwrdjuXLgj+zsuRAfvE2/w/IszFcXomyKtrg6/xZkj3xvHjlCvJjrzbp6g6f/LCumKsE3kq6myiSwOsocwcyH/qKvEDN9NIc3eQz1pDtFf+Ot2aNW2eklUiL2O/pJxq+60uphnERiUtDkNT6XQtTGzUBuc1wfuOo888yL3jlSZhN6sMeX7pEon0i/z+Spfhomcl281c0dxuD8i6hWSSeWDH9oGUFwMkALgbkwBbk8F6diWEz7n7gfG7mycL/Ik6mRkl4pMGfyCpXUBFxCpjxE+r049xSfZVC4H2v3ZEdlnR7o1LVSX0gtg3SUcj/9JmOtHaclSVx0ZjAvhgV5XpJQ3R/ZSX6oLK3DUyIbBkAxSF8LrU7mQ4abVBUgDOjOAVdmSWcfT+8UuxZAGR5daAvn6rgLo8U0JaiuorPXnKapPQdzVYW+uPXGC3UcdiaZv5M/nUh+c1r92twYh24YRylrrZtxE5sPkrrPzQAbz/nsYaazrFqyyBygSwROF627WHy3x+cea9rpaWzpl6mehdEoLRbMQcTcmSieKSqB0mYUfJy+0kIFwpW+jriS7dO2gqyr2vo5Q0DuH4UsL2sT9vAr9IMlrX6tXxeZ1lIaPM9667S/x6/+oTSxaWp7OZmfnHH9GFZ/MxCTtCdJ8k42myLf1o+hXLPCD8/kR78d4t9t/+/zT7nahrNFqaPQmqZ5Z7IJxeowfg3BRYJkDWdbsv5Ygq+kyYzIBDUs1kpRri5Xivz0lq5jtcHhqxYBz0nupTr1sHLHi29NNwOlMkmPM/JFPsIR2vqS0kNxNIrfi2gAyecQbEJUC3nrjAwuo/yeWE74qE9OILiSYxzKXZLcPGJkFR2r8uJN5mJtb1tmAzQ5p2bb3Fxm5H4c/gFNf0QGN6MklvMjbaHN6Ujd3O31T5Jfn44+nBs6FWcxlw9ouQ+8Pp/ytGrq/QYkH8RX1XBcs3sKRDahRVjgGE2pZ6rzmSrP1XRfmwegYaDNIJ1PRBoTpCM+5fOKRFREbxP7hJEube8ZpaPY+yVFTyelFxRMyXlFvlCYkU9DX84o5EYxgdeU6IFNl6x4G7QMWjFVRYPdBXy1EhmoQOYyGi8ZqQL9FFQ72KhAGjJ4D0RE4hatXcrsZdoTdDrhyX09WIofhBT64MIKa9fATI0VhRtL5rgvG6ekmmHOPp+YPPqviV6sKCxlGQhCUXkDfIV3lrRIgzUi8WJoc56/QkefaPlBys7n8rpZXFOg4O55qozY4UhrRhTE6i7iqC2rV1mu5Ly85WSltHpRlM/l/nkaPsJg03jOyV07KZ4VRhc806cXtqxgUfsTdCYVaTy1WuK0TOQDtqqi50LgDLktyd+cxIqm1D3SK8l56i8fmoNhkmZAbo2gdfxsyt46FtmE/8oNFkzDKoPRogzW4KQPGxW6eCN9aaY5T12ZS+qKjB0+ZPBKg4Z6rn1Fhxy1eFr7BvGeJPY1TQWeyhwFaDfHDcqLlv7rr/RZOb0OlEEA/ITgrRj/L3v4w//4/yTrMCe48yo90hMu4coO7MrAFkDX4PQSbwdUTPhsSxtj4A1FfUgmBmlZad3RtXO109c2Q1gsRWgqZRMaDsVzOYYAbzssKSnpFXC8HWmbeB0qwIC+IuQJjIUS9clFKjUV2Lg/3fsBBCW8ACQVCCVLRIrPhq5qK5kCHt8DlECR59K5Ec+M+XO7gpHh40BGKMH+FA4u0eKukp3gWpeVB+5XEuyui9pHw9FiwKv0fQ88d/WVRJSW+D9fGm3ck+9i6h7Cs70x/TJZlu0oVDK2MM/R/szNHZGtIN3rcM2WqxZ/vomcrFj3ke2xICGbQfj5FO/poJwFwkxvvYLwCutr0vR7fpXiaDNlp/q1PjiYkYuGVynJtTdsMGTGcRopysmedmMoiq/j52U97rAPHY6/mn/leE4rX05yZGkOwEnaH1B+Q0dZ7lsJkCU5gWMfLz1JxBKcPiBLc/yrYTobRe9xK1tMOxeyIcuzTqpwUFWRGzLqim3UP2D64XXj/Tk52wSzKQYKaHVB0zHkhaSngeIRTwaRYUoOI7UyM6bk9X13LRTIV/Q9LauzQYYYhSR3DZC+PsxTVYYkgtoM+RfifAVtPktAjFtPU/ttvO7ipUzybRedFd2/QnUa8SMF07fyXhJVeuTo/7E8s9HvO6FTAedpdHeHpyPJp2E8LtuWs/2u9dLJXAasl5MpAlcizypo6gnwvfi5beSycMuOnwWKZ3hXc/baPPjWM954wcY1sOiTx9NUG6k1E7Nq5DNsyiI9M0aQF38KlSNv3B1fbpDNXPmeyfeykmfxuiNdJLwVBuwmZVdSpeCoJ6oyEItXNYsJsD9FX81IbjGId5jQATAHoCUDV56M8I12osRs9sY/IJlIiL+94eUahtNHV724uwtOElfVJLitCgVwAJvHiUioh7XuDatb86+mWnomLnX2Vk7M5vj4PGmekuJVsfAgyvTU5zGIY3YlBFKP73V4H2a+57DzJD2TEMmL4jH0ZanJwPSr8DlJ76YKXSEHcqIbSr0RnBjZToeudoTw2SuARR1VJaOTJdUwfUsJplN5ErjKXDaYpLdZWkQdbKxYcFD1Jgm+ni6k/zZ9vpNfeH9QsqjaylU+jV924DArz+4g6V1ITK7P0jkQo65UmoK0LSYhyxbDcM0wZOytzntTYMiR9KXS3EuSOnkigZVbUX5PYxmwkE/m/2M8MYtaGLSPk/HILK7ycynhedA40OZC2d831hue1jE2fKTknEfvcAzDm6+LV76j+F7u/3hpqH4xmZ4btYm+2JLDrlhktJ3X+B+hUQV0Mu6/ux/2nMKL09nHHgqrmldVmxC/GQU0ImuySJdQoSLOPpS/w2E+h94ZsFaVHBRmb9lo45LOJ/ipGsRVVKmkKMeqLTI7Y1GK8yY81Wkuo18r+0+uai5D97T0CMi9lNuboOZhywE9IMYLuI4kcMChUGxLnKzHm+dELkKB0DjLR2fhzpRkJokU8U976LKR3n07q+5gW1fFVfyFnVwDODqW0x5s+qTtJFJP9N3s9EwrMnlJUNWUJnXJTdEsn4YxQgDVHGnL9w9tedjnt0ZSLgG/QkJQWHxs+a5USNX1OVi+GP/LVspTfMVQZgKuumlUhG80QhQ+OdNMKK2WwDON6i3lbou3hqjFUyJIiQEZ4DmEKSGyKwPHyG/Mk98Zk29C3/5OvtbNoECYWZh6AusQFqCt06gvSZcoDuCxVuQa2FjNizjuLnMa8bIPyUS0cHA9MSSLS0q6dQg+2xN8mjolZWimaQ1qbbicDL69sDHy54fBq2bhe1cpqkeyrM8JKCRAraA9P/094Vk0c1iNeYkOC6koeZZAxR3oDzKsS9gRgylILbS7IVYlsejp2o20Y8NTwGtdtWTbjsvkkFTvcuVvhisTGbzA5/vhW+tofo59Oc7b9JLICuOaAtcWDDRln+y1y5X8tTxHTTpZoD2KMhf6zn/Fp4NZRoC9K0VYtTYW6RtdFjUyGMj8OJFXdFkGqgfbB9E7SbhQ9Dq+zi1+70t7ceL7Kv68ocsLuKSSks0CyF0f3fsGXqb0cJxka7g5QV6J+w7SopTm5V0GTIbMPuJ7eSlvEOd3U2Og15/5zyCo9kj9utzNsJAj7SV9PYFQhitLmbDOiZ2majhMySSETY0vPphSFccRlwJ5H2DTJMtDz14rxCN6+QEqDkjiaJCL+Tsa+GvIci34VFv6wps+dcOFvPs2H647OUVpOkQLyZia/YitWLLPQKdPN4L84k8Tv6CWYzhfRD0RvWWRgxx8TedXkLV6AX1F7nXgSpWbXOyXhL4MR6tUyAk/zpWeIDZKtJosKQLGUGBwZhO7GYV1fzoySiGEHqZcoogf97WSKhXHjHNSThi9Z77AWjomZhZJCjhVJH0jWRJJ8JaovDBaInRiYzXD+IynK+rr7TpaGJViTW9hNTYihGYSqxqQEB7NoYLx5lPvyDYP7OSPfyzRC9h+wnoz7+Vi9vY1YE+guAArYXq2JH8r+O2hQpa51VSIXKCgjHGXzBPoP6OL1EldPrhWmC+HVl6MntleC2YDpFoUYNwjOMgaJpeVcy6NuOSw03tW8e7kju58BaPhbq2OADshL3ZIscLqSqxL+NlWlGsYkmP+AnG7nmzP7RAA0Ed3zsPzRSsM2V3BfvYauRprCl0u0b6G95fBdUjlq9q+C6YOtWdqmOJlEvf6OAyY9G1qpIkFJc+QSF4bq4YFQP4tCmLkJODsuSgVgRrjyVORE2S4mk8Vsbrm9lRFwazxRLeB6Mrw5oRRIr2w8MfvX1431CMp1I/L80AKhhgAkTCcOjhzhaeXamEYkYGwmTgV2tM0vTotswm5aKOP12afKtlxEKylWdrDKxfcfjNJRJwWSH8r/FYy318Pt7Zxb2RIHmKYz+rMhHiY4PgsubYqZyxKKjK0TCbfSyRXo1nBOyBpQqCTvB+xPp8dBQtxJrkOkqxgyxxegKwHXADSDiw6QhlEc4NcmvDqKX0CFiMD3Ezg7GmsKGhBx2cuT/5M+d7E+TeO7GyJtXdnb+4SN4q3XtSiA0qPZ6uG7BTlb3xRhKRxMZoIDSowZ9DpChgZESm5Yc9cOlHPA3xOolWoGaP0IKsYb7Msl8yIuFC/yEdrM6W0y8OA5TVx8kIaO2kD43CRtEu8NJGzGL2JuHHEy1l01slkiNhuFyhPhjoRfZCnHi2ox0b43helVqyMcfSxQiY5ODvhywfSZJZ2riryevo2QfGOMjkWi99LvpvBEzr/4y8KiIl9QvdnuWUoxl6uH7O8QZrrPM3nWZ0eBhj5cf5TIuW4cx9OrKCch9EbqZKDykZCbUrPtcuxmHqYlP7fvsbobtaYVuN7RcNxefUMXN60wIZSfxBrPyvyCXvoJ/eAvPOYjx2+X0r0VZzI2AJkq6+6EzQlCQvgi2mazeDfIeGb31cuh/g6568HfGEcN5qx9EqO+85f/LQir6lvR2DnZPgl1MyKOakrZzVgm3x5CgcVM/KolSHsWxofkn1FoEr+do0VafDaMlgsChTWUTxti8MhqKwqBku7FQzmRFqM2IKYcDQMsDkAO1kYUHCR90WKakW0PuPnBBlTWQ3B6WmqVKRcTgptgIZiVgaQk0I/HUzmIc5dq4M3UiyPUALIsEjfj+kjVT1NgkZPVXM0K8cv1+THmQSRqBGiQiV2QzkQ1FVx8YSvTdGn7XnnSl5f47Ub01MDZyfah29yB2mATnH5hBUNNZuVg3VxlvAVhyTnslVhRQt5GUDMdSNWcMsEWi3VfD4VpNIHLw9Q3jXeWXM/eYspe3JwHmlvOlIa7JqZFKlrrjbMS1ICpnfhYRHLtlgd09OYRN+lupnsFhW1QbfO5+0Dc3jF8Oth7nox6KfHkngrD4gk8I6qct3T2LV99rOAVR7xJTN9rJsZObn6CvX9FEOWkyHbd45rVvyWliuypddabkZhyGZ5Qo8cPE58wQ6rylnR+2iYRyXmYpKu+EYhOjFS49wuTtXTCW0gYp0F2X0uCiBNefSO1NLYW1bSOdKea3FWk2YrAK6LHNJGBJK+MOdyz1TUSBTWwJShopySQzTsJAtn4RuUucQgu6j0pHTHlYmXzlJiQcRGXJITVlPi63hK4n4olVumAIrkow01SW5pk1rMAS5fyOrDeH7OcVMZ2HBTZtorNm/Hej8g2b85GmGpGzDJVwgghEvVD8IXI+O33F2cajfL/KQuLFOpL+ejtdwwH+b3jepXwZOzhFiK1jBQla3opMtweRctTZJv5uoldH6cy6tqyje1s2vzM0lvrrXunhR7r0X/s7B2RX/1ABs43DojB1zRXVFfk48XlUsjeWuqFDh9fE17N5Mep2TUh4ohGSFonPBch8bjZLBoWHUMb9nRBR4WRJoJlQyFPT4MpPRUiJfmJRCVDLo5dn7DjR5zcpqZNCRRUgoCehHwkzhBkA2losFsUyq+FsO2GVZwQ7f2UriTgHepcVrgm68ZI+QhFX8kB4dEvxjNBwXDWUHrfTDuAO8swBYqxm7bUUw3znH6eKvgYrAWWs4B7U6TnSoSABlVGGTh2I5yjrwcszMFDP49IY8Ujrg5xI4BcYxKO3hwPU/mn1dchIqY1Y9gZAknRtY1qXSOZg3jBJEIJ5lm2KDgbGkaM1yfa7k64/8jgBRpqyc/PRL7++4foyytCLMJyj+MXkVW9lgjfXCQKeZ/f+TOw4uCWvOUIoENTWtfYfMJ03+jcQGUcmLeTDI9skDS3iM0LTAZCOc2GLgxkOGHu/FfVqVXnvP+GYi7wW4xs3THOL2adt34ej11G9BRKOkTdqxIFOgmD++L4iUKIXJPqGRxOOFRU0AdaTC1q3I4gd1mcuufJ1ZvcpgwZ6dm2tJS1+3thgd5+XoMU4xeZKSrOWVyyGGccgpmNMENnuvzy2VZTjlrw6MKaw6wet8w5nieM8ZZXI41A6QXEecpv/MMuO34jSFeUFu9IuQAWM/ZUkscKqGW4uWCmH0FA1VcsCTSxTs5rFWZKZIoRWTiImyCLMJEB17AIyjcAbY5xx3UdtlmIPewrHAgf6kdKSCvoNV6lPgK10WQYK0CskwpztPpa2SP4/i5/rwQ1ksmyILzMgpOsqWJ6R4oRiJuLvt+FRwqbPuhRs+j9tAPb9m7c3Bbg+QsfZjH2YBkFvnoCTZtKHfiUVHrpm4WKeU7wZhnYapqrug8hLEKlFP9dV6IDFv0JBzIsxS7EgI+z9jUhSh3F7FmmEio2taSPnJfg4sq34RwEcrJ92Qr1s5qKQzQD1OweA3uo6rHoyKTz30y8kNdQ0SR2isQRKAaqpcKlXNkpSR+c4mXqdiRQIREKSSnU85XMKyHJTnWe9I0lGwTF94XpYn6qi+mvaT4WpqXANmSjTW45MOqx7sI7WnJj0bxRJIv43jCjHQgGQFlicB/4+7/ru9A/yxZ3sCtCrJtRHzhYxQURcbHaY/3Okm5TFIB/RJYjkUfkO4ZXmmjPOFdGfUy/k1XthELPbivKDPI366p8gFXHkbpv+2PDwN6yeUxAoHai+WNb0WV0FNJ6vxIckqkxiWrQQumGH4UeTYkmwkZqltMTHw0elukZbAUaCUgXi9KnavTGlAgkEaU4jKR5zAfE9gChg9Jj/a6KZyjaix6gFBZ5BMJ7huFF3h0ydX7Ml0RnY1AS6W3VkfO1XC3PLNy0C4JW+Z+g/VCuJSF5Ui8KCaORpabKYxxbwDXBPZHJLR54xmcGqiEwGUCs+dUbaVHNgeOpH2H848x2BNToqctLhdkuZ7Ml7gNteJpHJ8nOpaVPO+oIAWoyWmmQsJtdKZCf4HLWFJW2WrZscspfpD7B4d5uKzKpU705DyWkVwhgseg5bMHk0TE4inzbnoSV/FukFQ8Uumlrkn8BphyrHWh+QxppqQWufITt3udXyx53NWbebgNgqBUaHOYpWhoY61PoyWJFkj8Y298M2muOSDQogK9ciamNvn2V6zqG5WvsbEGIozaH4VdD8oCvTUCR0BJW3iLyd16AusxbFIu0BpHrZmYKPx9QTNeennpG8PYdeALGt08hJVvJy8PYzOj6ovSfg5I5yTFWJ3hUgdf/oWs/gvKnsvsQF1m8LBlshCtTLHn47nAAoGAYT1Gm32onNBOhwaYKE2IQ4gdkG+ltSVxVFOOq94a0EoQcJukd/HpQqrZRO9iFJBYA9nl8IZML4Fx+GyIxlKpL8wiOjRQz6ZmLV2SkBEprU5y51kiEvmTJEPE31USHOUxxWdSMkSZPExSMNqiD35K7Rz7ckKNq8bsdTrygSxz6aYYCgkBYfdAqAOL85mBnwf8T7sBfyW9HIb1bLZRxqMF0PiTgFoRYMw+ruhH8mXEi69S8h5+/tLEm372N/WFEbd7cXLuqBiaQrwp8m2hOxGeA6BSJBJYEqRY94eKfjAV4JB4HS2nwpIAyREtzeYnJaulxWKZZIQo5wruodtryIhHCzmhBZDmM28aYDULJ22mYdw4wJeE50C0eVU9XSu3eaBFxM2BkZwqyxFLIDIpHsvAJYuvpWgJOBWQ2RYrL8gThR8IvnM/SUIScTCVGIDRR59m7X50qKLGDWlkijQFVxupCPHpCIALrBYMWnMzPw61u4UO5mRXXupHF5c8U1NaL5VKEecu6esCL47GI6X0SJ3hzN/8X/lz8D0kRI4qwADfJke9uDiRa4vwbEVRCmpcF3RJ0e+xXpMaCmlgxhXYiaCigxWa0hUy6rLrMJ30xedXoVpSSobkHfME2DyVF2M1y8ARgMUVdmUMDp8kwVfDzLck1xPrSXjmYPFOpv+uJu4pPgPyonolTh/PmXiC7Ei2zkTuIBm9ggHHjSLqBDzAYLHN1DXsrquKwMyFY4eUPozJA2/2A+ZXEMhK7+A0u8x+raot7m6FOmuA0gzlW3Fw6FsOOGiY2UUQYDyXmdDlbsVfdjXFJ1FXy/Xl9BIaPUpeR60QqTVsboXeXHH2EmmkrbYEF+SoKxkR+d7h4NLBn8Lxtp1x26gfpHeOZUmGExtmBVJ6DLr4lChgxY8BUNaT+5H7qJB5lk4fMN2UhGLDKEcaP4InW9JuYUIW/4twpqAn9dwGos1qGgTx83V55oXXHkTZi8x4I83/CoMq7F+QaoClMQvbM91QyjELLfXLJTUs8fotwioJM3FGdeEIb71Gj7akw4dJcUnN9ahWgPfm/CiEXGZ3EPtpSR9HXBNgmDGqNTCtiCkAxbF0eZDEaQpHHl83TnPJzhWkhsiKQaoroAVSBFUK/Qx3q6hoxTMC1wdgnJEP+47imBkSN6y48dx47rA9U7lZTPJNcBkncSZCc5KucHMDVCaZmcZ6jF2dweU2eYS9wktuy9Jld6ZeLfga3ICpjwjclEsxOh7w57+NfnBDbVRpqwhmF4ILSAeQcVEdiuLNeLqQnyG/OkjYpTR6krYzEg9AIQuXDxzSc74NwJt9+PZSzcyieIVFTfeO4c+HRjsWaYZmVbF+qBzrxDiQf+Qu4g/+t/9XmDFz/TQpKtE6zv4kHCNNwtLFvhrq+J04flOQrD4EkUh9Vm/KtQL2bdXFxMvJ+8tRvgbXq6GDpT5ByUkOHihXY65dAHlCwePBVFEiiWgGjAWabxLtD3z2PeDfkBaaulEQcYgepeLkInj/CjNUY1KGN1TRyWhdGi6eqc3DUALoUR9rBWS3eIrQYJRQQjYO+GCf2DZI6rC9wJNzHM2lmwdQ0/gehpu6WO7OHh/bx5Fj0kwxwcVCMs+zasXnFj9+jutVONSgsx09GODa7uA1T2k3JiXDiAXEyHWEmoExwcqI9V9HzFHWfKnDOMuRJTudWNhjaAfNvgSZw8Hso4yNAUpN1S2iYZWvSWBT8ZKCFVh25LCz4ZTOhd1G1RFuXxpnU7Y0lII+ylBpcxJ99VIqvkxujx0iJVDJg4sfy6iUNiDKMPzWMWj12bPhJCNVuk0FrIV3VfRVooYOjmrcybPKnF2W4KU+B6FQjsrzl7Lhcb2Ilto8zqODCpGWeXY5mbUrQym91QaZZvhMgRWTtSEGjFeyzBUJSeH90D01shfV9KJB00q6BcQZhcoZL1xqSY9KlJ0jU5nTq3XYTgCwAPHBrJNEWXJLiffz2i5PFpfgyht4cRB3GNd/hGcFD06MaUUdx2lVWDe+YPb58FMJJbb0t24qU6g3azDKJLHK755kmtbw9Q8Wjpa7+qSIJAA8rGqiHcISANUKSE3tDZO8DsMEWxSRgSDjdCHkk5DvbVTgPi1b2ckBFjcg+MjHLbXSI7lu1L9iTLeiSsJ6+/kjf1LyzQ2HfeOosx3wvSY6i6nzStRa0rwoXXWg/h7uSxK+F/0vVt64ylB68nIqhL3zkJWKiYfUpzsp7KPrfTb7Fc84uHsmZpBn9+CYa7ot3ELSPVM2D3Obr9M9ANYFgxC2A6Ha+MRj5WVmC+GszdWJ4Zuil0pJJtk80mePtM4bnIuNnCRsxMGafwSl+jdm5s+CZy+Boec0QxQ0ZpRRUsOr19JXy0Cp40wMnzTT+wVxWYfWOboTBKND+t2QKfupeamuXDoRkXoRnTL1eB79TyYj0gP/hFPb0xZyWpg3nG09qUibEA41Mt0Kxww0BvLiIO1rRvoH4xnXr2vy/BlvV6FVF9c4jVvg+Xlib+PVKaxdxIMXk7YXh5isqpAY6NyU6qpws8pBxa2OjJwnxt+hJEAbe2Ggy7tAFjVR073Miv+y5qo1/GEmOb2DXlizRUPauYQBVUAMiIJKiKoXtP0oJvQ/h9c/k1/9wpkq/dpTNb5jDq9wmA0WOGqm6sjhvIjdLRKkILcZy4+Ipwj2FOefmORkynLypKmsRxwkvN3j/DrZeuxqZ8Gjn83NbG6jnl8FbFJQnil0Z6qXUfQFIkZJbnwW9Fw6BCC7k29K8mgVJLjA7Qg+pL2+XpQEb/IoAmoE4Cslj6HNk1kpVfrKxlhq+3E3wfEtK2PAgR1f/02ybc8/werRW8kfpah+JF+ouTiBEEUbfXKr6TzZNoc8llLUGisDQ7A97eopvXm0/zjIfbqpgyemBvCVVnqYkxZasPgkmiUiMUFWkfbO6ZaQr/1EfDHMSwLULEmKYztNCxPp5ybOVOgayiQfAnwKWQjNmSg34W6VvFDnHx/ZsypEY1JMMmkCpZI3CaGxZ95uR62J1F2AZAHbCC2nTjdWunWVlLomuN0n75sEKvGBqoTsuK9SVVzp6jXMIhuuGUR0BXkySb+WX5cEKJFcSV4Nks31Ao54O2QFCRnraPlAHMzhqa5Zf8VMZ7YhqS6DbI3BEOIUGgG0VFqZKIPzKBWwIKO9jNR6E8McEHlZ/TjIjUnXgZvPPaRi8HnEVs0xk7Q6HJhCyaPqpcaJ8FVY/SNMTdYrj2gKN8fm1Qfc8XOHqa/WUKObzIEyzoD8Qqyv0P1x+JNT0H7K1w+jKhenedatocyafHU+ymeTJyE7KIz/4Jt6uULmkC0I3MKUQ9L4m7xdDM1MSH5dTVbiUTmqfnzJesXgda5P5ZoWpSWeN3kSwsyFcuU8aVsKvS8cRQwgUVyeSrTyhspvwIXL1QLK9tlZwXYQf5+okRNCzmNFkBYv5MXjRm7ho9GOERD5Z9B/P8O2YzWVrAWqPUaZ/XTwGUu0NLsuTi/w3MY0AdrvFbNHXEYCfhUPfozJQpqzvMK/srr7wayokQVppxLZx3Cwg8CHPUMKcue1yaUyJ2y7kry3Kyt58SqxJxt8ea4nV+h0yU+JW3AUxwNPO86Pv7XXZMg2eEOWjxycBDRK2aWl5C0RKCBp4d97MfVT+DhLbabxSFJfFkAkIMPmYtfNAw59ZVjc6I8kKfP/AnRTMd45NYYxD7JRbVNM3rGdCWYDgaKETkT2Dp3fQ5GeFmlU+pkEL+mXnC2VSW0LFe+AYEq8L6SFxJwR8WUQy//crKiZbpAuW8LdQiWA6pX4X53zkqr80KPthvrCjjazyGBwQsT6eXp334xPRlISvtgqozG4YUrDPW9aoPHdcvB9zBSAu1z6Lci13PNC9hAVzC2XEAl+9a3+6g0pqdb3EqwLNyzp5wvpPaZgPRg3JXPNzRuRqaaze9Z8TyNHcv6n4cSUSFnfuju/V7KePktm/9/x7IMSXsUDKRn/l6ZWLmYrZJ7nowFYOqVoFvwroFd3tI1r8aXqJ2PN6Oo3HpqzbRDuwoUd2OqK/BqnA4zeigWUpVV/8XmJpyD6POUGGrqs8rE5U3CqTpSBjKC0NKcXFPk5oIzA57mMcaJfM0w3C8UdUOioUBXtiGY0PFXJnMLK+lz3pWRdGp5Dscc5Qf395U55Vp4tLGwEwy0S2pElx5cBniT47qWsF/EYwHdizzvTuklcZiJoygtJcvAdfci4XVbXc5AjkNg8uRG6kyhzni1+On9e0GBWut5gRduY4/zJxnQxzTZK4Ztb2Xqba2+SV8+1+rsExbz41+N4rlzMuN2SzFEOv/9/+N/QLVY0lEgBsiNV6nS8AweL3opQyh499OVLyPFeNvfIEsdaqSHyZYihehhGQQbdyNIciffLxsWmRN9N5HX/ZkzsPfzMm/uKUqoge0CW0sS5qbpX5H457l2QrIpuPYXBIxG9nqYTaaQiycJigefPSMHlflcWXQL3LPiCuQxHBfK2HJ/VlYtr4cbyuG2I+XNyJZZxLFomXHqSmHP4y3P5WlezxzjV5Sbyv/Gk6cNwy9MUhs4gRgwuPFL6R2rsSjVG4iowJM2ZSp2p+u5XKNHVZyGsCTl8rgeHaDOSyVYkN1Nvy3NMta7iZYwOEQ5ien0evUowbaolC50Shl1QT8TuGcq+gCsz4RoKyhAlh/DNxP2+O/hg3MLwaoNYkYwLTDXIQ52WZcWUQTDFhVgmMfKWkm4lQolMZkfqpBrlTVofyqU6P6rJZ4AvfVGsjeKBLA+NVJ7JO7NIscATJsEh+PiEehvgqYlyDL36XF8p0+bH/sh03HZ++YmR8+PkI6L37LPIze9mF7PCyNJvJKMbsGainPZY9lDOUWeqG5f/UW7OhFX32aHhUt5kiSfwYw7WY0BkoJawtswnMUpM4R3ww09Sm9V/7Kc9joc9Hy1qlT4PF5QQiMYY0xw8nSVJQ7nz7WypkH1U97GE7KPokqa4qKAsojloJ8DRRQR4tBmFmaTQMUhO7pyh4kwsePQc8qAGlcPUfwp7k1gxVXNLUm5Fg02QBrB0oYKFeN1Vvs2F3T7+XSo9z6OXHDZdSFWpb4LkgdMcyQfnyvQXUvmd0kktaEKx8caYXiI3hVv5lKna9HY8oTBp8LXf8rMpYn/Jry2YrgTwvdp/VvwyLfRkd8wnNeQNpYrA9RhIReBkMKtDeYREXk4QzjLk7CfNefqmqJ3E3vcllcRAUcHPeyD+WvrRSzw8pfGSlmmGrikNGV24xFdA6nXBb+fC0qQGBmpA8Iy525p+LzqwY5ai4kT1U3j3G17iyRMqj27H7y3G4zVxWmNLl1g8SgJXOV+h68QshMAJgbGMoxQPdRRlUf7txFuAeBOkTe42eW4l3mr4j67JnZz/70I0V9RLBiQONxltUfKGxdcjPO6K0YnSvFBhpJgmgwDJFM4MfHqF2StiOY8wJlZRdSn42k5MqF3Jem0VsXWnYLIIY+nUiAOoITzThKKC7YQmEv7a8xovje99ffGkq7xSgsWZRv4iZAcynOAmTmmGdM+AN+XeKypc8k4f6WX+pKlIS4rZorgTkNwfMnBpuo+ojeDkGZNiGudJr4Zqi4mDhNaSyhogMT9pgrLKtNu4owEP+0uesjgLTjw9cnn+SZAaJMzh8e/gnkYrQr4/FiG1xjk+hRJ4V1ofkkuYtg/w+1IQCPDLJyLf0RKLAQCWUhDHiC9IaBZLicj9WdzH6BTH9ZKx7AxTZP9r7AJD/L1p9MlIT3xqeaj/HjcMBlXqdLRlxtdn8X9jwoTxD7sqFvj6L6VPzPizqnnvB32LK4UXGe1VdBDTatNACnBlsdwH5wDJLg/nxJHhxu3gywwthFLpUHM1rt2OZ1lWPtP8S+n5QUjn+eutZDojj1P27g5GCn80Cq7UrWwPSwjEXarRlBdEOKHGKsqfoaorocNJQlnzUfuymJuUbfQ9xXoPVvMJ7aj6rmDP+2c3ytMSvfF+UsrJ88gkS3NQtNyH960O5+tPxcTER1G8mWjKCzIqoCuxsGrppyOiclBBdKSAs4orde0PxsR5kihxrG7iywXpPs4MA3DY9t8XhkNAJycWCgJCSUgsHqHagLXbwXmRvLVBnOsoHQlA4WYPa+P0acJzaZK9T+IZDtdRX1a2ryoIinmWGx5MV1N4DNCU+Cpq/FH6MkFgAMiADLMJAqSGRfUgupB12veXFgxnDIaFzNVkVI0zX7cHNw6z5QwkhsA/oYW+dSrcO465XpXO66yS4SxCpQlTuujFoXaZ8T6Ya4bP/ddUKUrZRMrq/LnHXJP6tlgr+LvCvAxiEGMLsaKuTU64YGKWR+pHYI3FmZ7MNvBoVUgize6bSc8id8OVof31VAQ4/fs8PpsoX52Bv5IwFKWTZm4wSVuSV/5pXv2AqjmX6GMIB1iz4FYbzLelIBGSTdwTbrW9+ankqvKClixNQYvS/2EBZXPy1e9KbEgjSUjXJFDne9WwpLtZkMw7Vu1A5RFwUq4bouKBiSXi5xw7sSGYVtGHOHgN9GwpeL+ZvjkzJ5fwrsqfF3A1wh0XzTakW7Wgukp2WdJJ43fLqFtAsczWuJ10wLmMonNYybNpiOZJUnsmpYy7BZzTo3ZTnU6TUkExAcblRPwNJgLq7Cf8CyYS3Cyms7rl++IGsw8cnjri/VH6ZQQ1FW7l2VmA2ShtdtPMYnpkY/sjrLzmfgqHDBfvCgej8ZDpmcR4Ox5Qt5UX9lhuYLT6BTznuFeMY4Ut2+Hduf5mzJ/0VmpvOfJHl2mg1U/tzfFYGxef2kcX6nWaFUzhV8JpUJQ/WZSXPMWWpPZFWqAYhDLpfZaaNzQGAF9G1OQTLdmcKU2ROk0DMBDa0pQB1pSWDvE8TNIgrXhsF5DujnytGQ4W/VHHEDPbdtVmG3CGZw73izw6IdlzNzS1SY6sfEQX39BHEXJbbsuTuy/InbxaVvF6Ji7xuDfhxWZubcY5QuPP1HMLDpOokrW8c3xZYstd2rT4MweNOXcPk3hNvVWjmpD2LWZ0OHTjaV5Jx4AY0DiAnSWc3bfqM9CIcnmPBTlyILObIT09U2TAGpb4ukSLsZTuSIUXgKVC7YQ3RPSbOT7NU5qHUoNXMky9n2xPxKuJ9U1nupFkqhEOYqkTm8wIcKKPypGJRO1Hs/0wM99Ltj+xhpIqtsSmhPF+enZudK8YayVgOoJPoaUT3dfyWdq1BcqmajuezvSzQXTHklSIPSuxvjP985TINaWL8djmazV//NwKdJDp8c7bMJuKmyF+zSjIgdJGN/ieFF4QfKybFZpNpccwNA910tfqI6jN+RsI/noyEJ71/xuFJDVDG5u3oAhwr0lXA6zVYnEO4nexJGTOAOSQ12lfEZqHl7tWwYVDhg7a8e0b8jtK8qyvHfWD9UMxWtO9nLJR8u+MyGSKHtdZJcfPFSQksFoH2Yw0mMDZjC+NJtmYH4IeMOtgCfieAiJgmSStI0MRVkx9WRtKsa6B+pkSYzGwYO1HdILhyXeZ22Iq2xbPMaLD8SAFXWmlALLCOcGm0Pk2wACCY26DGJiBmvwUMKzNijibo7at6lNOdHQi+NUTgUrsfFOeAZ75OlpVmayCzu8rE22an+rHj4n/S/92DL0iamcVewzPigS70l1NzV66YSSIc+wf78dBWW2XLKUCSAyDTbh1RFuOAnqpZKALKPTflPJ5UDKhpML5GE1CyBB0bb42hott9+Vx+uUigDaQNvG0LtUBrvdoKMihJlAbW/suX8dKFWVTYz6gMkIXVeIeosJNrmTCzEbivMqtUO56yomWUFcpAtjSibVBMudh+1jM9vCCHV9U7SmdWZYU+8ptNTk5Vy5kcF1JJ9eVKZHz5Xgc0spvRfgGFKbeMpJf4Givandr8XAL5KJkkarsBcEA4Ej0D2nRgkWCknUwXQGTxRYZ4O3vMmcH4sLyZ4FeuQGzuaQy0mELjHss+hFHSbqaqNKMDEMxwkz0udQTqkkWMf3EEuNjqGUwrbJKPdQsfXIszlNYixXd5XdgZinHW9uGh8G4SgyZIYM7Q74iVKNFVcwbdYV4L/dPNyw3az5o2ps02dXE0UisjYXFaGtZ0ROxcJG4A/c80MJFVKUyOo2qkLR1MHTpgiHlyonayE/9QVqRwiWqKsliy7LO4uErOqqwTVsX9+Q3il4LgHiu+gfDAoOOqQAEXwws2zevlqQXNcgTBHzQfxncz+Etdf7YUV9uku111ZWFv4dXUff8XNH6wcKn4nmRlqi1jd2nPu7WjGkFajvOCodRS3KKWPUSLQvCFB9X5vlF8/fONLwfuYcuKWqHEr+yILUg3iuLsq2wnHAXY1EQZG5eV2GzGUwsXT2GXYIrr/VuhWx9J7QyG8b02m/IJAYb/Si6I88RM8sY9UBsoL4UWFOVByi5olzrep/3cfFX5E/fch4/0IdVh6nCHGk/fCpOBvLUENkVMAgVH0NA4owBLJ3nUwjuKCNfIfRXVaWFgxEfdUFxBs0DUZ9F/DZxC4TW4+K+gt6RGZeRxuElkwTwbyohRGwi9C4HAEg2ty2mjsm3cq7fB40GvHcUmvXkn0CrVZ98rCmFWfhzy1zjYvPv+GdfNJaPokcvu1hVzntJ9kb1RjYhEdB9vqBjv2CdcMQmVlPHZ+Nk9Yp0s+4CaMTnyu6iRDbztb7R2Z+UJHZUzb5aSt/LkcQB8z83KzNRUMH95VgxRb+UoTWahSj7ioS95CBE0YPidVO8rIhHVJQb8TKHvhJAiuQYub8tFg/S1Ge9O/KaxGZ1+cBLryH84JBHGfIqg9wrINMB8XF6bd57+OeDo3y60Gwe/8DmerrjWpXeNNPShkdxEnpBTe2pUuISdybbv8g0Lj3U6YaEn8hGfzvjcG2NiLABoz28mgH+CE7qMGjwUX5KqloomAWfy0UuhstYusmuXZC9uXI6oX/Spg8zSgIAueFUf5spnrKO4yxZeCcIvsait4jydYWGiM2RkVfMMfAPUzcnz4lwPmJ6xBZjY3BEar4SCxStp4nCF/+gXU4o8zJEIHrOp3WncC52uvB4DAcVXimQXCi6m9IW569p+tW/jf5aWXcs4t8Wq5VpkJ06QC6PLdpS+yFctZExEMF+Kst4dBen9fg8IRXERD3QZ5axl5X26a216GRBf6lQp0u6Z8n1uVR7CD6fBrKEYVXdmQsgJWMCmw150AF+hmSupCORFr0oTq0Di8xZihSQux7wNY1lCs5ZrjpMEo//LAKbRVoyQQqwfVWPejCb5ctdexTE33Tk/dXoxkfkylfIy5eFglNbuWxO7l5o6g365RRlGrgwp8e6nIUAHmiBpeD/fPAPSg+zB/0gI5lyR4w9tKjCwyIY1IO7y4lbF50UkL72B+c9LYY/p15azFzPs33bbMnzDZi5pnnPF9T+sreQI8iUU4boHaHIjM4U/JSsP5/FO8avwGzb1Cr/WJzMi4GtoCtdUwYeI/GRdm2Erib9PZZ5Hbo3F+VhAexbwdUAS2NdjjCiOK0ivchOvyycHMjlT/IfyGw+V7+KQuNSLVIIr2DpThL3ifGGZAfI0SV5Kjc/4RdTjBelWg4cvSCtN9GiKkdVtDAQjf32pOV2YOpq6MaathU67UB+jCJRJGUTTkco6sEFQvRGEpbhLvQNKJUlshZ7qhXtrQixFV1COp+m7xwYi0MRyJLfYOKal5RgoEkVXxkhkUCwnRfwXgh+PG99kHglmTnK5sNYO0wfXsykulEjUrTIPCgghFIXE0NPxy683AmrWQ6rqPAGG2FUvVBel4XDrWCBAMoVB80/JFUn1LgdY9697gs8L+9a8DvWzVpzGdmnmVWQzgDrqPjga8EG0nXZeyYZs9XMOMSM8uwJrmjp7ovgk33/w8KGQXkwSmrTkEvxpKB4Baj3gPhno1iVqE5bPzAUBOQ/YPBz4gxA7wvcWKPf2GzchHAXmoxeHRF/UUwhhtmk+0ouj6AWi5eYX30FqxPXLRpmjPhJSp2omYVP3gPHGl2KcHmHig8LvAz8Fg07fF6A9izSpjo5cIozMhfA9aK0LF0sqmqeZ3Cy2LfSiUh8PKgYfmBXW+iGxMJB2slE8OkoZuljVTcxrubUCQV3isnZBn564ldH8v5X4dZGZiGjRiUDF2ne4rn/AOW+4hqT5t9OO40qCrGSgozBp2VBXpsL7oekbhv8RIAULmXFK1sZdNgSNfaOWdURcxN7JT4zcFwPNgh6c568uChcU7gxUTsWfKhoiZGu+FLUos8tfNtJ0/PQ6zqvV4uPr8Z/9HY8OrNFylbOvfo17xXCPRYAXlrqBNOcFjIwXLLcumg0qBRaaB9eJElxDqcv2fowrL+Cv5G95pbVuEOeLkH5FdIXxZmlKcuBOdDPwsQ+VRd+CaUTB9/KhgjQRTHsk/UP4cigiDBrrA01xctE2hR6c75ywKwi3cWmtzZcKRpOTAbfUONavLEE/6mSgBH8u176eWp7LTf+p/OTnNJYM7LLonxCrdZwpCidt7OrC6yXSOE0/t6ZMl2zFMLDu9j1QCYDyQTTOL1konZTK+S52ss6XbDPiU+AYrI1Dks81W+mIQeTJZ4aAvkgx0Eyg0NFYPv//J/2F4Y5GyJHt8/lZZgKGTZN0EFwXAGZAo5CYJyL1+eKiazGXB5JZHKCqm3t4zdn3XPyb9goC8zbCwnKw8MrSWGLLuyk85vFy7o0NKNEku/O4TTSi7uixvxXx+ac0nXPsHUwLErGNVw26dfr9IQkfwz9Bon+uR3o60qhIKey3PDis6yiDLlxBz2cCrMgbe6hM4HWpyBdoOee2F5Aqoxb78pzC2wP2OyIO7NUWtQKn8ONp+D1d3RoaA5B+ZaxMCLUQhjCM5ccPOFvDc3cmMRzZpX1bk6ebYdaGVRuB6AoFafGnMJDJbSaWt2B9hUg1vWzK5pHxR0tiPPIrZNbDD5dxvPrgC8EopzeTliqw+4CPy/55WZy9bU6DHBK4PRBEBfjYkczfy2877inmhSpIgvtNzIeg+sXzrTN9y8dvPL3/yPUybx3mdclnO/BzDz97pD7VTk/gUIg3QGuARQLARNGY6wD6J/LcoqMECxtJ7Vp8lkonL3RNZrTOmz3COHIWC16/vb8pZVUXmfWPhVnbSQovrbDxDL8xW2aF/ZyDzZcX9oPd0/T6ZmY+LI5VGsaxDE89U2rRXgeXN0MlzbcP8tHpjA/aAdfObCUla8Ok/3LdNaBfKqqYwJTHBSEueyXjtV1xf9M4MudqOYYVyw/0JXflthaSwJ7QFCU4WC+ypdhjCvgxSTO2OoqZaU6uuzIr4tcvNZpV2q+scsJaFai9g3lzEp32gr/ZjKGGqwgdS08oQJWiR4DN89LTTqAZIKpvmcAis2u0pymyZF8dC6sx3qjm8IEHeZ4yJDd1RZDvsF957rxTALjug8n0oIi2xrMl8Gsrg0WJfynW//3tZ+JN996wR7/KHFeBfpIFtcb4ARBkyDHFRmAzIzwTzmIAW1xkcP6SNihMDWobye/XiOhJq0aNjGwBaXxXjge2NKpVQv1fB/mzx1/Ro89H942w8XUKjG7AIuS4mzIo2uq/Ba27kOeyMMwrRE5veeEVShM3D+gTaHkA/4CaNVbqWEoJ2VujuWfjC8OQO63jdkHBW3RY1+MowmHWyeKPmbRGm4vQrsI1edk4VboXElP3u5lt3CxpBhjUpimj05Tr6mV9dRfhSSVQAnEGxHJI+4RfCwyU3gRcVSQNvPTg7Elv0HXzt1uydyDMfeJ2ZUrY4J94k+wLcNWli1H2PdI/zReBEpZYbNlUOwzeMj357Mb143Dt/ie6izHxuYYRBaEWxQZ/PUUWqfy0li+szuePHO+kTV6S5CtgKy8CC2dPq4YqIz1fJiV0Dim7UOkE4htkF5njgNIgqp1rKe8JRMwYLiIlfO4/RrDFWN9TX75Vrcf0FUQxaF2VFCqbdDHKPdVZH2M/buWWwvEmdoNAD6zs12UeJCXuF6NpXoQCngRYGUR3m2g7xx+5XXpnhY+VoVpSvaY7RfsJDODoW4UwquB4RggWdWyGcIHwp2gZuDGGA+HTpnoaon/hVDcNL29b1jj8Mln2Z4mrki5lXkKEuH03d2sDDjjIWz76nKWDzwYOyjra1Et5Rqy34PKGZFScepyqZ6vbXmldSQAIYiaPhy7SQlJMoXeOV4YJPtTcvEc3WtS19OmWYx7/I2Bf/DKKaveI567uEd/acPbLhp2sqEPfA3OUpgfybmEbiL5jRf6GvvrvKs68b/57nTji+wHqkwyTZhBnFzyY80djo2MxDQHekU4W031AsUT+T5O92fK4UZyj0HZAN4xMXPCKiCqok8kOfsC3owbR3N/p2FkClxpgHAFpAyWl0EwQhON77wwzqz49MQvyplyiXWySJRT+UA9uJDzDvnQTvZsPA2QnaXeHvKKSrWFCgTuYqwMYBNlBk/ZHFlr/fgiEf37NnfRdlAYT2jvillYSkYzxgScETLpsZqm5k02+lvCDWjVwxs/dy4nPE554Y+y/kJS5or2c9rrB7igkg2ZQzDf42FewWuikKNNzh630a4ybkrVt3n42jQ+yyT1DFik+CThjV1eDsNf+PIqEZChC3U6LxRwmS6EZKUb/1Yi/pSP/sSqvjbfG2uvv7mEcv5qRhuPg74uVST40pbuYlZa4mNDkTEM/nZWq8bBhVz67zJWr03aTckxwMqiNG8Bj+O8ngQVPMunJVfqODA3weWRsyuI+7NQ3dF9RIwaV85Ru4ZzCk1X59mCxoeScqJpnJ8kittNr2fh5JwMVlHmgsevQLw/uJWIDkta1TQ19Vsl+OgkNtVkGeOjbHoGiAu5DcQkA0srwkOILcMqoHNKoAf8C1b2sE3SWU6hy3iXykqWrywAL0JRDHLPNGgEjiOVjbg8Uc4yoZzXlyFnCcpNYXlT+Ir9y5VoC3LmIH+Cr94RE8NIKMh3ILFAYQG1IOw9S2RbtiIne9umfTBG4qynJwLmRopcBYvHdIhJjwK7qoRVAm3KsChOLG9Pkmd8K4rx0FdmaXIr+zMgqX9l8rf+Bf2fF8UlTv+9CnwE1K8SB2dzW1k+Z7I7h2sz+hmJPw3q93Mv3lpQF26CbNfEP/zT/0zNJGzR79o8vwHsDGNEH77k6X5S7KEoFZtL/LyhDhvASBQcQpQgBGF2wNuhBD8l2SJJIhxvxlcvQCshJ164Opc5B3MHFe7Fi8tMfaAOi8WzG5qUSmlRthxA3zWTDRmvSaMsWM9jtoQHWwxaEBeYgcAGC31HenPB1iXoTEHF4YVp8ColEw2VOJzI0JijiIAjhVYVfOMZ8TvJC5eUrkvlEzQ9jc8fs0qs5nIM3A7qabzr6pOfh8uhNjBZbo0a1ag9xuWE1N+ELVOWj+LQwvmns5u289/2Ybcw+w9aSlqSvlLZMiLpPpu5oAxgxRKzRbxvJKVm0nyuwJdo/nTkx6JmI/WG0i9kzu6DZz33TyxQXxp8umM5lfT7I0WqSl9X0+KilkFotAzmADbfDrqL6ATEpVcL5fOClE8uFj0yGZLqVyQ/EPfaflCR/3xVv1tHel7x5pTLMPDjkavGLjDX4cRgRBH3XqYXcynsx35WgrNk9LnihUm1oXMpqs0pYaKjA/yAUgaNDrbG6e6yVltM46J4KmhpVVQ62Muz71DwgS7fm+H4CyoGkR6lFzkgmJS31YklDYvkVllAIGIkNrJ8kFqXdb48A94CbIeprpH3n/i7ntI16G1JPHpLdyRa2AismWFegq/8aIDEki8uXhTjQmRoQvl7+OqT9NVc+P8Xpwi4IUXRlUJ3TYuKfK0C8zN0uZb5einHZP86XIiBONpNs0gsJMHjkuHdAz8O6XGgvN6Ll6Ea7GnAZT8shd+YpZOaqC4Lb90pSs5FjBhI2SjjKNmibJgpRkU2LYFCR0svQBSLsAKWIacz+bDl7KxZxpwfK/Lku5Jdz+G/B/9jztGxIHbTdD26Z0Zbi7KyHnoFCVgoMBAokaHOmzOJnILCsTA8+saWF2u4wMDBuuQSYF+Tlx97UVa9JHh2nS+OiHMBwy6sRGBSkQdVmsvEUV8zoVz8Brk+8b+NzgDbOlFXT30XS3uL0kJZl6A8RqxiKeYyHNaBaFBJBqoigbssqOP5VuCUxXUE+BnxZCDp0sUGikNw68fumwUWK+LOTzHOo6whnq7T5JxtjcVxQvIVUbLYMy1sAnXJkTCTpjl9sKrVYpgQOBmJYIdLCV744exyiQYSurGnOQl0t5WFHCn7yWPOB15y20U2599lUzsjVyDI1EXd9Hd183kylpG+9lq1v1a8P2dnw8TSCrVACN92DmF0k3BFKItUkUiwxpIJud3yR4/BcSfcPDM0T/QtchLHsiuT/FvqYJlMqvHGcjv2bP80lb6y8r9OR7LUrYHperyYlWTIpQmUHJjpxcm2PGykqB7VnxLRI/KMqyFWZNiacEcTOU8+WGEPnvJ9Hb9eJg8WZ88dE2pKYdm7NMOrsGCB9NdbioI5nCCko96tEGXnBQTqn9ZaE/lbP1lvEr2HygEcc1zK0NZM1sfo2n7mtzA8LhP7Bss+Q2uWl4ytz2v0Xzmm8UZ6WxLHMb2opPcb6c1EmctEmdJSDL96gRfafIXrs22pvJSEfziPE0kVLGpn4kNSHUD3SyndBNKxsTsVm0P1gen8fyo6KsZ/NHV3P8iezqa304KSRieRLDKJGcKoxi8ArBt4m8UHsTYbMJ5gEzN5y9YEH7ZpUJYXLqILgIN/HIeb5nwD3cDA3MXdp177Lf38xyCX0TOf4jRm8DhNFlgoOJki+ddp6vLg6mm1xvn73dLUBGLB8raAdYl4V41+lWAD0yyw18RyNv1VYuxf9P80MPNZX+PFXj1q9GHtx/wZQ8fIX5+b9wdIXxX7ILzzSnOfKakXja4bZWHVqpZuRZOMmMzoX/0VAs7sz3Oq3VXlsebG4jZt/8quvEKD27NFReEzhrN9jjPgbEJvbGIZQ+GBqycJV9AzGVo9ddIP5AKcm2BLk6UCm97kNU9yhqT0CMgNPLgUcxMkDWC+jVOK6BHsenKwW+QqN+Z4FdOTK0nrelo41Z0RdCbSbQ2DptjN66LkVY4zphvlhyzNUiQBFImJDWOHaSqQjqGho+mqerQULnZ14kpjG5jXvYzmySd4cEl5AMpXUhQqY6IxyHqD6GOo5IfBZdl4viD0DNuycPoOjySh78vL+0w6H5PBo1CV+DQnnZWN7SZtZCm44UM5lVWeFDLLj1SnIicBDQwI2gBVuWsyCDmR2dkCMcv9GwyjMX8FYSZMNzQQnDE0h6GFkpRdrXLT4XMd6xI/uwBaB9AscSukSMVOsfcQ5B4tjP4d2LyliC9T8db3rWyNx0648FVaGDhf+PL5FaO0BdZsYgI+suBdpJ+M+UkvuvUxeDDpf3698ZvZNIc0f4n5CEy16O4TKX4Tem668ip1MaFF3UHiWQ7fTyGosF+5yc1X6qYiDs7SmQSIgHxDXYr5XMEvqvA2YE84iF6SHw7Uk1FwkM92yxLiKFQ4WaKNkL86xXNFFAO2B2H6QjN9dYELs5d+6cKzYf52GdziyKWiB4BWA0tzEL4XfHXJtUhefzWZFowESe2DILeXbBIJZ4S/oViySHfUszom6X8Cwi6pfKfWdt1XF7K2pgps3v+FX37T+5dyPL5eufMOmr+WZ0fRJGLjQC0BCHLoGbcLShyF6o0nksfww4hdyxGjJ0+PXPmB/msO87ayqY4/sWqT4nTjWDe2hOiAXgbOj1iugd33sbvkaUGQTR3CWKCwSyLMKbp+uKL2gskonS8YnVy8MNWqLn86g8NK8od1YVXTniodzMH3XZioMJ6njVzO/UqMS0BNrR111G+a34lMtev1SsZu4gmOK1+gROb5FYB1mFkRaYD8Gyhn0WcUplOe1zjri9EC84FcsTg+B83LzkOj/Of3pXe/d7k1V8Kxb5xSU/DKCHtV/mQJLt8IeVuzP6OuRYAv8CYZtENTyJU5OCLJHU6Ux+ggK0pfZFbnLJilA9N0CjKOwcZEWUujPSzeQO+Gmctl6b0oyhOT2P9cVUsAmqCWgYd97zhwfvxQLmbd9mL5fI3lrySFthLWgB4oigVfEtiR2E9eZzKj8SdfRGo9W6xGY80cN5LVObsoKBPJiphwL5LrY+zKhPQdeAd3knSdS2bM3ARHOlR08SgqyJ202NcmA9MspbIiziSkj/B9BHJ3kqho+TpozSZpp1HIJ9EGyREcEsZaOiXQ/iZF7zCm8UpVZx2REvDOE//xLHhlK8Z7UqpD769ww0kKGMrfarWUvgYMDYmyDiERBuc3GOqfS/NadBtpytw/IpIfxuECCQNU/lGg/p6Icu54wuwvao1LeW/qH9VNeT167yPpsynv0fDWQzMSEBbJrIHyNVHGdKZIrAPqZ9Ospf88m/4kKy8ouD9kxETbiUxt0Y7lNUzbTbK/k011pskctMFkRhZf8NxoTkg/gn0Wb2vr2/7z7erefleHaPpOPrkaq6pzto8yajFP43/xtpxPSFlnK2eytIwCJkKb+DqnN8RYoloKcnF4iNX5dgx6pDGX82G0b+faP8BmEkEb5hzu78AgFsqNlFzKF0O0/FjZRsAxBH3CcxIZWHC7JhYWvWlLHSRk5xeR5+PUGx5fyR2VnfcmWeXSVZIEVTKTa9LRinkZpz8MtOcJIHnUsMm/jiwtJb2M1C4GVyjoaRy5xLhNc5tIGpDLPle+ZufbcqihJT1uaWocs1U1pSEyIFxry+03SYYCeKxNNqszCUnnjJynK7NQSsAzDAxq3H4wLvfy50EqHwRSXW2/LTjjfYyUh1K5BiYNkLmlLOzpX2edcUZJ6gEL4RKGEwhOErzwJtE99pBDcjMsufJpJNwWuxsldeyAgk2qP8Rr3yn/ctz+ZWP5xspsnC+xKfwNgaIrL8VW9pDNl6E3IhykORfpMTh2xQ8W/PZ9FHt87ZX13acsBWAHKodZxVdBPlCpxtcLIHhbHsdwtekctuE4YQpR26agDBdmJPM6LYzTAxOP1mHlqsieg7KHD/eDeZcIpGzDeU/JGULkVgv9I+/Oxbz02uFZMi/o8f3cAIRvCxz/yggVshn4j5H2uhh87/te3QYnAJPdwtYrQ/6qv7+hSGWydTO1ZrAdwZnKpJLkztnOHGzN+5/zWsea2lZBKdD5kSRzkJnEPGGvR85B27yZlTUdjdbgfI3NrNTfE+U2n3+eNWz4wzifGMmLiM9eiQ88EuloYsKbPmWntHfFGG2mHKZtF77zCSJv5p+fu0eLOv2TivLxDMtBvVdsP9GVl8n1AM+XQM9UlTuZbkkQKRHS9zD1QX8pWA7Jwu35eKyTkZyPsflUJBb45gjdv5Y2Z0pnJvIU3MrR8AV4eC4XpqCWhW0FKATVKugiBySF5304G8FyjqUdEnV4/xfKAmeOjZSxm8hqF0bNrCoZUAM4Isgfx40/w1V1cnAujcsEVe27VRxskzM1eac4a3DtHCYTqjLfThK5ELP9xiwYUJnjCZK4yliWLQ0kGoMnPzOdTFpdY1qbnWcQuJdzVsMYhtqFNWG42UyvjOEXK+D81F+u2U2ckRW00itij+06VvWjdHPMvvvQ5C6q2PxUiRb2yfIo/O7reBgYV4tqJ8ejAO1bouqKZj75RpG3W+ngUfQCcWvNVhZgNyCVVdCbIS6BO2mhL+g0wLcbSVJqTtLh8BW7vmery2pHkRo2NH9Ist+hN8N0REFmSTvPpiQY4KgsdCS1H2NwkFZ165ur0MpxUaHWjrJO8P6chh1ppZ3MBT5cwO9cxHXJOxoFK4v5d7DzjzTUKGqWYKc9nHPBlbnziGoPCf8YoPwDXjyWRwXu9pKyjbZeeLETh+Hw+L3F3F25ovHD42Rxj+nu6KVS6d7mxW0aOJLPpOyppnb5+a4Uv63UFbFmSNMJfumr7oFWoLRW4e3leHEimy3QdbkL0pRItSPQ7ivXeHjlCn15D9MkzbdNRiAsMU7BGZXIk/R6rFdOwtFdvV8JGp4x1dkhYYu1wJwjTGXMYO0C7T6PoSxLOuXX7MnlbLevbhc1tM7DECqWmGQwu+0DAHJDQz8kUZcePQx3dszM7TnF6uWZeGtiFhGOvx9bysRuyNEzMDtJv5nIDybKRhFVcuHLHLD//XhzLl8e6ReP0vhzQI7+2OtNlD/4biEcsmMZb8aR/rMUGbJGEFoBu5BOarGmKagAoCnimTDrCVZTqkMx4GIEjC5yAgpHYpGzlwa4D9hqEX5+OQdXSvoMP9+OLI3fFEawE1dkTckX2w/D48VYRfBvyDSFefffoUEhAeth2ktzp4Vymn421K8hoXARrQtI+OipuTSgiUftJUmYaJQTZxM1HIKNi4BNA8jIatPAGejWsOaCwY4SRXgwYduPs0KFZ30q56WCYLWbqcKkgRCDb2PjLx1C49KyOtyS+oXg1r+x8sqQDw3uJpIMjJw+eA82NXRHdQcHVpiySQRiwjefM2sZ/7zDkIbvLfhyJX7YJNMzdXNmFL/03/xaGmZh821VASD14MkzpWUvNz41P6CAH7rtt/CFqroWnTvazc+C9s2MP0aVd12HW2UikcKhdUkAr4jlLDjBRGCpOLAO3swrU6rvpiKHrB7Qs/Qsr01ddq/FRwV9YBgVKzUTcr6sLF4XuedqHwnnCi/LYtbgpzzSUhF2hPYNt1e1Uyf6a3oa9IzJA7ax2jr4I2p/U525tHdurpoCDdFRMYu/k+ovU3rojctK0wS0DlslhWSjtC9V84m/CTyHhHOYPUm1hF5m8YKMSuuUlYwhxwt9FA15vMIrNTzAKEvB9gxdctEzhVfG24sMIzYYKJbClx3Y+/vIxkrxML8vJ1bIbyV6xo2Ojby2jitZ3oEoXRyDmd2P5OYF2UmkLzpR6EHzGIZLshIwboLST0HPV5CKi3f09IafM8HVavBnvj1Fye0TKB+7iIOJyqNVXLTosxLmJbN2xMD5OE9Z2rBpmnb+dSJFtD7IReuiaFL8P9P+k8Ebaa6SGzw6lAj2SP2uoywZk/fh7D4qZ43S8+TsMnqug8KidDsfH2QVPwPutDG/gAeXUAKyWWfD1ZToPBVg9RK3Iy2JSd0U7joQKcY9uJGm+1B9vR4sH2dyA0v5Jbrw06Ijv6U5n83V1yfgqiObsjx/G1cNwmw4mYJJSsIA5RJpM6ZBKKUn6N7RuH/kHtIglrFVVDNFMWhAaqEHqThh+BA474QyOhTBq9BoJ3MJz3yqUky65Izjsil2PO+Fop72+IeCCiB96c9NrrzvUpun7VCZUUSX2KULohQtf6NKGHt5cNVyx6Y5xNxYksG1JF2nrMmqim4CgurSRYueXtKdvrL0Qb/fyPkuMZ45poxOt4zIQssWOVEVXuLaZgSrUmZDN4U6m6VrNejkzcv76gXkaVVsySkZ3bUnKSKewB1GiXi+RR+cmeVCeubAZqCsgvTl75gZzUiSoCNFipVQnciXclYPvygr8gyaxyKKyGglqQ61B8PkfKqc6LQRq42Z36qYeisGOvnKVFUL4KdmZ4RWUbL2Nvg6gVOBRqpiWrzKcSI4AaIr+ytZfTuMf1qXS4680SG7cnpYVpo+ta4R1ZCLP87GgyDM8HHKuCIG58ZCF1TT2ZmQfDUuKaFWkb++roMitfOReaZGpyCKRXYKEwO2FhTFjhaeKZNHwAoSs670pZCvEYHpWKHzhJoJ2qZ496kSW4jbfJBJHrhh2TDbGdGYgfY/5TNLqlOwmE8Oq8qhmdSuoB//nEwl/u3ny+s6K8eonde8LW0KY5blw5x0XnU1CBeOdA0JWWLWXTp0jEcCZLKMaGxYibaHGf00Ji7Elg1kGzCCix7KfpLA7tRBqNdAbh1c3RDZmx4d6Dd+pu0f978sFa5I1DXRSU6rfOhzBp0Axy/kO/9CFMa9lxHgd8oWwOkCdIl2xPjWNWXToL9BrO6gehd6FRhUUYGlxMVTwSxOJ1RJYpT3oTNidiTHZTnUwHYktVzey4pbHYR9cC5L0mY8uuNCEBTncvhbjYfCfQ41mc5MPNuWV1I1v0tm/eDVmqkUgDrGe68NtMgqV0XMmDfA1acMLZBphBrrXMqBU02xfAhHgP+Szq4bpi8Nb0RvjtDH5bSWV/r51BoRZarJvlMCIJbZDMPFZeURpACSjTodGmk2y66HLPhI6rfxEIH3FwPTTp7YuDgikiMgAMYUzGKpfqkaNj87BUsaghgu5Pg5Qv0WNhGKRexzIDcAJtf+IZzi9wrJGCsXq7SMVekdrbVo+NvgqqHCCf7NHn83kDet5LdreKePKzp7YiutTTpKxO2QwEDSEGow0V7IGLfMfhU4ISsJkl1l/rW0YjEW4oNLtj6GSQb3YxrYuDYT04w8NpP3dgN3qr8aBUvX8BrhL6EYAfZx7EcD9FRi61BWi+j4PFEtkr5GHdVAfaNJ0PoLAt54fBS2C5qzA+UF6gNco3JUUoc5UBkD5WGYdOhlIqiMVxNScmGGsfNzHszpkgM9SLpVlruQ5QRp5/E51GYKXD1EQYoqPagYsHfMHIe++9LPOcFftlCOq2odd65Fym0/XwWGzXpdxd4l9NPYtOVmxPRL+t0x6qpWoczUgMQIRiOoUHne4dfnLJEQULF8lZ+uC6OehAuJn+VwKS4FxjtuRKaMNDcV28XzQ2AKqo+V5F0fVBxDYhsPa+lvo4uEWQpNN6HXRHWizt+Te5gMSoGB4fqpMfGAJ4OSxuU/nlci5USB+FPr2hwPD4LP+sjMyMACExUt3OG5lKoHsJOA08vkg4306lAaHwooQwdBjmDuX7q9nJ5mKa5K5Cyxqnor8a5N5QLlx0vy2Wqycankfx1f5KUNF8l3wWwlm14PpBmIxqD9wngwDmf36a+tsKBCQ0DjHSg0QJ9BMAbLZ547Yac5Hawr3nbIHsJ8O3r8LN0mUjsnJR9moAQmuXhrQAb5+HKmLSvpDsejAXNSEJqGv6FxjTtKTGfiwVEeOeBowK6LlMRsd13vAfSekmZJ/D/YYjGUtEPDBvz6C/4wYU6OVyWJX2e7Z7xym+kRbOO0YaZrM+lzLSUBWSvTliKTmUKSDSc/MCQFDYGkD8Hpb5VCt1DOEXMY65vkBVK1lB6maDyV7sWwUQr/cixjIm1/h06TWCa4jIWc8G/286SM34LJoQxhAwdrSm4IN87iyw1Nc0W8yEd9pbyWuJgaA0V7E+Wej1an6ctrRSbzzIYymEmTtwmHsWWD2YaccwKDYGmAnQwY4vD61DAzPFhXlL3YzRP9Auo/ci9QvBzjt+bo4DDZK6jOBbD65Ed9rzUFn93Va3W0nOOTqVANARvqqxy/Y/Oiq0w3QBMz2DUIxKkqdgvxtUhuPpFkmKIeFDXgqzB5V1SniiJJURLNrECX8dVX1ss47B36C/cM/zayMnF+yn4JUYo4WQx4ZS5TNJvRH35nURf2I5Au4dY8/r2RAPtJy2bqWd5IIWipoq9GBnQkuuJLd8LpYSX75k6M/6ryX5S6YJbDQZk2silzZe0yURkY3FLtq9GFDWIZ2DU4yEXrdd7H0qVJf+8rDhPxQmXyHfmtnpc5Hn56Np5ntNtVAAwIRqBnCxzCTS/9ZBq0Nb6c6FgC706GD+fWuBv+oJj66zb8XeNZDXqL/GaFT3/ghQSmAuaeKJkqhi7uQDWyeSOEQwXor2BGhywrqldEdxGeUgD31eqf8+VvQqmXHqo43SD2AFgxjD3wellVMCqN4MrrxE3wcppc7Gjf8NmGqYlHIFeEKgVyHWIfPZr5tbFan4qpjaGB0w6nLjgKxOpGuqE4jwtolocFLI8DsXmOtQiHOUlW0ClOVxheOZ8Ov5Gft4ZUr1oGGfn6+sDe7IRnGQ1soMktb1aiP1ymsWpMO8g79/0BbQAZ92LJwK2AZyxScdPzFvA+C8hYh2qZiAmoHMBYkxJF1P6I7AZwVnEaTLpGRMsk8zY0Rv//guArxtLsQAzzSf/5839zqlt1K8fO3dPdEznkcEkutdpdaSEIkmF59eQn+2UBAwJsWI8G/GY/6cmADRleYAHL1FK7S3LJ4QwndZjuru7qCl256uZ8/5zOOf4+SjiIqlJJIup2mEykhCThHgOrRPwwBwTudgI3yEgAtPMoc8g3WCptSH3F32hQ0hITg0/7WnGCIJa7ltS751IGrIGunSjtE9F+jh462PFjEiXtXwh5h6xG9G0lsockV5HAfTAzGGkTWkr9U3V5nkVjoJUVPQbHUA7eA6zHshgvSQz8CLsVX3Jo5NFCNwpl6Wkxk/PF/cNcmkX9CqcWV7rSRid8q0i+loAGi0Ns5WILMLqJ1SHmZ+LilxAZdF2DzRXQ98QtT87PpfsqnBaD+ROjtgcuMtJDEq3eVv7aD5PXidc0GUtLGYiqYjafdKo27ekbDM/UAH5o1+8YT4Z4oWtujqKDde1CiJJMZQF7H6vyQshtDf83f/Lvs2ex/2LWd8FhDtdX4AqL3nDUmoTrOWmpxfZT4g35QwmDVnR4EaYOmLsJ3LoYZWF+RLOL3FsOLSjb13K6Lwp1pKm8twyGC5Dd9kWgp8dEvIkLHinuJHJeOlgL2ZnBgFw8o6vH4mACW3r80JHWQPBmykaPUXlZSWtCTVDPF0TD946jCxf738TrGL5o0bQEVgB3VHRv0evcpeerECdo8QzKCuxARPro3bd+5Youpkh9n3eobD+yF08krYJ3z71kHT7uQXOQDGX5eIHLWbx6LbcdMIigwcjaSBT24uGr8cANO8vqXANkdgV+Gc1m4nqBmALVhzIKxKiG0jzcuOEOHwdvamnZzK+exKKVkqtgxI2LPgp8We5IhZCEU1kNiLE2sVOtQpDR4Wc5LClwDsB9I8VT2gBiTDD+NPrvJjHytzK5n+GuDLQ+KT3znache+M1D+AdT8SKdoaTRxk+W5UZoLRCXp3yNZlsHoMuwruX/MxRH02hWqALM0CeTodfT6S95DUF6J3+UVs47+Ih5WRB9lwlr6XdKdUktPWVh9rpEVC6/8TBq+Fn+Viy0bcMSjayKWi42IS8HSFH8NtJMu2AUy2tr8nDmpA1sdVPp1PSKknGGMfVFD0ljU3QuuQ5Fa107WNJGuO04BJmymkHjs5x9ZrVFtkrE3AbbFxyOQMu8nSWCjFBqQ8TWdQFrvfTwQBlC2J+S91fVztjb1NS6ml0VtXjWGR6wr2I+XkYExwWYN5DlNLTi5yHyH1ATQ3ZdRXL9LAKVseg8Cba79mf7dn2tfjdRZQG5Y0z/P7L9rALfoU8ryHuN4SXSIkL0Ds4aCNS/UsLaezL+fHJVFpFmg7F+L+SqjJODvPTp35Ll8MBNwEajNDVIzb/g1R6IYdH/tkpXsY8UzYuQFqZqtNNwSjj/zSIJhYvqqinRAO3usfns/6vt1UjwdZJEjfdoKYOjJC+p9GPiZ2DkDLc0vLfAom6ronpQzi+incuCCXpKCdlY0F9oIOIL+qDJefIlKHCN19JXZe6KqyMoXqZOBNFLUI678meniPsOpuhZjp3iZsUtI7Y6mN4NYXpR7yTwIcjLTqLz7x07gPpmqV5hukUTu+HXiJKHTpJsb0Nq+tusxyCrlo/NqN3gi3D6lL4wgWbX+AMBwOK2xnR6dk/HSPvtXgrgpuy5vN0UKfyw0TZYKUr+XpZrGS1jXPcVpMZQmCdOqdRbY7nJfs4U1bOeo+Oyfck6RfjrYemKWA5Qrg49z83L/B1B+p99VOSjCzk2HQ9ScZZ2LPQKsKjocAySlV8ehUvWtKCFJGGcVwl7IeS9QPHzaieC9wLnB3jBcTYXHjSGGlzrpSV9GWs1kF3HlhFRG2pPC+fK2RgsKqQ9YUUznmDjhYeQjOC6CdoeDsuVhOsqABIloFZCKwEuB4PdBWpqN1h0ve8uoc0ipxtVJCE7aNZifTn4608V4/JCYTF7ehqxynU4mUFnxjcwNLja/9sX7QusRPR0hKbK4PeknzeBxUd1YTwRvB6P+Fn4K4E3FU4dZF8rQTPrIyvWRokGPdU0gxQtZ5UHjmjh0BalusvgH/myylVNHxVVYxOzIryXiHNpnSjl0xPYKfGazuJeZ/hD3n/Hgoq7OapNAux9SnGP4meb0IFFdSK6i6hRZfoSMx8SFQOVyzkMblLgvhMRgmaztiFoW2LpFampwOgNXAqgbc534gkf4a7dVSa76JYaUJ+d09PCH6JGNxEgcp3Y1Xd1ch3WUHgRpkxg52ZojKlFci9He6t204MF7oaeCa+PAd/GiqfmO7vAs3+kXjF4UJA86/l8wDc9EC16fyWUVqjy3cxzrLuEJEyVIoaY6gYhehL8b2KyssyejRRxnLjQFzNFAPC0yl9N2Yf1eFa6hwMC2Ocomnil2WHJ0VGc4ipKdA0UXzi9SHch7z8MEMUSU5gaIl3E1RPYXEQHYWk0BcqBKM62uomNiN7e2DjVqaoIAfC7VJ4nRhHGtp6KCV1m/xcKjpstC91TxJjWVn+NHgasud9+m+z/heSBQ7po5GwS6gE2NOq2gfJZ3cca7N1MTG8Aei+lebmE7KFSPZfBO6p7j0JWZ41c/I8ickqiXx0oqG2ka7cS2I9FRO50VdqbeiO2ctr8C+L+Z/vR7868b6Dif6jWroYSxRvPk/SUfJEor4kKjq9vhSkKsklaWuShiE+SKE1y/pG8pMpGBBwCdiooSm5UA+li9+5qs2ZplRy4cMBvIDYjIG1Jh9lg0yOrp2D+T6/xKgoQJgVx5fodjCbDOnxuc1+D7Z7MzMXfFuq+8vSzlvFE6l0lZXVsD4GiQuzCynbTnrp7GdnyvkvWC1JlSUJ3TazEjxm/npGFBPSiuNTR94cpiUcR6O0pBKXib4GBeEmSyWGR7H78qR0k/Ic5fhWuvAJPjzBl31IjzR0C7OXoD5OTkxxnmCV4HlbGUbJ6XV+m7B+nyGfVQlwAvH6f4+UrFpPagGE8jTc4aKWC3tfh8OMTKz/DTgbEN0nhg6kkUgJdBxktdkciDtAenIT/PNrZRiQw/1Z0Q1aqtKqhxNRWq7xQqHuLAOjJUgXux1upuFY4GspKq3qIgfSAFEJ4CHESOSdKDDoYMDqDjVQwBAkBvEDONYpK/FMTp5KycaVMDvBRQf0Fw3+x1owZ6M2VpukAN1pRXc7kTxGvofje7RUD6+4Fb1Ql6dIWcryVbcvQGE9zfREwdamr+PpqlLKsmYB7wd5Zz/WdaPuBu7HelcTSiUuZDwOSByE/Gs1P+GXlI0Wea0OfIa1MWpMxa8yQMoBzWTegzRDWT6Qlg6gb6O2QW6MUzxTCgmcesxOY+ULqlRw47b4nvBuz/nhd/RIAaHKYJkUTgNTw7td+MUO/lNCbsLC3w0HN0R+Mw5eVy145gd2LOwwPw3I5L+WpwXbogk6yjgzuN7x45CeFGTik5Cl5f/HkUTMFIOVZONnqqNgpYWIBk/vkNx8VxwXLq6hP46XKkaduuNqqYn7ZV3iAkeC3z8i06O0aZFGAXvLSTqFDRdEAWa+2ObSrh/c6hNzm0xjaDGyPxZbd4ztj4LzRHp1Gaz2zTlVJAC4OVLnoV6VUkA9yJKEabuiUKL9j6eozD0p3aexNcOpK9dH8i2XpnF4ZqvyjO9UeSclvuGXXCWYYyNFwGrkvlFDXWYprGbV7aLnjdHfcdvaBevl+Ds5S2/G8xkHB1Jk43wsJx1VH2IaJ+2x2IGpHUt9IFNFyGWwJKNJEZ4G8MF80EtQZVcxoXrWjwebqQkkH0CxgGId+x+iOSMWccw0kGnT0YK73BNexjdmdAMGX1kmVFOS6Kn0rcWOQhrG+SWEEoYRICeesSTrRBo8yPRukanB1aorrqh1ImMfHo2hG+vVJ+ajMLisKN8N+RCxE704SUljWJTe4WsE6oCocuJlpX4e5w2YscEV8DOUAAKGSySRxL1I8WboXZKsBBIfp3UDjE3UXAIZP6w2FXiWShyANXwJ5EI2zhEAA6HaJHZEyvF4LHxbmvPVS4qpz1csdJqGl2XpseR0l9T/DOLNZeUHiTMOLPka1Cb81Zwy8dI7Ju3PWDFKXQb8ptNZN0OdaCUl5NDrgZmcplxaXlBuHCjf8eA8DRbXNSzg+zNJLYFzSseFdInEniBvDf+W0EoQjS1fbqmSyu5PuB2AgxLSuqIQAefzSfuDzHg9kTIh2jfFBVNcxOfDyZU6XIoLgim5CLhiJrjQPMKfq7UU2NuqORZ9Faqf6VbN6RCUcwiVkh0OpSA5iYR5qfsRvMtZKTbHLV967SGJ7N7OcRdCA+nvkvQm6hJ0ryPHqnjhzpbz2WV//I7Unpu2sqbILlp0tM2XrVmfn3lSrpI9WJaTNXavSQzCLiH8vMqyr/DdrgWKYOthlHfp83bcOokLHypKJb57qinXgD+dOMvmcM0EjSRqpg7CE53pdZjxAAQAlBK7wZjhFMZqogQDwvNklulLd/8Admfpker8OSZD04ymLOaQG/SKSotZ3hCGrSZaDnZLvCe7f9Qjm+Xo1TVUAxRegt4tnttOHI/MHQoak11M8vNpo2tRTUxGIOMZip12E7pWiFRE/lN19tgu1hGYMKs/g6+eojUjc8dMgjsiGaGiLMWHPOOByyupNU9u+LaB9IvzkFiLPK/FHZ1nrlTDBYcOvSVrS3nuKqx+pg099PVJWKsqjYvEvksy1RQuQAy0ZYskLe/wfIYKyuIHsp8HVxfQi0F1UxAB1p4Z5d3Bu4C9rc9IDBSbQiEaV4niON9L9VePwj9XtGUn/fvvA0rUynD2G4xNzaiU8GAgWgNeHWu5uy78GPFLos1w9AtteexMiNxeN/w10QdK6YKqU5p1Yi9hwy1F1TlWOfgNycri0sgBjauX3Gcop3E4L1GDpTLxowRliDwF3p/TcshzRfH6W+FOkJwyVhSH83oGgKxt2Wp6eSOp30JgQF8fpsY5fsChM0UUs1kTDDNiTkI3XsdfS2KCgh8XrBkhNBJJAQ7rmABAF1KVJu2fRKUj05+mEaN5Ep8N1fl+su+Bi4yvd7ihG7uxP31MMpiTNYNc/PW0m1NNSdrM+sOz5MCNRm58XDdLunoX2xcFE78HS3qqYHJ6JHhe2l70n/8UTfOBhURvEjYi+f7fBW890hOip0KrCGsuLP0YkYucvBxHZhSESfnbFF0nM5WEf2lN3utth2i5Dzr/IVvqRYHrHn1Sm25MMz2EJ6Jx5cQOeNpKFu5lNqvic5HQ55GcsHBend4h6dawMDamCRJtoRZFdEKShPeb8X0kmS2UgPQptEYZsAkRvQf3I/JT26vNyMn7fA5FBgTjc9m4F51nkpCAWwOYW4bjcpCTYCJHdpdqMdTb0LHw4CupMc9DAq+208o5PXouGOA/uu9+t6mFNFl+CqcN2lci3gBLHe8ly1yXuDQvelqwPTZphwxPUdlS60OnPsXHYFzKZnIykyVGUyIMQT7gBSUVJ6jZUaEhqjseUdczXhUYgszqHK7JjyNLP4jaVqQQUrgZtSeyYyf3hma4E5GbIGJweKnM8glsG9n1waqQ3cS3duTVCf5/1VijhL+iBTcsZeHRh2mnOq2O9Z1OGVlcr1K7QP42qb59O/3kqjD3dhTexblS/rISUMlpJPiOB099gX+q5zRmXCqtA+F+zz7ikM/Rs3mY3PSKu1j5Q/Zqat9eyaUN4NejUsPfEMr+a5zfDbTr4TeGpWJtqIqZCT7WUjPPOySVg/AcpQsdfTVrNVVJZmn990ZI4XguzW46HZAGTWtnT20Nkuw0aWzL34/gOJ8sXxPFFVZM8m6UKOi8gc+QYfhI6kmWN77cpp3p9CfX88nl9Bwn6gPUtOXaMdI9eOom7xWIcRG6Fm3ETAby3sT/wZoGbjC7j0ACJpd6ZEiLDugPhXfl3/xbQKI/9cS5Wj/ns1M6ucFuyfboJp69DknJ8A7VnJCSQdwuAkuXpWLKZe7cCHiEQiBabyqFJrkbMMOanjzE05lTC/O1ITeuptffJU++g2An837dXD4JGAfTOfV40fen/OPPcw/m7et6xnngFzm61Nykre10rPW22wn0ZA9Jq5DR2P4h0QJacfmwB9vXYZuQf5uGqxX9aJHYOcw04Z1TX8ere0JrMWU867y/cGC5NwUlx0kiAxlAz5dZVskV0WvZvxFCx1FUX4RTKdThwjR95sDyr6yyAY3jOK/ElwuUL9FIY2ke5ooQARZ4WLOlpCDoDMo90T3kGTdqV2hUpv0ZYSHfmKaZTFw8o72/CScI1AAsZOQTzLuPycYSCuZCTwFb1+qvL9neAD6Y0gzCiURnLtFi/h4Ur/ME2LTuBCT+G7oxSEiGvx1HlTPFmdPbH4iH84rp42Nq3CmAbypqqxUHHUk/w8uJSLjMR0mWA2VsX1a1mUUqkgq+V9fGZLGbRiJhN6zoLyTXtauvSWUvnJXoyV3OqvYmR1czZNZRD2jRDCX/xfwGhR+cWJGM31F/7s9IYvmNXY38xsmakrOJRovJByRowWwX+B/18+q6a1IpSeLZOcwc8SuUuAGaX+JJUe4+yHatWS07LbsJOc2868RDWVkI4DiFg6nYkvQUicEkLRaJSoXaiHSX2wkgqnxT52GOEDkxj4G3xE/bqFQAzTfAmYCtbGD3pd05sJyh5S0+WpOqCl5v47Em5GdxKWe4CbjYyNpbqDbWZpdskfi/4fLp3LjOdC0Qs7fGTAM3S/5G1rhaCHpH6vIO03+DWQ1cnAH6Q7j4gufnIWxTcq34jfcL+UVvKiMDgItC4A6UTVk4x+jsTngnFJsDhb9zxzB6WxJ3ZGpe2jMiZQGdn1OOEIgqAlYYGAJmoYab7pZVpcaXqFsaGdVmNB56QVOpvYbfmuyc81tmRtnmrxfQIy8qRuDra6TdVq4YGOk+mpL8QJ4vumd/alzOPCuKi23KC6G+7hdj7Mti0DSDsbTjZqvtqe+nIouaeXOOgzyIjw7Vr2Pvtt3Ia6AdwXpNzpylDiF8xlIItHZopGnPiDOVYl0VzQhsB3wZqk4CwTUGOvT7hKZA/0N8tkpuvGBFLg4Z17GUXZTCaTA/EFpTXHuguy0LDqiC1+bZ6Uj7LfZ/ntU2VxypQvTA/J1pNGvORg3Sl6DXp9TlTg5cEL1RDdt6XGtLyS44ZemY0Nk9Vi+G/CfCnDGlDPDdf/3v4RwXY0WoYONEejnG6ES6y9O0BftD4lxLH3ZmuYTvNSdtNV5aKdQ/jl+8j6XH+OGSf+1Zp6cjGuXMBbZQEt4aHulgSAV+JW87wLmhjX8u848wMUxziGshQn3vFSETDj4rT65MrWmTO+vRLgXRUlD6Xhu3xK2Rn2fsbU+yeZJtQi2nHLaoFcvrI8BU1LnJallJfojshtm7J8w83WoFsx58euErQHnc4vF5iNtxdBJfAwwK0g0rvKZ0LhBzcvo59kejeA6ZN16l2lF4+jzuhny1mRo291vposw6EdqNZ3cqRrJA3jwIP84B1GDPeZqd1+KUMJ3EY16yUElO1WriaNpUcOkVuHgKs2eyviZaG17AROEy8+BbVwLwOCXOZqI3JVWCB+fgMzMkNthdl3CD8xi5hxREdLEya68lpOYqV06w0CTmity8ZI978YDy50Npax7ce+78ogwfFGTrn4/R+Xycjp4HaaWRmgExRzI/ZfoCUOqaI/OFUDQ1OM7Gd1zJD5FfQuieD+OUx1CNceGj0egx6bpoqZX3/TgdpNFMMYdw7Sb/g00pEY8OCjAD4o/DEwuLAC3GqHOtRCUUMagpQAA4zYGdMB7sKcOCqHrAryXejA3NJPksyaB4Z5Y7/SI5XJJhTtYX2PoLnGKw76X5bVklXHzIbALwWCpdZ/hRGiciqSooS8s5lBTAMIMqCetkkFtOt3uFkQGUGMQknWgK6cFqTIorcZrFZN1O3lr+CIxewjzh0ZIYFUOwnClzCSwEIILhkQaPYh0A+Y7UMaW2EuemdDFh7c+ZCtJ8xrFx/p0/Lrwp354kbyJwds3qtCDxAP/lX/0PN94qvB2fHc5qi7pYovtzoESlUiUpFME3FZEsKqV8xNb9IUCeB6qjbGZfXjtJxky+XEvZhr1+bpID5lzAUw5+2nRKf+j+ct+/bmnFllJ6xvpfOM6hsXUtF2zlsBxDDG61ZbqX7DJVUUgyRvU2nrkiHbPcPrweaUZFqPPOFBFgMAkQJANzhEQE68Nwepp676JJGw8CSbKJAvG9YQIC6auZZK5hdZ7nSqwsxGSRH1qcJmSd86sxzmSFNiYjIFtdWugkxpxUwHGrrJ6dzXBDCRZT844Trtk4ptsBePeU7YXR7bdanuOui9Nb6dkZKiXEeqfyIfrweupMxIt5wyuy7FZKi0kWQ7irDH+V5K94Qkm/LtaqgisgbFLUFL6Fa4uwn5NqVBYZfKhgmODGQxGVJRlK4yPxbkZJe9e4w0PlhvRuyvM18CPo7cr0tBgZBWGtOZ+clr8ee8bz0r2l0P+DeKtH7xx3bttUlsBZCR7Pove+Kz+2e782ywdSlE2pP0+1DzTFUqYtsYJjwsV5kg0icO4TBEB8gj64AhaK3sXE3YAzxBdkVNZZz0MLOTS9jFunfmmfRNlsUgJmCSsA5afM9jhvhfYGdf4MuaVgc4QKA/idw7Kn6NRVxApd3WGi4vd3LfsMghEnd6XFWsofe6ddlYdcf02uEa42kxtS8nZRbtaEkcg3+1FvwfAv0kksSqe50iw5jbHsBaUN3e+hoIBfqmBFBpsn0ospjwtwkOeqCiql8LmaOamOyxrxXZR7Yay5wSBNS+vSIC8d0ElZUc3ddDaBZOTMqfiJRNyS9F6VjSkYK9wQ6fY18TpgiPmnKP1HC11FLum/9cv3ovYWZHGwds0vjpWxHH4Ua5CAnp+/6cz+oIonOW+1huv/VG5HlDWRWhdHBSwwq3Ml7zKlwkexEKsC2GD/HtvS3WJh5oHCzNfNAN5m4okL1Ymo5fnBMBmXNFrCuUb63dSpJdqaGR0s4tDmDRHnc/I3BA572krCWkPmjRnzITfgzJSqd5WE8v4Qrjq67aN+j98domvAB3cUaSmaDaW5X6jW2LnYNPkiGQfi6PvoVsO458ZvFPmoIB6BcGDRJwkmS7EqCbs+LdhIGNw9zMoMJW2QU1JtHffmUJ4H3FNxJ32OomxO/+xF57tY+VbnH28Vq2nay5vTagTGdP33ercT4TQoSJN9rfy0gebn2M7bzGQWnxu68YhtU+Xal87cQYUVIxerCFQu4ZKrXGFGAFzlsMEmMzUzVF3iYP5/R1bjDM1lSZzA+a3ITCW7D1feeT5Eg/esnJKGZtIKZONeX+UQ7ShgLzO8JDvN1FawWIXddUW6QFlb9s/jt9RQO+a8igwB2TxD16KQS2eJmG3A4hTUt1Qzm/Y50mekMtATl/fr8nQG1lUeQihS8OnIjFrxZYbMKKv6WEagNUdzMw5K4ncT8P4eK+5d/QEo8EbZfyBFOB0mAr9VbrYjPAcP72RGNMlPkdkXNUdypqmb8DyPDhfBukrFZnxjTz79Tur1fKtQfuBdPz6W/14f06w2uCmZShyfKpen0meXXqkI/gamThBtTRC5pYwMCRhCvhDRVFxIWvoUPJ7QuOmNVbC9oI/z+XclnqvxsofDJeL0SYGk+iB5EmnjBjfmiTSGuAlynQB4adNh/H5mfRuXW5z1MGhGhk6IAtF0HG8f4Yap9g1YsgiTubfAiw/So5JoJUk+hegrY3AQnv02s6hTUcShJ0oYJATakCd1USLS+g13eGq8mgd8yHMWsEPARoB1RIAE1VGUjVCFh/N8yZXSt4pzEpsVMslFN+bUvg2lMy4r+HlZ+8HmTB4qvyzjBsIPi/RNyvI+Dc00OiOF40RjMHdTGB+WZgPNI6w+hgYjvJUSIngds5U0cXkMmZEhSla0TlD5MvIoRJwPx8H+XGGbg/HNuH5OtVg1r/zrbFaaJ3GdOV6ypcAhUtbdBHRAf8FcVMN6UW9P/KmkVBpBgmMlkfIqkzXxdQZoHVhb5a9+TEnBq19HJGS8iU88Vj+R1u7wSYQOAM5M8MpWOvFwY89YaTnPMVwo4bmlUGPF77UOPan8mTwarulWKlcuIf6L//XfuRNZ8tGUsW6BPwricaKmFzyX0Oal3nNRpq9+5oeBopxMXIuTUtN3OfQglG4iZYRGPTF5jspFyXJAJyPiodhSoHAhB8jnwLuFxzURcmQdq8Xf8sYLr3MS92pUmiNjM5UpqgdQngmPw3bMrSWxguzeLfZacVckaW5I2ynoOez2HV9FqOmQigxnaynfCCvH5tl5gGy+Y+FRwCNK2o40NwL6JT5KmWbi/MMIrcizT1O6TWYNJPUlekpWAh4t8FglKxQc/Jjwv+jr7/nXFlBGWnU+pQuJ/T5LqwAvxy/UWKqAzzB/AY0jz/9MymQwT1R4FcFyFbDF+AX3V2fm+mV60dL4Zar3IVeINobjgC9qyPs4umr42AQrrnxvOozPwtdUm65kp3cC24WZQF7eYoPVRLwXVW9T/K/+2f9IDSzWGd9iOiFzsthjKMmBch+2CZj3yNJBNJPpsIiDR2DBlIsYXqika3IFE5wHYQRvjePOOQzG4L2D4M3AH7l07gYCd6OkgrtWInlkrU0mLrDGyfwd8eymNfpkenMkuxcYfR82hvG4oRwaiVyAoKlATYpcJRzL77/j8lHyvc89Ny1U5aya5FeS7zC6TtGjVGRLSWsLSjtCvxuE84RkYKiKjXIEfHIEEyrI+gBlx+L5MbEXk+JULSDEztIRl/A5vOV40wr9azDSRPYHL43Tvo4nqDEmAmA4kLVzfJXKo0xo5XgD4nwLnYR46QkgEd7DRKwkj9vp4Fty8sy5s4fVvNS+DbQ/8qOSMqqxikqWZdC85gff+ZUTSxnLtyseaEhPbxVxjU5koVCoxwqOEGxp1TdA7huttkLq58CrgBdxuthX5w95W5Z5ht9q8HYVlXr41pf9dtP7rm5NP1DuZBCPeVVEq1f49cxZPFG3suKdSfYfaUsDMU1hpT9bs5XZu7PkteynvGVp7TyOytnSuryTMvRjsotld3nKOrKhsI+Z+J2FPY+HgZha8cOu3nX5S0FXs2K9h8TZVGN8UICEQ/q5cpA3avfCOUtcRGI4U+cWR+V+/iSJ8cRYbzgLV3T/a/QiQ5S7MJ9F4JWwXveGPgxhon2jgDmiLsj+RxhIfH4/HZbULy1eA+bK7zTHS5QSAks8bpKpL2WuUmOdXw2R70t3TqykJpwYF2UUl7BXB2E1gQkklbQSSFUt72A6HKbm70E0lqcNkEqwoif+OZ8WJGbIsY7kXhp2gXZTLOz4b3Hstmiur1Q4zkWgNUhXx6F86NsOI8MS8l3cmOj1AXPXcL+SYDnOvFHlMbh2UvyBUVrRohZxmD/9pZl/XwyWkbEWrh/noAHfBsIrRPVyqs+lYkbFAy3ChsNV8qVSHERnEvbM4D6iswD2MiSfia8YW9jP0VPhWKBQS+rv4yOGmM8KrhxGsExE6zRBF7NMRT/ayN5ctm/uG2edSXQ1pBi/egJrqrzJeN9xHFXBVaBkqAsFeW4SNTA21OMCvz0CTNCzUnzjx/5zdfGId/44KZNrcRqzapuUxikDYhLi8+Lk5rTQINHAg5bLh+cxlgX2aH+JlGEQ5jlsgZwK+jO8oCQ5Xbq45VUVELnw4eeytAC4Be6ptHma+g5bYekg4FE7NXNqO8Q7Vc9h9G0myiO5eAP7lvSWKldu9ANHP4R4yqFJgMgDugXDCggNzlRG7H+Ao7yIF/lOjtcOwug/RV0WnizJeQ0tbcDWCuwtu49I7stn8njm73yhtJd0sJO8Nx8rAf48i2w9ZF9beju4MvG3/1IvZYNifRDeRUT1wDhf3s+HL+BJy116rAmbZAVYfxONe+mehsv3VAkkrBguXhnyAM5Cke2Fm07cZmAMobMZ3ozBZgUcC5reK+SH7LqXKE2/DNNDzseAWTLSIRiwuI+Uwh2AN3vMkfiTArgCsA6a9/F1vn9npN3oB5+HNJL4QovriPtLpJmCXFOvTwAqAr5FtWvhoLBZlKUa980UXYGcIjEFKKuMvAOdmESv43EP3TgFOYJGXuginUhgqR7aEg3fJ8DE6YNhcKyu25h78NkGUqM4O5YKp2gl5geQznvCJNqzES9A9N47d5cBmKP3FRBG2kVBYXdjYh8OE0NOxkZrXa2VAc7q2iSZUxBS4JspKP69hKaZNSt63VCDBWQO2JM3drmp3df9tmw41+6GDRfG1/uFQlMT9KUcR1IJZNUsWJgLLEJuDbG9xYkjtYww7ik/aXmI8INVy5lPQSbZeEtSVe8JeGcpueD4YVEAJL2tGF05nExTrpLi3dEcJAFwLAcYBkAtKxPGHCqdgk0OcRbAjpfMNvhbpiYv9T9+l+SLzv8h6DAKneMy1+WMkqbX0nYWz2wiR6k3R760oj+xReMA/UaMM1Nrc83pqVZoCmXM1Yu0MwoHO/pYS/ECh02SI6mwJE/CMgSSCkIVb0rJLoHTmG1YSWlefiExt0vobqkSgqIHvsXx8pTW67MG1GgITloonAIlELOJmE8F0IVz38gwOOCMXyXNgnLJkswbiXj/U1E+lMOLJHzlk58j594Emk74et6bSvMttC37X2OyRzSiAVpF+hy3qHkyiAYNtWA49+byLwZRe2lB3J4MQ/vDN3OeS87GcQbR6KWkUwksp02DSblk9Yk+I4AbWK+nsgPHUVT/B5xDIW87vccFx5QeIOYaxNZRv+SCFDQGRi/H+iO5zsH679PdguKXxOrGpINkX3KykOe24vIYP0tj7aWMJJjbt8kS6R1zuAHxlXg50uGEbdyUrxtpJWVZV7qskEgHmSb1DSh9BhVdnglonEVaEYrzxLUghHBHJ6cxjL1k3tDOU/TDmhsNEImhj4X4IQGK8Foq6oOOnswuFbjM8BBNl8KV1wotQFsR719J716nX/nKzQVlJ7T/QTffyd7PNhJtqv+DgDsOYRvhOAQVjs085CthIMJyrJFsPrA2BJvKZzP+/30RaU+tRr5UW4mvTDa8HWfdoCZyVyGMz1l5QnkYDvIJrYBmlVtMLj8cLDDa0Wdhy1zxLJ0LMhJmio6u4vwKVhJxhiAfki2ZrF/b3/n4SVnZvsEDza/16N1lEVbU6ZDICvR+5eZw2iybrVVCFXnltVLsx+OT2aWKP5QRmlPepq7FaeWpaAr9OGP/6Ym1GLj/eQJRgS1FwfMU3srSjBa5HHCfz7ivWDmQIe/GfOEI5zJpjwNji006aKIl0xV4xwlyvt59Bdk8KgzTWzOd9f3esjr5Z6l9IlbPVPBrmwswraGTDNbKMD9C3Sd8aqIPGuPrRnEiBbGq9+rRmqxcIdyZ48ZiAl0yj4Vek6YjoJQBGOHY5WvfAvfz+GlOFe8RVmTnU3T/DaqG4S81JTmFm3pOayf4j27/LwWULoug+558oEXZVbk4wYoD2Z5wORV1iKq+hlHunVR8Oe6OxCvswSrOT/VCAigGxx51rtXGiWqNMTeFWeAaIbzLS8cRHfLvz7z8iVB6KFPBwab2uhgtJ7KcT2FPqWwFp77ivm9LTN6oyNuW932gtXhKT+BcBEAKujdMd4tmH8vkYdiaE5lAXubgIEv7Nf9jisk87EPdSqSVNNkzcPgDKi0j8WdOiqzrarDR0YUBo6mozxIPkKGKHQKNFKo5dDBhc75sTomXReXVWC5y+z45KsNggb0XYMMhCoDXZeItyxuLsL8Og5UwrQDSgIYgq3E4vJI7JwlJjdM+3LRA9ivoTaH0HRs5eCUvCjHYy6bgLSp9EnOiFKBkjMNnDWqL5C6Uwl2UlEjVj4RD0FXo9UOfCbw2/W/ZuaQ9xi+IoIvx1liXU3QlwUXIeyl6afP7CON8GNXR8kcM6tZX1al6Kt0OlSub5J+Cyktx0RTCIuUldu5CbctrcDael3AXRWXKEyxVZU+CO6tRR5beEe/DL+M3byi7TksN/L3C7jeN3CWOCpAvQZylvQAwj23cwdEOGH08xDlglcPznp4L6MYu6C1J3VwqQ3yXJ4qaPJvHuIyWIOoAQnYTrU3Oy7KmCJAooYtzDG54sWrAv8/y4GGwVGZ5SVwOYP3zqFFD5xPMP/C7TXM7P8mF6OusL0nowVcgnKFLApMPwh2NRBh9OQs1KH1gwxShAz+9m4l9SXEspTOJEijuZER/HU024sVQLXriYjcKmaT3EaqTnk9vgGizPPv2cfZNZVJH5tabZBoIr0zmtlKYJ2dVysuy9REmR0uIYGm5jYdxfDstkCG7yvD6Fq/b/gvPGnV8/VpyuT65I7FNZ/rDib5HG8Rgl7FDIS7jEkjMVjppuuwLHC3q777BC5+ibJ7D/37IU6yF0ta+8c0VfLanSirIY6W+4PjIGNTjOz7mBiM2kDk/O4WKJivv9cup5DtUe0F2Pdz6SvsTG1+4qJuJ3lvTVzX3q5caPLI3EPovOXnthvmvsf1Lw3q9CX44S/9eJv5ZNPtW+lkMDYt+kXo/cnHtsvsfSbG15H3cLQfnsArTrA9rdXX6+9ksYsGJEt9KYaCMFC11+I2eOV8bfqeok/mgumcEPS4nLG/ReITaKc7044+miZMj+6vI2olhXxqdJ5PfiOCGJGoQ/XTGr3RlohdicUEAN2NlSHJOZM/J4z760KmmV+nRvBpvJnYcnxN59cawlIGga9W+lkn0L2JtIiW/j5SBC9L4fMtANdTv48wgWOqreyyJQzhM0du3kTwp3dyePUxzRYo8A9pJDEpEyUD+yBx0g1KPniZwjGNnl/gADS8rJkbz1UQaArWGagoIFZA7hFImnbjRBETjmeUbaXY5JVV2KTPzwthpZrknB4up5PGsLg10yWygzJAYEeuPxAYGlgynZU3VSXeRazfi9RCYXRgd4NkGf3SPXzwm+wfuqJgrXbHNgTweBMr9ymwZACGk18CIOVF4iSNlFeqhUsiqX84G5QGReWITjBY51kCYhTZL5D4tdVmwiM+rLDaD+VPLsthKGh4Zxm89rgXw5lfg7Ng/K8eHCzk3m5gneP0QpxP/t1vW+ZRv5fDpoQgsnqyCK0mGUlogqK/g6UK03ZEOObgeQw3mc19KZszHHUY+fddYuk7YMNqS9JM67ErOnDA2mhCVBBBkIczqrtdsqO1893ZBve6aK1NoZtnXOtRWkX2IaQOXDM7KSJ2m/pVMiTod4WbMKscQMeaeosqNdKeNxxTFz8NNAo5pdiKH5armVUgWgWuAqcCftmHq8TdvU3WJdq84uRdJHMU7fmEEr2rWtMPLfTxeloO5pLg9gl0rbcLq/wmVJd7ica1G20MKAVCXo/WuKWWANxbVhtTelgY/7lRtRXtXcCjYMnmzLPV70Kgl+SwTc+Gk7//0opJeOy+5Hyciu5Xafa3kUToRBRb3D3h/N4qqElsU/ArxPCLzzDD5xBbXA3mxjo64IlJQPMF0ys56bLZoaldiQ4HpF85VOV05o7EknYzJvZIIqDiZt3WChUw2x+g6BUd7pJEHldt2vyrwv/mrv1ouBq331e4/8ctZvR8J/CbdsYhF2VFRFQ1QmsMHAmZPqfk0bY/AgzBMcvhFO7p5LZMJ+9bAQQznQiozBLOoFpAIQJBDcRUJiLJc9Mc4INAoC7CFyQ/D0Qe+u5mUahxOlJ19zl94p2+C1atA74f7G0ZrK9ZMrMzUcIqhSzd2k2GizGTwwOTvsHQQJluDTPUAD19Laxi80Y1pBfws5z99wwHCa29Yt0FGb9I7eRbX0T/U+4WL8gefw+Q5O6dsLiLFXnJp4TYC2k3PZPBCoEaNbBW8Nzd1pytMX8tIQNNAkIHCxIN51C0zK5asCMsaVO56fkBLB4R8w662AL3rrnXV4xfusGv/RIfKsvLNLY4aYEEVNTvZFzhQwM5rp+3h6CBoMSk8YNmeWsqiNCPMFAYzMMlBqOHzABPpc23SSM/mQhaQhVw0mWgXiz5AUHaSpMcVBUkFAKbCVRnb1O1y4hXxOIHyvNh8Erxd0+1OeKsuiwnsFQBHgi8m6iUZqiLfRXCZuz6OTK7M+4CmPoSrb+l3zJiO3XsjbZowQeH4x2buSiwWZ687Zq8RkwtYQUQepl0MuA7Lee8PsXWszH5eUa1ryY1Te0o/DZr8WNqtFr9ZnZg3w8IV3Fyb+xr6dyf44UB8CdhpWT2DTDkz7p3HiYLotiLBxKZEDsBYS7MnmIf5vo9MKiUWpTjdfi23T91eMjO2MzvZ4ExVFAlUl/1jEMiRlhwTAMHoVXYgo3tVd1jVZmep/Sbz2ezSiHL/V+K9NIuTLTbxog9iFWST6b9JP3mW/8fEGxdK+QaeYLFwCWdUDg8m42O5QACrqX0ThEP+/tNQGyfk2Ut70c8qU2U8THINXkKINZTBJZ7ltaqBdifp+ZA+AuLJBr1Mw0UinwSEWaw0F6M/i90EhIO02KWTnlD24qmGB7fQ/cUoCqTRRBTHyFXFzExEXzI9NetD0gmkVGRclK+AnobFdihZAXrA7A4kGyk6gSkQpRnHjOdsMZgyt0LnuiGk8atJ3rqVLtgqrSAeKORR/gWI1Cvpj15bB4T3Pk4y1YDeROaR4lag0uZBDkRpqt2FMBa2zo0zLDt8sIBtNcg1qPQtymOw0ceDOLik1nwmXNzOX3LfivlYlhKdAQKuT9XF5+ROEL90Z5eq9HjmxrXsFx9o9R17Lat3ToWxyHhebfcnqoxmDiBZAcaQ7iF3kNVMVkRSd4vFejSzvNqC8ekJ/V4rvI2iPwlRb5V4drRakoMQTRcI4f8OXsRurq+tNODRkC53mdESzwrByhauZafHWPIDqZSwq0lQudQfDP1fSEjWyE01p7ozw6XzSDIdd6+g3iNiGvFvXvZ3GjW5AtWK0Ppg7ILiE4HtiIZxz1TdTynIidhIvZBHgr91yfqvJb0K35nIWvcfVZU9mbWr6MdR3AzM7tgmSOBFGkLgd5L6MyQLcJLj790mfKulk+jGr3dEM/51AVSJMH1FeMBccjQqt+ekwgSrA8u/TEUrMRTwLhuvBemrZ7QnT9bvzYNPwjETalfKDOlEp2QhXp2Cs77osHiJSplTbBo86vGdPCGtiLqxDlCvaF0QcNR0Nl+oS3fTPQOc3lbWp70bDePNV5ELkkJHqaNwj6mDrvjZvH/umM+G/rKmLiuqXIx1LSneJQMXRBk+8njjUqq/9U82NPIjj/D/qE2yXNGwusXqXVYY+6MZcrT0HwfGTwOYrYuoRfOyl+toch0ruuAAOTErXyUjlaazRF5Urg1jbhHpEoeurLQ1712UNIkuQaBCuZckFE2qClmxKgN2PcPSk3BpyertuRVTSkahRsThVBlvSu87JKlE85hWLoF24XsVY1aLhzdhInsVykqnmP4+Fk5KffnMKYy+LdU60Yfz7tv3jAu1p7WKW89xooijlWJBhpX18I0r0AbPfembOHzd5tclL7yRyUhE3ldHL6N+T1upxD7ggIHRAB048vuyuJ0aTTu8es5LgGfCMEnRKg4uN3J778M7KxI3k7wAuZbUuLAv/l66mptNzMrCbufuvvQNGtifqMYSUpz0RhI8H6pfDkyEQKUmDS/TR710L8Rgna4P2LdJMm1bWk4s5Vgq0b2+vfS3Bsm97vdKuFfNKLG2NB1nrPgfk0KiJZ1Lf1IylAhqAQAzJCKhO9jXhJXiKUwKFrO3ZW9Kxa1wJKCaoCAEFchKDQ1wMutGeRnDBFomcdZIZ8nRl+zNDml1La1JoM1DAqtpesiYnKcTE76Lxzeuy1LATQCWvUDn4f50Fqgx9LUTW9Eguuf4WiP5/UxzwuDDJpiESHEjv6h9fxEZmrrSBZbgSSCe9dPFGMeBOp56nzygleUggDTCigeGr3OFh8ZkU8pcHPq0h3ZGycyXzJEvyaSdTfmmtUr51RAkbqrXZMpxygns+e9S5Fg+LciXEb8TqPf6ar3QuwiKIzw53m/8ROreyxv/YWmoQ/OOZgAWp5dooRUdqGRSB5YErRAX1GCqSFEKPxFpWagnIctiuJkfv1jLuWdibgj+f68Wy1ygV5GEAAAAAElFTkSuQmCC"
+
+	var OPTION_SSAO_SCALE = "renderer-ssao-scale";
+	var OPTION_SSAO_INTENSITY = "renderer-ssao-intensity";
+	var OPTION_SSAO_BIAS = "renderer-ssao-bias";
+	var OPTION_SSAO_RADIUS = "renderer-ssao-radius";
+	var FLAGS = {};
+	FLAGS[OPTION_SSAO_SCALE] = {defaultValue: 1};
+	FLAGS[OPTION_SSAO_INTENSITY] = {defaultValue: 5};
+	FLAGS[OPTION_SSAO_BIAS] = {defaultValue: 0.2};
+	FLAGS[OPTION_SSAO_RADIUS] = {defaultValue: 1};
+	for(var flag in FLAGS){
+		XML3D.options.register(flag, FLAGS[flag].defaultValue);
+	}
+
+	var SSAOPass = function (renderInterface, output, opt) {
+		webgl.BaseRenderPass.call(this, renderInterface, output, opt);
+		var context = this.renderInterface.context;
+		this._program = context.programFactory.getProgramByName("ssao");
+		this.randomVectorTexture = this.createRandomVectorTexture(context);
+		this.loadRandomVectorImage();
+		this._screenQuad = new XML3D.webgl.FullscreenQuad(context);
+		this._uniformsDirty = true;
+//		if (!this.inputs.positionBuffer)
+//			this._positionPass = this.createVertexAttributePass("render-position");
+//		if (!this.inputs.normalBuffer)
+//			this._normalPass = this.createVertexAttributePass("render-normal");
+	};
+
+	XML3D.createClass(SSAOPass, webgl.BaseRenderPass);
+
+	XML3D.extend(SSAOPass.prototype, {
+		createRandomVectorTexture: function(context) {
+			var gl = context.gl;
+			var tex = new XML3D.webgl.GLTexture(gl);
+			tex.createTex2DFromData(gl.RGBA, 64, 64, gl.RGBA, gl.UNSIGNED_BYTE, {
+				wrapS : gl.REPEAT,
+				wrapT : gl.REPEAT,
+				minFilter : gl.LINEAR,
+				magFilter : gl.LINEAR
+			});
+			tex.isTexture = true;
+			return tex;
+		},
+
+		loadRandomVectorImage: function() {
+			var img = new Image();
+			img.src = base64RandomNormals;
+			var gl = this.renderInterface.context.gl;
+			var texhandle = this.randomVectorTexture.handle;
+
+			img.onload = function() {
+				gl.bindTexture(gl.TEXTURE_2D, texhandle);
+				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+			}
+		},
+
+		createVertexAttributePass: function (programName) {
+			var context = this.renderInterface.context;
+			var buffer= new webgl.GLRenderTarget(context, {
+				width: context.canvasTarget.width,
+				height: context.canvasTarget.height,
+				colorFormat: context.gl.RGBA,
+				colorType: context.gl.FLOAT,
+				depthFormat: context.gl.DEPTH_COMPONENT16,
+				stencilFormat: null,
+				depthAsRenderbuffer: true
+			});
+			return new webgl.VertexAttributePass(this.renderInterface, buffer, {
+				programName: programName
+			});
+		},
+
+		render: (function () {
+//			if (this._positionPass)
+//				this._positionPass.setProcessed(false);
+
+			var viewMatrix = XML3D.math.mat4.create();
+			var uniformNames = ["viewMatrix"];
+			return function (scene) {
+				var gl = this.renderInterface.context.gl;
+				var target = this.output;
+
+				target.bind();
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+				gl.viewport(0, 0, target.getWidth(), target.getHeight());
+				gl.disable(gl.DEPTH_TEST);
+
+				this._program.bind();
+				this._setNonVolatileShaderUniforms();
+
+				var uniforms = {};
+				scene.getActiveView().getWorldToViewMatrix(viewMatrix);
+				uniforms["viewMatrix"] = viewMatrix;
+				this._program.setSystemUniformVariables(uniformNames, uniforms);
+				this._screenQuad.draw(this._program);
+
+				this._program.unbind();
+				target.unbind();
+			}
+		}()),
+
+		_setNonVolatileShaderUniforms: (function() {
+			var uniformNames = [
+				"canvasSize",
+				"sPositionTex",
+				"sNormalTex",
+				"sRandomNormals",
+				"uRandomTexSize",
+				"uScale",
+				"uBias",
+				"uIntensity",
+				"uSampleRadius",
+				"uConstVectors"
+			];
+
+			return function() {
+				if (!this._uniformsDirty)
+					return;
+
+				var uniforms = {};
+				var program = this._program;
+				program.bind();
+				var target = this.output;
+
+				uniforms["canvasSize"] = [target.width, target.height];
+				uniforms["sPositionTex"] = [this.inputs.positionBuffer.colorTarget.handle];
+				uniforms["sNormalTex"] = [this.inputs.normalBuffer.colorTarget.handle];
+				uniforms["sRandomNormals"] = [this.randomVectorTexture];
+				uniforms["uRandomTexSize"] = [64, 64];
+				uniforms["uScale"] = XML3D.options.getValue(OPTION_SSAO_SCALE);
+				uniforms["uBias"] = XML3D.options.getValue(OPTION_SSAO_BIAS);
+				uniforms["uIntensity"] = XML3D.options.getValue(OPTION_SSAO_INTENSITY);
+				uniforms["uSampleRadius"] = XML3D.options.getValue(OPTION_SSAO_RADIUS);
+				uniforms["uConstVectors"] = [1,0, -1,0, 0,1, 0,-1];
+
+				program.setSystemUniformVariables(uniformNames, uniforms);
+				program.unbind();
+
+//                this._uniformsDirty = false;
+			}
+		})()
+	});
+
+	webgl.SSAOPass = SSAOPass;
+
+}(XML3D.webgl));
+(function (webgl) {
+
+	"use strict";
+
+	var BoxBlurPass = function (renderInterface, output, opt) {
+		webgl.BaseRenderPass.call(this, renderInterface, output, opt);
+		this._program = this.renderInterface.context.programFactory.getProgramByName("boxblur");
+		this._screenQuad = new XML3D.webgl.FullscreenQuad(this.renderInterface.context);
+		this._uniformsDirty = true;
+	};
+
+	XML3D.createClass(BoxBlurPass, webgl.BaseRenderPass);
+
+	XML3D.extend(BoxBlurPass.prototype, {
+		render: (function () {
+			return function () {
+				var gl = this.renderInterface.context.gl;
+				var target = this.output;
+
+				target.bind();
+				gl.clear(gl.COLOR_BUFFER_BIT);
+				gl.disable(gl.DEPTH_TEST);
+
+				this._program.bind();
+				this._setNonVolatileShaderUniforms();
+
+				this._screenQuad.draw(this._program);
+
+				this._program.unbind();
+				target.unbind();
+			}
+		}()),
+
+		_setNonVolatileShaderUniforms: (function() {
+			var uniforms = {};
+			var uniformNames = ["canvasSize", "sInTexture", "blurOffset"];
+
+			return function() {
+				if (!this._uniformsDirty)
+					return;
+
+				var program = this._program;
+				var target = this.output;
+
+				uniforms["canvasSize"] = [target.width, target.height];
+				uniforms["sInTexture"] = [this.inputs.buffer.colorTarget.handle];
+				uniforms["blurOffset"] = [1.0, 1.0];
+				program.setSystemUniformVariables(uniformNames, uniforms);
+
+//                this._uniformsDirty = false;
+			}
+		})()
+	});
+
+	webgl.BoxBlurPass = BoxBlurPass;
+
+}(XML3D.webgl));
+(function (webgl) {
 
     var ProgramFactory = function (context) {
         this.context = context;
@@ -24056,9 +27039,15 @@ XML3D.webgl.stopEvent = function(ev) {
     XML3D.extend(DrawableFactory.prototype, {
         createDrawable: function(obj) {
             XML3D.debug.logDebug("DrawableFactory::createDrawable", obj);
-            var result = new webgl.MeshClosure(this.context, obj.getType(), obj.getDataNode(), { boundingBoxChanged: obj.setObjectSpaceBoundingBox.bind(obj)});
-            obj.mesh = result.getMesh();
-            return result;
+            try{
+                var result = new webgl.MeshClosure(this.context, obj.getType(), obj.getDataNode(), { boundingBoxChanged: obj.setObjectSpaceBoundingBox.bind(obj)});
+                obj.mesh = result.getMesh();
+                return result;
+            }
+            catch(e){
+                XML3D.debug.logError(e, obj.node);
+                return null;
+            }
         }
     });
 
@@ -24208,6 +27197,13 @@ XML3D.webgl.stopEvent = function(ev) {
             shaderClosure.bind();
             shaderClosure.setSystemUniformVariables( webgl.GLScene.LIGHT_PARAMETERS, scene.systemUniforms);
         },
+        updateSystemUniforms: function(names, scene){
+            this.shaderClosures.forEach(function (shader) {
+                shader.bind();
+                shader.setSystemUniformVariables( names, scene.systemUniforms);
+            });
+        },
+
 
         createShaderClosure: function () {
             throw new Error("AbstractComposer::createShaderClosure needs to be overridden");
@@ -24221,11 +27217,11 @@ XML3D.webgl.stopEvent = function(ev) {
             throw new Error("AbstractComposer::distributeObjectShaderData needs to be overridden");
         },
 
-        getShaderClosure: function (scene, vsResult) {
+        getShaderClosure: function (scene, vsRequest) {
             var shader = this.createShaderClosure();
 
             try{
-                shader.createSources(scene, this.getShaderDataResult(), vsResult)
+                shader.createSources(scene, this.getShaderDataResult(), vsRequest)
             }
             catch(e){
                 throw new Error("Shader: " + e.message)
@@ -24238,13 +27234,14 @@ XML3D.webgl.stopEvent = function(ev) {
                 }
             }
 
-            this.initializeShaderClosure(shader, scene, vsResult);
+            this.initializeShaderClosure(shader, scene);
             return shader;
         },
 
-        initializeShaderClosure: function (shaderClosure, scene, vsResult) {
+        initializeShaderClosure: function (shaderClosure, scene) {
             shaderClosure.compile();
 
+            scene.dispatchEvent({type: webgl.ShaderComposerFactory.EVENT_TYPE.MATERIAL_INITIALIZED});
             this.updateClosureFromComputeResult(shaderClosure, this.getShaderDataResult());
             this.updateClosureFromLightParameters(shaderClosure, scene);
             this.shaderClosures.push(shaderClosure);
@@ -24284,7 +27281,7 @@ XML3D.webgl.stopEvent = function(ev) {
     XML3D.createClass(DefaultComposer, AbstractShaderComposer, {
         update: function () {
         },
-        getShaderClosure: function (scene, vsResult) {
+        getShaderClosure: function (scene, vsRequest) {
             return this.context.programFactory.getFallbackProgram();
         },
         getShaderAttributes: function () {
@@ -24474,17 +27471,6 @@ XML3D.webgl.stopEvent = function(ev) {
         return name;
     }
 
-
-    function getVSShaderAttribTransform(inputName){
-        if(inputName == "position")
-            return Xflow.VS_ATTRIB_TRANSFORM.VIEW_POINT;
-        else if(inputName == "normal")
-            return Xflow.VS_ATTRIB_TRANSFORM.VIEW_NORMAL;
-        else
-            return Xflow.VS_ATTRIB_TRANSFORM.NONE;
-
-    }
-
     XML3D.createClass(JSShaderComposer, webgl.AbstractShaderComposer, {
         setShaderInfo: function(shaderInfo) {
             this.sourceTemplate = shaderInfo.getScriptCode();
@@ -24519,34 +27505,34 @@ XML3D.webgl.stopEvent = function(ev) {
             var vsConfig = new Xflow.VSConfig();
             var names = this.extractedParams.slice();
             //if(names.indexOf("position") == -1) names.push("position");
-
+            vsConfig.addAttribute(Xflow.DATA_TYPE.FLOAT3, "position", true);
             for(var i = 0; i < names.length; ++i){
                 var name = names[i];
+                if(name == "position") continue;
                 var xflowInfo = objectDataNode.getOutputChannelInfo(name);
                 if(xflowInfo){
-                    vsConfig.addAttribute(xflowInfo.type, name, JSShaderComposer.convertEnvName(name),
-                        true, getVSShaderAttribTransform(name));
+                    vsConfig.addAttribute(xflowInfo.type, name, true);
                 }
             }
-            var request = new Xflow.VertexShaderRequest(objectDataNode, vsConfig);
+            var request = new Xflow.VertexShaderRequest(objectDataNode, vsConfig, callback);
             return request;
         },
 
         distributeObjectShaderData: function(objectRequest, attributeCallback, uniformCallback){
-            var result = objectRequest.getResult();
-            var inputNames = result.shaderInputNames;
+            var vertexShader = objectRequest.getVertexShader();
+            var inputNames = vertexShader.inputNames;
             for(var i = 0; i < inputNames.length; ++i){
-                var name = inputNames[i], entry = result.getShaderInputData(name);
-                if(result.isShaderInputUniform(name))
+                var name = inputNames[i], entry = vertexShader.getInputData(name);
+                if(vertexShader.isInputUniform(name))
                     uniformCallback(name, entry);
                 else
                     attributeCallback(name, entry);
             }
-            var outputNames = result.shaderOutputNames;
+            var outputNames = vertexShader.outputNames;
             for(var i = 0; i < outputNames.length; ++i){
                 var name = outputNames[i];
-                if(result.isShaderOutputUniform(name)){
-                    uniformCallback(result.getShaderOutputSourceName(name), result.getUniformOutputData(name));
+                if(vertexShader.isOutputFragmentUniform(name)){
+                    uniformCallback(vertexShader.getOutputSourceName(name), vertexShader.getUniformOutputData(name));
                 }
             }
         }
@@ -24578,7 +27564,8 @@ XML3D.webgl.stopEvent = function(ev) {
     };
 
     ShaderComposerFactory.EVENT_TYPE = {
-        MATERIAL_STRUCTURE_CHANGED: "material_structure_changed"
+        MATERIAL_STRUCTURE_CHANGED: "material_structure_changed",
+        MATERIAL_INITIALIZED: "material_initialized"
     };
 
     XML3D.extend(ShaderComposerFactory.prototype, {
@@ -24632,8 +27619,16 @@ XML3D.webgl.stopEvent = function(ev) {
         },
         setLightStructureDirty: function() {
             XML3D.debug.logWarning("Light structure changes not yet supported.");
+            this.setShaderRecompile();
+        },
+        setShaderRecompile: function(){
             for (var i in this.composers) {
                 this.composers[i].setShaderRecompile();
+            }
+        },
+        updateSystemUniforms: function(names, scene){
+            for (var i in this.composers) {
+                this.composers[i].updateSystemUniforms(names, scene);
             }
         },
         setLightValueChanged: function() {
@@ -24657,7 +27652,14 @@ XML3D.webgl.stopEvent = function(ev) {
         "kind": "any",
         "info": {
             "coords": { "type": "object", "kind": "float3", "source": "uniform" },
+            "cameraPosition": { "type": "object", "kind": "float3", "source": "uniform" },
             "viewMatrix": { "type": "object", "kind": "matrix4", "source": "uniform" },
+            "viewInverseMatrix": { "type": "object", "kind": "matrix4", "source": "uniform" },
+            "modelMatrix": { "type": "object", "kind": "matrix4", "source": "uniform" },
+            "modelViewMatrix": { "type": "object", "kind": "matrix4", "source": "uniform" },
+            "modelViewProjectionMatrix": { "type": "object", "kind": "matrix4", "source": "uniform" },
+            "modelMatrixN": { "type": "object", "kind": "matrix3", "source": "uniform" },
+            "modelViewMatrixN": { "type": "object", "kind": "matrix3", "source": "uniform" },
 
             "MAX_POINTLIGHTS": { "type": "int", "source": "constant", "staticValue": 5 },
             "pointLightOn": { "type": "array", "elements": { "type": "boolean" }, "staticSize": 5, "source": "uniform"},
@@ -24710,7 +27712,21 @@ XML3D.webgl.stopEvent = function(ev) {
             "spotLightCosSoftFalloffAngle": {
                 "type": "array", "elements": { "type": "number" }, "staticSize": 5,
                 "source": "uniform"
-            }
+            },
+            "spotLightCastShadow": {
+                "type": "array", "elements": { "type": "boolean" }, "staticSize": 5,
+                "source": "uniform"
+            },
+            "spotLightShadowBias": {
+                "type": "array", "elements": { "type": "number" }, "staticSize": 5,
+                "source": "uniform"
+            },
+            "spotLightShadowMap": {
+                "type": "array", "elements": { "type": "object", "kind": "texture" }, "staticSize": 5, "source": "uniform"
+            },
+            "spotLightMatrix": { "type": "array", "elements": { "type": "object", "kind": "matrix4" },  "staticSize": 5, "source": "uniform" },
+            "ssaoMap": { "type": "object", "kind": "texture", "source": "uniform" },
+            "environment": { "type": "object", "kind": "texture", "source": "uniform" }
         }
     };
 
@@ -24719,8 +27735,8 @@ XML3D.webgl.stopEvent = function(ev) {
         var ext = context.getExtensionByName(ns.GLContext.EXTENSIONS.STANDARD_DERIVATES);
         if (ext) {
             result.info.fwidth = { type: Shade.TYPES.FUNCTION };
-            result.info.dFdx = { type: Shade.TYPES.FUNCTION };
-            result.info.dFdy = { type: Shade.TYPES.FUNCTION };
+            result.info.dx = { type: Shade.TYPES.FUNCTION };
+            result.info.dy = { type: Shade.TYPES.FUNCTION };
         }
         return result;
     }
@@ -24898,7 +27914,9 @@ XML3D.webgl.stopEvent = function(ev) {
             XML3D.extend(dest, this.descriptor.uniforms);
         },
 
-        createSources: function(scene, shaderData, objectData) {
+        createSources: function(scene, shaderData, vsRequest) {
+
+            var objectData = vsRequest && vsRequest.getResult();
             var directives = [];
 
             var inputData = {};
@@ -24961,9 +27979,53 @@ XML3D.webgl.stopEvent = function(ev) {
         "spotLightOn" : {
             staticValue: "MAX_SPOTLIGHTS",
             staticSize: ["spotLightOn", "spotLightAttenuation", "spotLightIntensity",
-                "spotLightPosition", "spotLightDirection", "spotLightCosFalloffAngle", "spotLightCosSoftFalloffAngle"]
+                "spotLightPosition", "spotLightDirection", "spotLightCosFalloffAngle", "spotLightCosSoftFalloffAngle", "spotLightCastShadow", "spotLightShadowBias", "spotLightShadowMap", "spotLightMatrix"]
         }
     };
+
+
+    var c_jsShaderCache = {};
+
+    function addDefaultChanneling(vsConfig, inputName){
+        var outputName = XML3D.webgl.JSShaderComposer.convertEnvName(inputName);
+        vsConfig.channelAttribute(inputName, outputName, null);
+    }
+
+
+    function channelVsAttribute(vsConfig, inputName, spaceInfo){
+        if(!spaceInfo || !spaceInfo[inputName]){
+            addDefaultChanneling(vsConfig, inputName);
+            return;
+        }
+
+        var i = spaceInfo[inputName].length;
+        while(i--){
+            var entry = spaceInfo[inputName][i];
+            var outputName = XML3D.webgl.JSShaderComposer.convertEnvName(entry.name), code = null;
+            switch(entry.space){
+                case Shade.SPACE_VECTOR_TYPES.OBJECT: break;
+                case Shade.SPACE_VECTOR_TYPES.VIEW_POINT:
+                    vsConfig.addInputParameter(Xflow.DATA_TYPE.FLOAT4X4, "modelViewMatrix", true);
+                    code = outputName + " = ( modelViewMatrix * vec4(#I{" + inputName + "}, 1.0) ).xyz;";
+                    break;
+                case Shade.SPACE_VECTOR_TYPES.VIEW_NORMAL:
+                    vsConfig.addInputParameter(Xflow.DATA_TYPE.FLOAT3X3, "modelViewMatrixN", true);
+                    code =  outputName + " = normalize( modelViewMatrixN * #I{" + inputName + "} );";
+                    break;
+                case Shade.SPACE_VECTOR_TYPES.WORLD_POINT:
+                    vsConfig.addInputParameter(Xflow.DATA_TYPE.FLOAT4X4, "modelMatrix", true);
+                    code = outputName + " = ( modelMatrix * vec4(#I{" + inputName + "}, 1.0) ).xyz;";
+                    break;
+                case Shade.SPACE_VECTOR_TYPES.WORLD_NORMAL:
+                    vsConfig.addInputParameter(Xflow.DATA_TYPE.FLOAT3X3, "modelMatrixN", true);
+                    code =  outputName + " = normalize( modelMatrixN * #I{" + inputName + "} );";
+                    break;
+                default:
+                    throw new Error("Can't handle Space Type: " + entry.space);
+            }
+            vsConfig.channelAttribute(inputName, outputName, code);
+        }
+    }
 
 
     /**
@@ -24992,6 +28054,14 @@ XML3D.webgl.stopEvent = function(ev) {
             case Xflow.DATA_TYPE.FLOAT4:
                 result.type = Shade.TYPES.OBJECT;
                 result.kind = Shade.OBJECT_KINDS.FLOAT4;
+                break;
+            case Xflow.DATA_TYPE.FLOAT3X3:
+                result.type = Shade.TYPES.OBJECT;
+                result.kind = Shade.OBJECT_KINDS.MATRIX3;
+                break;
+            case Xflow.DATA_TYPE.FLOAT4X4:
+                result.type = Shade.TYPES.OBJECT;
+                result.kind = Shade.OBJECT_KINDS.MATRIX4;
                 break;
             case Xflow.DATA_TYPE.TEXTURE:
                 result.type = Shade.TYPES.OBJECT;
@@ -25026,7 +28096,9 @@ XML3D.webgl.stopEvent = function(ev) {
          * @param {Xflow.ComputeResult} shaderResult
          * @param objectData
          */
-        createSources: function(scene, shaderResult, objectData) {
+        createSources: function(scene, shaderResult, vsRequest) {
+
+            var vsDataResult = vsRequest.getResult();
 
             var contextData = {
                 "this" : webgl.getJSSystemConfiguration(this.context),
@@ -25045,41 +28117,81 @@ XML3D.webgl.stopEvent = function(ev) {
             var contextInfo = contextData["global.shade"][0].extra.info;
 
             var shaderEntries = shaderResult && shaderResult.getOutputMap(),
-                vsShaderOutput = objectData && objectData.shaderOutputNames;
+                vsShaderOutput = vsDataResult && vsDataResult.outputNames;
 
             for(var i = 0; i < this.extractedParams.length; ++i){
                 var paramName = this.extractedParams[i];
-                var envName = webgl.JSShaderComposer.convertEnvName(paramName);
-                if(vsShaderOutput && vsShaderOutput.indexOf(envName) != -1){
-                    contextInfo[paramName] = convertXflow2ShadeType(objectData.getShaderOutputType(envName),
-                        objectData.isShaderOutputUniform(envName) ? Shade.SOURCES.UNIFORM : Shade.SOURCES.VERTEX);
+                if(vsShaderOutput && vsShaderOutput.indexOf(paramName) != -1){
+                    contextInfo[paramName] = convertXflow2ShadeType(vsDataResult.getOutputType(paramName),
+                        vsDataResult.isOutputUniform(paramName) ? Shade.SOURCES.UNIFORM : Shade.SOURCES.VERTEX);
                 }
                 else if(shaderEntries && shaderEntries[paramName]){
                     contextInfo[paramName] = convertXflow2ShadeType(shaderEntries[paramName].type, Shade.SOURCES.UNIFORM);
                 }
             }
-
             XML3D.debug.logDebug("CONTEXT:", contextData);
-            try{
-                var aast = Shade.parseAndInferenceExpression(this.sourceTemplate, {
-                    inject: contextData, loc: true, implementation: "xml3d-glsl-forward" });
-                var glslShader = Shade.compileFragmentShader(aast, {useStatic: true});
-                this.uniformSetter = glslShader.uniformSetter;
-                this.source = {
-                    fragment: glslShader.source,
-                    vertex:  objectData.getGLSLCode()
+
+            var options = {
+                propagateConstants: true,
+                validate: true,
+                sanitize: true,
+                transformSpaces: XML3D.options.getValue("shadejs-transformSpaces"),
+                extractUniformExpressions: XML3D.options.getValue("shadejs-extractUniformExpressions")
+            };
+            var compileOptions = {
+                useStatic: true,
+                uniformExpressions: options.uniformExpressions
+            };
+            var implementation = scene.deferred ? "xml3d-glsl-deferred" : "xml3d-glsl-forward";
+
+            var jsShaderKey = implementation + ";" + JSON.stringify(options) + ";" + JSON.stringify(contextInfo) + ";"
+               + this.sourceTemplate;
+
+            var cacheEntry;
+            if(!(cacheEntry = c_jsShaderCache[jsShaderKey])){
+                try{
+                    var workSet = new Shade.WorkingSet();
+                    workSet.parse(this.sourceTemplate, {loc: true});
+                    workSet.analyze(contextData, implementation, options);
+                    var spaceInfo = workSet.getProcessingData('spaceInfo');
+                    var glslShader = workSet.compileFragmentShader(compileOptions);
+
+                    cacheEntry = {
+                        source: glslShader.source,
+                        uniformSetter: glslShader.uniformSetter,
+                        spaceInfo: spaceInfo
+                    }
+
+                    this.uniformSetter = glslShader.uniformSetter;
+                    this.source = {
+                        fragment: glslShader.source,
+                        vertex:  this.createVertexShader(vsRequest, vsDataResult, spaceInfo)
+                    }
+                    if(scene.deferred){
+                        cacheEntry.signatures = workSet.getProcessingData("colorClosureSignatures");
+                    }
+                    if(XML3D.options.getValue("shadejs-cache"))
+                        c_jsShaderCache[jsShaderKey] = cacheEntry;
+                }
+                catch(e){
+                    webgl.SystemNotifier.sendEvent('shadejs', {
+                        shadejsType : "error",
+                        event: e,
+                        code: this.sourceTemplate
+                    });
+
+                    var errorMessage = "Shade.js Compile Error:\n" + e.message + "\n------------\n"
+                    + "Shader Source:" + "\n------------\n" + XML3D.debug.formatSourceCode(this.sourceTemplate);
+                    throw new Error(errorMessage);
                 }
             }
-            catch(e){
-                webgl.SystemNotifier.sendEvent('shadejs', {
-                    shadejsType : "error",
-                    event: e,
-                    code: this.sourceTemplate
-                });
-
-                var errorMessage = "Shade.js Compile Error:\n" + e.message + "\n------------\n"
-                + "Shader Source:" + "\n------------\n" + XML3D.debug.formatSourceCode(this.sourceTemplate);
-                throw new Error(errorMessage);
+            this.source = {
+                fragment: cacheEntry.source,
+                vertex:  this.createVertexShader(vsRequest, vsDataResult, cacheEntry.spaceInfo)
+            }
+            this.uniformSetter = cacheEntry.uniformSetter;
+            if(scene.deferred){
+                scene.colorClosureSignatures.push.apply(scene.colorClosureSignatures, cacheEntry.signatures);
             }
 
             // TODO: Handle errors.
@@ -25093,7 +28205,17 @@ XML3D.webgl.stopEvent = function(ev) {
             });
 
             return true;
+        },
 
+        createVertexShader: function(vsRequest, vsDataResult, spaceInfo){
+            var vsConfig = vsRequest.getConfig();
+            var names = vsDataResult.outputNames;
+            for(var i = 0; i < names.length; ++i){
+                channelVsAttribute(vsConfig, names[i], spaceInfo);
+            }
+            vsConfig.addInputParameter(Xflow.DATA_TYPE.FLOAT4X4, "modelViewProjectionMatrix", true);
+            vsConfig.addCodeFragment( "gl_Position = modelViewProjectionMatrix * vec4(#I{position}, 1.0);");
+            return vsRequest.getVertexShader().getGLSLCode();
         },
 
         setUniformVariables: function(envNames, sysNames, inputCollection){
@@ -25356,6 +28478,7 @@ XML3D.webgl.stopEvent = function(ev) {
          */
         typeDataChanged: function (request, state) {
             this.changeState |= state == Xflow.RESULT_STATE.CHANGED_STRUCTURE ? CHANGE_STATE.STRUCTURE_CHANGED : CHANGE_STATE.TYPE_DATA_CHANGED;
+            this.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.SCENE_SHAPE_CHANGED });
             this.context.requestRedraw("Mesh Type Data Change");
             XML3D.debug.logInfo("MeshClosure: Type data changed", request, state, this.changeState);
         },
@@ -25382,7 +28505,7 @@ XML3D.webgl.stopEvent = function(ev) {
                 //XML3D.debug.logError("Mesh does not have 'position' attribute.", this.mesh, this.getMeshType());
             }
             else if(!this.dataNode.isSubtreeLoading()){
-                this.shaderClosure = this.shaderComposer.getShaderClosure(scene, this.objectShaderRequest.getResult());
+                this.shaderClosure = this.shaderComposer.getShaderClosure(scene, this.objectShaderRequest);
             }
         },
 
@@ -25528,6 +28651,8 @@ XML3D.webgl.stopEvent = function(ev) {
          */
         shaderInputDataChanged: function (request, state) {
             this.changeState |= state != Xflow.RESULT_STATE.CHANGED_DATA_VALUE ? CHANGE_STATE.STRUCTURE_CHANGED : CHANGE_STATE.VS_DATA_CHANGED;
+            // TODO: We don't know if the change of data only influences the surface shading or the actual mesh shape
+            this.dispatchEvent({ type: webgl.Scene.EVENT_TYPE.SCENE_SHAPE_CHANGED });
             this.context.requestRedraw("Mesh Attribute Data Changed");
             XML3D.debug.logInfo("MeshClosure: Attribute data changed", request, state, this.changeState);
         },
@@ -25766,10 +28891,41 @@ XML3D.webgl.stopEvent = function(ev) {
         return object ? object.node : null;
     };
 
+    XML3DRenderAdapter.prototype.getRenderInterface = function() {
+        return this.factory.getRenderer().getRenderInterface();
+    };
+
     XML3DRenderAdapter.prototype.generateRay = function(x, y) {
         var relativeMousePos = XML3D.webgl.convertPageCoords(this.node, x, y);
         return this.factory.getRenderer().generateRay(relativeMousePos.x, relativeMousePos.y);
     };
+
+    XML3DRenderAdapter.prototype.getElementByRay = (function() {
+        var c_viewMat = XML3D.math.mat4.create();
+        var c_projMat = XML3D.math.mat4.create();
+
+        return function(xml3dRay, hitPoint, hitNormal) {
+            var renderer = this.factory.getRenderer();
+            renderer.calculateMatricesForRay(xml3dRay, c_viewMat, c_projMat);
+            var hitObject = renderer.getRenderObjectByRay(xml3dRay, c_viewMat, c_projMat);
+            if(hitObject !== null && (hitPoint || hitNormal)){
+                if(hitPoint){
+                    var vec = renderer.getWorldSpacePositionByRay(xml3dRay, hitObject, c_viewMat, c_projMat);
+                    hitPoint.set(vec[0],vec[1],vec[2]);
+                }
+                if(hitNormal){
+                    var vec = renderer.getWorldSpaceNormalByRay(xml3dRay, hitObject, c_viewMat, c_projMat);
+                    hitNormal.set(vec[0],vec[1],vec[2]);
+                }
+            }
+            else{
+                if(hitPoint) hitPoint.set(NaN, NaN, NaN);
+                if(hitNormal) hitNormal.set(NaN, NaN, NaN);
+            }
+            return hitObject !== null ? hitObject.node : null;
+        }
+    })();
+
     XML3D.webgl.XML3DRenderAdapter = XML3DRenderAdapter;
 
 }());// Adapter for <transform>
@@ -26144,9 +29300,6 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
                 name: this.node.id,
                 visible: !this.node.visible ? false : undefined
             });
-        var bbox = XML3D.math.bbox.create();
-        this.renderNode.setObjectSpaceBoundingBox(bbox);
-
         },
 
         getMeshType: function() {
@@ -26315,7 +29468,9 @@ XML3D.webgl.MAX_MESH_INDEX_COUNT = 65535;
             this.updateTransformAdapter();
             this.updateLocalMatrix();
             break;
-
+        case "style":
+            this.updateLocalMatrix();
+            break;
         case "visible":
             this.renderNode.setLocalVisible(evt.wrapped.newValue === "true");
             this.factory.renderer.requestRedraw("Group visibility changed.");
@@ -26690,7 +29845,7 @@ XML3D.shaders.register("diffuse", {
 
         "uniform mat4 modelViewProjectionMatrix;",
         "uniform mat4 modelViewMatrix;",
-        "uniform mat3 normalMatrix;",
+        "uniform mat3 modelViewMatrixN;",
         "uniform vec3 eyePosition;",
 
         "void main(void) {",
@@ -26698,7 +29853,7 @@ XML3D.shaders.register("diffuse", {
         "    vec3 norm = normal;",
 
         "    gl_Position = modelViewProjectionMatrix * vec4(pos, 1.0);",
-        "    fragNormal = normalize(normalMatrix * norm);",
+        "    fragNormal = normalize(modelViewMatrixN * norm);",
         "    fragVertexPosition = (modelViewMatrix * vec4(pos, 1.0)).xyz;",
         "    fragEyeVector = normalize(fragVertexPosition);",
         "    fragTexCoord = texcoord;",
@@ -26865,10 +30020,15 @@ XML3D.shaders.register("phong", {
         "varying vec3 fragEyeVector;",
         "varying vec2 fragTexCoord;",
         "varying vec3 fragVertexColor;",
+        "#if MAX_SPOTLIGHTS > 0 && HAS_SPOTLIGHT_SHADOWMAPS",
+        "varying vec4 spotLightShadowMapCoord[ MAX_SPOTLIGHTS ];",
+        "uniform mat4 spotLightMatrix[ MAX_SPOTLIGHTS ];",
+        "#endif",
 
+        "uniform mat4 modelMatrix;",
         "uniform mat4 modelViewProjectionMatrix;",
         "uniform mat4 modelViewMatrix;",
-        "uniform mat3 normalMatrix;",
+        "uniform mat3 modelViewMatrixN;",
         "uniform vec3 eyePosition;",
 
         "void main(void) {",
@@ -26876,11 +30036,17 @@ XML3D.shaders.register("phong", {
         "    vec3 norm = normal;",
 
         "    gl_Position = modelViewProjectionMatrix * vec4(pos, 1.0);",
-        "    fragNormal = normalize(normalMatrix * norm);",
+        "    fragNormal = normalize(modelViewMatrixN * norm);",
         "    fragVertexPosition = (modelViewMatrix * vec4(pos, 1.0)).xyz;",
         "    fragEyeVector = normalize(fragVertexPosition);",
         "    fragTexCoord = texcoord;",
         "    fragVertexColor = color;",
+        "#if MAX_SPOTLIGHTS > 0 && HAS_SPOTLIGHT_SHADOWMAPS",
+        "    vec3 worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;",
+        "    for(int i = 0; i < MAX_SPOTLIGHTS; i++) {",
+        "      spotLightShadowMapCoord[i] = spotLightMatrix[i] * vec4(worldPosition, 1);",
+        "    }",
+        "#endif",
         "}"
     ].join("\n"),
 
@@ -26893,6 +30059,7 @@ XML3D.shaders.register("phong", {
         "uniform float transparency;",
         "uniform mat4 viewMatrix;",
         "uniform bool useVertexColor;",
+		"uniform vec3 coords;",
 
         "#if HAS_EMISSIVETEXTURE",
         "uniform sampler2D emissiveTexture;",
@@ -26932,8 +30099,20 @@ XML3D.shaders.register("phong", {
         "uniform float spotLightCosFalloffAngle[MAX_SPOTLIGHTS];",
         "uniform float spotLightCosSoftFalloffAngle[MAX_SPOTLIGHTS];",
         "uniform float spotLightSoftness[MAX_SPOTLIGHTS];",
-        "#endif",
+        "uniform bool spotLightCastShadow[MAX_SPOTLIGHTS];",
+            "#if HAS_SPOTLIGHT_SHADOWMAPS",
+            "uniform sampler2D spotLightShadowMap[MAX_SPOTLIGHTS];",
+            "uniform float spotLightShadowBias[MAX_SPOTLIGHTS];",
+            "varying vec4 spotLightShadowMapCoord[MAX_SPOTLIGHTS];",
 
+            "float unpackDepth( const in vec4 rgba_depth ) {",
+            "  const vec4 bit_shift = vec4( 1.0 / ( 256.0 * 256.0 * 256.0 ), 1.0 / ( 256.0 * 256.0 ), 1.0 / 256.0, 1.0 );",
+            "  float depth = dot( rgba_depth, bit_shift );",
+            "  return depth;",
+            "} ",
+            "#endif",
+        "#endif",
+		"uniform sampler2D ssaoMap;",
         "void main(void) {",
         "  float alpha =  max(0.0, 1.0 - transparency);",
         "  vec3 objDiffuse = diffuseColor;",
@@ -26954,9 +30133,11 @@ XML3D.shaders.register("phong", {
         "  #if HAS_SPECULARTEXTURE",
         "    objSpecular = objSpecular * texture2D(specularTexture, fragTexCoord).rgb;",
         "  #endif",
-
-        "#if MAX_POINTLIGHTS > 0",
-        "  for (int i=0; i<MAX_POINTLIGHTS; i++) {",
+		"  #if HAS_SSAOMAP",
+		"	 float ssao = 1.0 - texture2D(ssaoMap, gl_FragCoord.xy / coords.xy).r;",
+		"  #endif",
+		"#if MAX_POINTLIGHTS > 0",
+        "  for (int i = 0; i < MAX_POINTLIGHTS; i++) {",
         "    if(!pointLightOn[i])",
         "      continue;",
         "    vec4 lPosition = viewMatrix * vec4( pointLightPosition[ i ], 1.0 );",
@@ -26966,6 +30147,9 @@ XML3D.shaders.register("phong", {
         "    vec3 R = normalize(reflect(L,fragNormal));",
         "    float atten = 1.0 / (pointLightAttenuation[i].x + pointLightAttenuation[i].y * dist + pointLightAttenuation[i].z * dist * dist);",
         "    vec3 Idiff = pointLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
+		"  #if HAS_SSAOMAP",
+		"	 Idiff *= ssao;",
+		"  #endif",
         "    vec3 Ispec = pointLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
         "    color = color + (atten*(Idiff + Ispec));",
         "  }",
@@ -26979,6 +30163,9 @@ XML3D.shaders.register("phong", {
         "    vec3 L =  normalize(-lDirection.xyz);",
         "    vec3 R = normalize(reflect(L,fragNormal));",
         "    vec3 Idiff = directionalLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
+		"  #if HAS_SSAOMAP",
+		"	 Idiff *= ssao;",
+		"  #endif",
         "    vec3 Ispec = directionalLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
         "    color = color + ((Idiff + Ispec));",
         "  }",
@@ -26986,29 +30173,47 @@ XML3D.shaders.register("phong", {
 
         "#if MAX_SPOTLIGHTS > 0",
         "  for (int i=0; i<MAX_SPOTLIGHTS; i++) {",
-        "    if(!spotLightOn[i])",
-        "      continue;",
+        "    if(spotLightOn[i]) {",
+        "  #if HAS_SPOTLIGHT_SHADOWMAPS",
+        "         bool lightIsVisible = true;",
+        "         if(spotLightCastShadow[i]){",
+        "             lightIsVisible = false;",
+        "             vec4 lspos = spotLightShadowMapCoord[i];",
+		"			  vec3 perspectiveDivPos = lspos.xyz / lspos.w * 0.5 + 0.5;",
+		"			  float lsDepth = perspectiveDivPos.z;",
+		"			  vec2 lightuv = perspectiveDivPos.xy;",
+        "			  float depth = unpackDepth(texture2D(spotLightShadowMap[i], lightuv)) + spotLightShadowBias[i];",
+        "             lightIsVisible = lsDepth < depth;",
+        "          }",
+        "          if(lightIsVisible){",
+        "  #endif",
         "    vec4 lPosition = viewMatrix * vec4( spotLightPosition[ i ], 1.0 );",
-        "    vec3 L = lPosition.xyz - fragVertexPosition;",
+        "    vec3 L = lPosition.xyz - fragVertexPosition;",	
         "    float dist = length(L);",
         "    L = normalize(L);",
         "    vec3 R = normalize(reflect(L,fragNormal));",
         "    float atten = 1.0 / (spotLightAttenuation[i].x + spotLightAttenuation[i].y * dist + spotLightAttenuation[i].z * dist * dist);",
         "    vec3 Idiff = spotLightIntensity[i] * objDiffuse * max(dot(fragNormal,L),0.0);",
+		"  #if HAS_SSAOMAP",
+		"	 Idiff *= ssao;",
+		"  #endif",
         "    vec3 Ispec = spotLightIntensity[i] * objSpecular * pow(max(dot(R,fragEyeVector),0.0), shininess*128.0);",
         "    vec4 lDirection = viewMatrix * vec4(-spotLightDirection[i], 0.0);",
         "    vec3 D = normalize(lDirection.xyz);",
         "    float angle = dot(L, D);",
         "    if(angle > spotLightCosFalloffAngle[i]) {",
         "       float softness = 1.0;",
-        "       if (angle < spotLightCosSoftFalloffAngle[i])",
-        "           softness = (angle - spotLightCosFalloffAngle[i]) /  (spotLightCosSoftFalloffAngle[i] -  spotLightCosFalloffAngle[i]);",
+        "       //if (angle < spotLightCosSoftFalloffAngle[i])",
+        "       //    softness = (angle - spotLightCosFalloffAngle[i]) /  (spotLightCosSoftFalloffAngle[i] -  spotLightCosFalloffAngle[i]);",
         "       color += atten*softness*(Idiff + Ispec);",
         "    }",
-        "  }",
+        "  #if HAS_SPOTLIGHT_SHADOWMAPS",
+        "   }",
+        "  #endif",
+        "    } ", // spotlight on
+        "  }", // light loop
         "#endif",
-
-        "  gl_FragColor = vec4(color, alpha);",
+		"  gl_FragColor = vec4(color, alpha);",
         "}"
     ].join("\n"),
 
@@ -27019,9 +30224,11 @@ XML3D.shaders.register("phong", {
         directives.push("MAX_POINTLIGHTS " + pointLights);
         directives.push("MAX_DIRECTIONALLIGHTS " + directionalLights);
         directives.push("MAX_SPOTLIGHTS " + spotLights);
+        directives.push("HAS_SPOTLIGHT_SHADOWMAPS " + (lights.spot && !lights.spot.every(function(light) { return !light.castShadow; }) | 0));
         directives.push("HAS_DIFFUSETEXTURE " + ('diffuseTexture' in params ? "1" : "0"));
         directives.push("HAS_SPECULARTEXTURE " + ('specularTexture' in params ? "1" : "0"));
         directives.push("HAS_EMISSIVETEXTURE " + ('emissiveTexture' in params ? "1" : "0"));
+		directives.push("HAS_SSAOMAP " + (XML3D.options.getValue("renderer-ssao") ? "1" : "0"));
     },
     hasTransparency: function(params) {
         return params.transparency && params.transparency.getValue()[0] > 0.001;
@@ -27039,7 +30246,9 @@ XML3D.shaders.register("phong", {
     samplers: {
         diffuseTexture : null,
         emissiveTexture : null,
-        specularTexture : null
+        specularTexture : null,
+        spotLightShadowMap : null,
+		ssaoMap: null
     },
 
     attributes: {
@@ -27066,9 +30275,9 @@ XML3D.shaders.register("point", {
         "uniform mat4 modelViewProjectionMatrix;",
         "uniform mat4 modelViewMatrix;",
         "uniform mat4 projectionMatrix;",
-        "uniform mat3 normalMatrix;",
+        "uniform mat3 modelViewMatrixN;",
         "uniform vec3 eyePosition;",
-        "uniform float screenWidth;",
+        "uniform vec3 coords;",
         "uniform float pointSize;",
 
         "void main(void) {",
@@ -27080,7 +30289,7 @@ XML3D.shaders.register("point", {
         "    fragTexCoord = texcoord;",
         "    fragVertexColor = color;",
         "    vec4 pos2 = vec4(fragVertexPosition, 1.0); pos2.x += pointSize;",
-        "    gl_PointSize = distance( gl_Position.xy, (projectionMatrix * pos2).xy ) * screenWidth / gl_Position.w;",
+        "    gl_PointSize = distance( gl_Position.xy, (projectionMatrix * pos2).xy ) * coords.x / gl_Position.w;",
         "}"
     ].join("\n"),
 
@@ -27196,12 +30405,12 @@ XML3D.shaders.register("pickedNormals", {
         "attribute vec3 position;",
         "attribute vec3 normal;",
         "uniform mat4 modelViewProjectionMatrix;",
-        "uniform mat3 normalMatrix;",
+        "uniform mat3 modelViewMatrixN;",
 
         "varying vec3 fragNormal;",
 
         "void main(void) {",
-        "    fragNormal = normalize(normalMatrix * normal);",
+        "    fragNormal = normalize(modelViewMatrixN * normal);",
         "    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
         "}"
     ].join("\n"),
@@ -27215,4 +30424,219 @@ XML3D.shaders.register("pickedNormals", {
     ].join("\n"),
 
     uniforms : {}
+});
+
+XML3D.shaders.register("light-depth", {
+
+    vertex: [
+        "attribute vec3 position;",
+        "varying vec4 worldPosition;",
+        "uniform mat4 modelMatrix;",
+        "uniform mat4 modelViewProjectionMatrix;",
+
+        "void main(void) {",
+        "   worldPosition = modelMatrix * vec4(position, 1.0);",
+        "   gl_Position   = modelViewProjectionMatrix * vec4(position, 1.0);",
+        "}"
+    ].join("\n"),
+
+    fragment: [
+        "varying vec4 worldPosition;",
+        "uniform mat4 viewMatrix;",
+
+        "vec4 pack_depth( const in float depth ) {",
+        "const vec4 bit_shift = vec4( 256.0 * 256.0 * 256.0, 256.0 * 256.0, 256.0, 1.0 );",
+        "const vec4 bit_mask  = vec4( 0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0 );",
+        "vec4 res = fract( depth * bit_shift );",
+        "res -= res.xxyz * bit_mask;",
+        "return res;",
+        "}",
+
+
+        "void main(void) {",
+        "    gl_FragColor = pack_depth( gl_FragCoord.z );",
+        "}"
+    ].join("\n"),
+
+    uniforms: {}
+});
+
+XML3D.shaders.register("render-normal", {
+    vertex : [
+        "attribute vec3 position;",
+        "attribute vec3 normal;",
+        "uniform mat4 modelViewProjectionMatrix;",
+        "uniform mat3 modelMatrixN;",
+
+        "varying vec3 fragNormal;",
+
+        "void main(void) {",
+        "    fragNormal = modelMatrixN * normal;",
+        "    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
+        "}"
+    ].join("\n"),
+
+    fragment : [
+        "varying vec3 fragNormal;",
+
+        "void main(void) {",
+        "   gl_FragColor = vec4((normalize(fragNormal) + 1.0) / 2.0, 1.0);",
+        "}"
+    ].join("\n"),
+
+    uniforms : {}
+});
+
+XML3D.shaders.register("render-position", {
+    vertex : [
+        "attribute vec3 position;",
+        "uniform mat4 modelMatrix;",
+        "uniform mat4 modelViewProjectionMatrix;",
+
+        "varying vec3 worldCoord;",
+
+        "void main(void) {",
+        "    worldCoord = (modelMatrix * vec4(position, 1.0)).xyz;",
+        "    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
+        "}"
+    ].join("\n"),
+
+    fragment : [
+        "varying vec3 worldCoord;",
+
+        "void main(void) {",
+        "    gl_FragColor = vec4(worldCoord, 1.0);",
+        "}"
+    ].join("\n"),
+
+    uniforms : {}
+});
+
+XML3D.shaders.register("boxblur", {
+    vertex: [
+        "attribute vec3 position;",
+
+        "void main(void) {",
+        "   gl_Position = vec4(position, 1.0);",
+        "}"
+    ].join("\n"),
+
+    fragment: [
+        "uniform sampler2D sInTexture;",
+        "uniform vec2 canvasSize;",
+        "uniform vec2 blurOffset;",
+
+        "const float blurSize = 1.0/512.0;",
+
+        "void main(void) {",
+        "   vec2 texcoord = (gl_FragCoord.xy / canvasSize.xy);",
+        "   vec4 sum = vec4(0.0);",
+        "   float blurSizeY = blurOffset.y / canvasSize.y;",
+        "   float blurSizeX = blurOffset.x / canvasSize.x;",
+
+        "   sum += texture2D(sInTexture, vec2(texcoord.x, texcoord.y - 1.5*blurSizeY));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x, texcoord.y - 2.0*blurSizeY));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x, texcoord.y - blurSizeY));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x, texcoord.y + blurSizeY));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x, texcoord.y + 2.0*blurSizeY));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x, texcoord.y + 1.5*blurSizeY));",
+
+        "   sum += texture2D(sInTexture, vec2(texcoord.x - 1.5*blurSizeX, texcoord.y));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x - 2.0*blurSizeX, texcoord.y));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x - blurSizeX, texcoord.y));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x + blurSizeX, texcoord.y));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x + 2.0*blurSizeX, texcoord.y));",
+        "   sum += texture2D(sInTexture, vec2(texcoord.x + 1.5*blurSizeX, texcoord.y));",
+
+        "   gl_FragColor = sum / 12.0;",
+        "}"
+    ].join("\n"),
+
+    uniforms: {
+        canvasSize : [512, 512],
+        blurOffset : [1.0, 1.0]
+    },
+
+    samplers: {
+        sInTexture : null
+    }
+});
+
+XML3D.shaders.register("ssao", {
+    vertex : [
+        "attribute vec2 position;",
+
+        "void main(void) {",
+        "    gl_Position = vec4(position, 0.0, 1.0);",
+        "}"
+    ].join("\n"),
+
+    fragment : [
+        "#ifdef GL_ES",
+        "precision highp float;",
+        "#endif",
+
+        "uniform vec2 canvasSize;",
+        "uniform sampler2D sPositionTex;",
+        "uniform sampler2D sNormalTex;",
+        "uniform sampler2D sRandomNormals;",
+        "uniform vec2 uRandomTexSize;",
+        "uniform float uSampleRadius;",
+        "uniform float uScale;",
+        "uniform float uBias;",
+        "uniform float uIntensity;",
+        "uniform vec2 uConstVectors[4];",
+        "uniform mat4 viewMatrix;",
+
+        "vec3 getPosition(vec2 uv) {",
+        "return texture2D(sPositionTex, uv).xyz;",
+        "}",
+
+        "float calcAmbientOcclusion(vec2 screenUV, vec2 uvOffset, vec3 origin, vec3 cnorm) {",
+        "   vec3 diff = getPosition(screenUV + uvOffset) - origin;",
+        "   vec3 v = normalize(diff);",
+        "   float dist = length(diff) * uScale;",
+        "   return max(0.0, dot(cnorm, v) - uBias) * (1.0/(1.0 + dist)) * uIntensity;",
+        "}",
+
+        "void main(void) {",
+        "   vec2 screenUV = gl_FragCoord.xy / canvasSize.xy;",
+        "   vec2 rand = normalize(texture2D(sRandomNormals, gl_FragCoord.xy / uRandomTexSize).xy * 2.0 - 1.0 );",
+        "   vec3 norm = normalize(texture2D(sNormalTex, screenUV).xyz * 2.0 - 1.0 );",
+        "   vec3 origin = getPosition(screenUV);",
+        "   float radius = uSampleRadius / (viewMatrix * vec4(origin, 1.0)).z;",
+        "   float ao = 0.0;",
+
+        "   const int iterations = 4;",
+        "   for (int i = 0; i < iterations; ++i) {",
+        "       vec2 coord1 = reflect(uConstVectors[i], rand) * radius;",
+        "       vec2 coord2 = vec2(coord1.x*0.707 - coord1.y*0.707, coord1.x*0.707 + coord1.y*0.707);",
+        "       ao += calcAmbientOcclusion(screenUV, coord1*0.25, origin, norm);",
+        "       ao += calcAmbientOcclusion(screenUV, coord2*0.5, origin, norm);",
+        "       ao += calcAmbientOcclusion(screenUV, coord1*0.75, origin, norm);",
+        "       ao += calcAmbientOcclusion(screenUV, coord2, origin, norm);",
+        "   }",
+        "   ao /= (float(iterations) * 4.0);",
+        "   gl_FragColor = vec4(ao, ao, ao, 1.0);",
+        "}"
+    ].join("\n"),
+
+    uniforms: {
+        canvasSize      : [512, 512],
+        uConstVectors   : [1,0, -1,0, 0,1, 0,-1],
+        uRandomTexSize  : [64,64],
+        uSampleRadius   : 0.9,
+        uScale          : 0.9,
+        uBias           : 0.2,
+        uIntensity      : 1.0
+    },
+
+    samplers: {
+        sPositionTex   : null,
+        sNormalTex     : null,
+        sRandomNormals : null
+    },
+
+    attributes: {
+    }
 });
