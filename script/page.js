@@ -40,6 +40,9 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
     {cat: "shader", name: "Shader Overrides", href: "examples/shaderOverrides/index.html",
         info: "Demonstrates overriding of shader attributes in the mesh."},
+    {cat: "shader", name: "shade.js: Animated shader", href: "examples/shade-tv/index.html",
+        info: "Animated shader with shade.js."},
+
 	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
     {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.html",
