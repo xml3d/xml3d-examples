@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xml3d xmlns="http://www.xml3d.org/2009/xml3d" >
+
+    <dataflow id="skinning" out="position, normal, boneXform">
+        <float3 param="true" name="position" ></float3>
+        <float3 param="true" name="normal" ></float3>
+        <int4   param="true" name="boneIdx" ></int4>
+        <float4 param="true" name="boneWeight" ></float4>
+
+        <int    param="true" name="boneParent" ></int>
+        <float3 param="true" name="bindTranslation" ></float3>
+        <float4 param="true" name="bindRotation" ></float4>
+
+        <float3 param="true" name="translation" ></float3>
+        <float4 param="true" name="rotation" ></float4>
+
+        <float  param="true" name="key" >0</float>
+        <compute>
+            bindPose = xflow.createTransformInv({translation: bindTranslation, rotation: bindRotation});
+            bindPose = xflow.forwardKinematicsInv(boneParent, bindPose);
+
+            rot = xflow.slerpSeq(rotation, key);
+            trans = xflow.lerpSeq(translation, key);
+            pose = xflow.createTransform({translation: trans, rotation: rot});
+            pose = xflow.forwardKinematics(boneParent, pose);
+
+            boneXform = xflow.mul(bindPose, pose);
+
+            normal = xflow.skinDirection(normal, boneIdx, boneWeight, boneXform);
+            position = xflow.skinPosition(position, boneIdx, boneWeight, boneXform);
+        </compute>
+    </dataflow>
+  
+</xml3d>

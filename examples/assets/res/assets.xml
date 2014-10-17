@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d xmlns="http://www.w3.org/1999/xhtml">
+
+    <!--
+
+        About this file:
+
+        This is file serves as a quick link collection to all assets defined in this folder.
+        An asset can be referred directly
+        (e.g. src="res/cube/cube.xml#asset" )
+        or via this file
+        (e.g. src="res/assets.xml#cube" )
+    -->
+
+
+    <!-- A regular cube with an xml3d texture of extreme promotional properties -->
+    <asset id="cube" src="cube/cube.xml#asset" />
+
+    <!-- The teapot. We all know it -->
+    <asset id="teapot" src="teapot/teapot.xml#asset" />
+
+    <!-- Heavy Weapons Guy from Team Fortress 2 -->
+    <asset id="heavy" src="tf2/heavy.xml#asset" />
+
+    <!-- The Engineer from Team Fortress 2 -->
+    <asset id="engineer" src="tf2/engineer.xml#asset" />
+
+    <!-- The Medic from Team Fortress 2 -->
+    <asset id="medic" src="tf2/medic.xml#asset" />
+
+    <!-- The Scout from Team Fortress 2 -->
+    <asset id="scout" src="tf2/scout.xml#asset" />
+
+    <!-- The Sniper from Team Fortress 2 -->
+    <asset id="sniper" src="tf2/sniper.xml#asset" />
+
+    <!-- The Robot "Smilzo" -->
+    <asset id="smilzo" src="robots/smilzo.xml#asset" />
+
+    <!-- The Robot "Ciccio" -->
+    <asset id="ciccio" src="robots/ciccio.xml#asset" />
+
+
+
+</xml3d>

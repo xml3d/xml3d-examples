@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <!--<script type="text/javascript" src="../../../xml3d.js/build/output/xml3d.js"></script>-->
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <title>XML3D Examples</title>
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+    <!--<h1>CSS Transforms</h1>-->
+
+    <xml3d id="MyXml3d" class="xml3d"
+           width="600px" height="400px"
+        >
+      <view position="0 4 20"></view>
+
+      <!-- Scene Graph -->
+
+      <group shader="#ObjectShader" style="transform: translateX(0px)" >
+        <model src="res/assets.xml#cube" ></model>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(5px) scale3d(0.07,0.07,0.07)" >
+        <model src="res/assets.xml#teapot" ></model>
+      </group>
+
+      <group shader="#ObjectShader" style="transform: translateX(-5px) scale3d(0.07,0.07,0.07)" >
+        <model src="res/assets.xml#sniper" >
+            <assetdata name="base" includes="defaultAnim" compute="dataflow['protos.xml#skinning']">
+                <float name="key" >0.8</float>
+            </assetdata>
+        </model>
+      </group>
+
+
+
+      <lightshader id="light1" script="urn:xml3d:lightshader:point">
+          <float3 name="intensity">1.0 1.0 1.0</float3>
+          <float3 name="attenuation">1 1 0</float3>
+      </lightshader>
+      <group style="transform: translate3d(0px, 40px, 40px)" >
+        <light shader="#light1" intensity="30"></light>
+      </group>
+
+    </xml3d>
+
+    <div class="description">
+      An example on how to use model and assets in xml3d.
+    </div>
+  </div>
+</div>
+</body>
+</html>
