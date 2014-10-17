@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d xmlns="http://www.w3.org/1999/xhtml">
+  <!--
+
+ Shaders
+
+ -->
+  <shader script="urn:xml3d:shader:phong" id="shader_engineer_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.078125</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="tex/engineer_red.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_engineer_head">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="tex/engineer_head.jpg" />
+    </texture>
+  </shader>
+  <!--
+
+ Mesh Base
+
+ -->
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="geom/engineer.json" ></data>
+  <!--
+
+ Meshes
+
+ -->
+  <data id="index_engineer_red" src="geom/engineer.json" filter="keep( {index: index_engineer_red} )" ></data>
+  <data id="index_engineer_head" src="geom/engineer.json" filter="keep( {index: index_engineer_head} )" ></data>
+  <!--
+
+ Animations
+
+ -->
+  <data id="anim_taunt01e">
+    <data src="geom/engineer.json" filter="keep( {translation: taunt01e_translation, rotation: taunt01e_rotation } )" ></data>
+    <float name="maxKey">4.41667</float>
+  </data>
+
+
+  <asset id="asset" >
+    <assetdata name="base">
+        <data src="#meshbase" ></data>
+    </assetdata>
+
+    <assetdata name="defaultAnim" >
+        <data src="#anim_taunt01e"></data>
+    </assetdata>
+
+    <assetmesh shader="#shader_engineer_red" src="#index_engineer_red" includes="base" />
+    <assetmesh shader="#shader_engineer_head" src="#index_engineer_head" includes="base" />
+  </asset>
+</xml3d>

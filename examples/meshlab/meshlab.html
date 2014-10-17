@@ -40,20 +40,24 @@
     <div id="content">
         <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d">
             <defs id="mainDef">
-                <transform id="t_Lamp" translation="0 -200 -700"></transform>
-                <lightshader id="ls_Spot" script="urn:xml3d:lightshader:point">
+                <transform id="t_Lamp" translation="0 0 -700"></transform>
+                <transform id="r_Lamp" rotation="1 0 0 -0.2"></transform>
+                <transform id="t_boden" scale="30 30 30" rotation="1 0 0 -1.57" translation="0 -380 -1600"></transform>
+                <lightshader id="ls_Spot" script="urn:xml3d:lightshader:spot">
                     <bool name="castShadow">true</bool>
-                    <float3 name="attenuation">1.000000 0.0001 0.000000</float3>
+                    <float name="shadowBias">0.00005</float>
+                    <float3 name="attenuation">1 0 0</float3>
                     <float3 name="intensity">1.000000 1.000000 1.000000</float3>
+                    <float name="falloffAngle">0.5</float>
                 </lightshader>
                 <shader id="Material" script="urn:xml3d:shader:phong">
-                    <float name="ambientIntensity">0.1</float>
+                    <float name="ambientIntensity">0.5</float>
                     <float3 name="diffuseColor">0.4 0.25 0.25</float3>
-                    <float3 name="specularColor">0.5 0.5 0.5</float3>
+                    <float3 name="specularColor">0.3 0.3 0.3</float3>
                     <float name="shininess">0.2</float>
 					<bool name="useVertexColor">true</bool>
                 </shader>
-				<transform id="t_camera" translation="0 -200 -700" rotation="0 0 1 0"></transform>
+				<transform id="t_camera" translation="-100 -200 -500" rotation="0 0 1 0"></transform>
             </defs>
 			<group id="viewGroup" transform="#t_camera">
 				<view id="defaultView"></view>
@@ -61,8 +65,14 @@
             <group shader="#Material">
                 <mesh id="laurana" src="./Laurana50k.json" type="triangles"></mesh>
             </group>
-            <group transform="#t_Lamp">
-                <light shader="#ls_Spot" intensity="1.5"></light>
+            <group transform="#t_boden" >
+                <model src="./boden.xml#boden" type="triangles"></model>
+            </group>
+            <group transform="#t_Lamp" shader="#Material">
+                <group transform="#r_Lamp">
+                    <view id="camView" position="0 0 -100"></view>
+                    <light shader="#ls_Spot"></light>
+                </group>
             </group>
         </xml3d>
 
@@ -70,6 +80,28 @@
             The displayed mesh (Laurana) is form the <a href="http://meshlab.sourceforge.net/">MeshLab</a> sample set and exported to MeshLab's JSON format.
         </div>
     </div>
+    <script>
+        $( document ).ready(function() {
+            var t = $("#t_Lamp").get(0);
+            var xml3d = $("xml3d");
+            var last = Date.now();
+            var deg = 0;
+            var radius = 800;
+            function animate() {
+                var now = Date.now();
+                deg += 0.0005 * (now-last);
+                var x = Math.sin(deg) ;
+                var z = Math.cos(deg);
+                t.setAttribute("translation", (radius * x) + " 0 " + (-radius * z - 1602));
+                t.setAttribute("rotation", "0 1 0 " +  Math.atan2(x, -z));
+
+               // console.log(deg, t.getAttribute("translation"), t.lookAt);
+                window.requestAnimFrame(animate);
+                last = now;
+		    }
+            animate();
+        });
+    </script>
 </div>
 </body>
 </html>

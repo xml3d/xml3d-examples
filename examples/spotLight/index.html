@@ -66,8 +66,8 @@
                         <float3 name="attenuation">1.0 0.0 0.015</float3>
 						<float name="falloffAngle">0.8</float>
 						<float name="softness">10</float>
-                        <bool name="castShadow">false</bool>
-						<float name="shadowBias">0.01</float>
+						<bool name="castShadow">true</bool>
+						<float name="shadowBias">0.001</float>
                     </lightshader>
                     <transform id="t_directionalLight1"
                         rotation="0.0 1.0 0.0 0.62446165"
@@ -87,7 +87,7 @@
                         <float3 name="diffuseColor">0.712 0.712 0.712</float3>
                         <float3 name="specularColor">0.78 0.78 0.78</float3>
                         <float name="shininess">0.15625</float>
-                        <float name="ambientIntensity">0.2</float>
+                        <float name="ambientIntensity">0.1</float>
                         <float name="transparency">0.0</float>
                     </shader>
                 </defs>
@@ -122,7 +122,7 @@
                         <data src="basic.xml#mesh_cube"></data>
                     </mesh>
                 </group>
-                <view xmlns="http://www.xml3d.org/2009/xml3d" id="defaultView" position="-30.944881439208984 -23.090110778808594 21.51552391052246" orientation="0.6988239288330078 -0.18478119373321533 -0.6910144686698914 1.6189127998963848"></view>
+                <view id="defaultView" position="-30.944881439208984 -23.090110778808594 21.51552391052246" orientation="0.6988239288330078 -0.18478119373321533 -0.6910144686698914 1.6189127998963848"></view>
             </xml3d>
         <div class="description">
             A simple spot light as defined <a href="https://github.com/xml3d/xml3d.js/wiki/Light-Shaders#wiki-Spot_Light">here</a>.

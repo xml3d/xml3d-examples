@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/shade.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
+
+    <script type="text/javascript">
+        window.addEventListener('load', function() {
+            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"),
+                {revolveAroundPoint: new XML3DVec3(0,2,0), dollySpeed: 40, sceneRadius : 4} );
+            var xml3d = document.getElementById("MyXml3d");
+            xml3d.addEventListener("mousedown", function(e) {
+                controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+                e.preventDefault();
+            }, false);
+            window.addEventListener("mouseup", function() {
+                controller.stop();
+            }, false);
+            window.addEventListener("mousemove", function(e) {
+                controller.doAction({x: e.clientX, y: e.clientY});
+            }, false);
+        }, false);
+    </script>
+
+    <title>XML3D Examples</title>
+
+</head>
+<body>
+
+<div id="overall">
+    <div id="content">
+        <xml3d class="canvas" id="MyXml3d">
+            <defs>
+                 <script id="screenMaterial" type="text/shade-javascript">
+                     // Inspired by https://www.shadertoy.com/view/Xsl3zf
+function hash(n) {
+    return Math.fract(Math.sin(n)*43758.5453123);
+}
+
+function shade(env) {
+    var time = env.time || 10.0;
+    var p = env.texcoord.xy().mul(2).sub(1);
+
+    var n = p.mul(0.75, 1.0);
+
+  /*  if (Math.abs(p.y()) > .8) {// || Math.floor(env.texcoord.y()) % 3.0 > 0.0) {
+        return new Vec3(0);
+    }*/
+
+    var c = env.wt.sample2D(env.texcoord).xyz();
+
+    // flicker, grain, vignette, fade in
+    c = c.add(Math.sin(hash(time)) * 0.01);
+    c = c.add(hash((hash(n.x()) + n.y()) * time) * 0.4);
+    c = c.mul(Math.smoothstep(n.mul(0.18).length(), 0.8, 0.4));
+    c = c.mul(1.9);
+    c = c.mul(Math.smoothstep(0.001, 3.5, time));
+
+    var s = c.dot(0.2126, 0.7152, 0.0722);
+    return new Shade().diffuse(new Vec3(1.5 - hash(time) * 0.1).mul(s), env.normal, 0.1).phong(new Vec3(0.7), env.normal, 0.2);
+}
+                </script>
+                <lightshader id="ls" script="urn:xml3d:lightshader:directional">
+
+                </lightshader>
+                <shader id="screenMaterialInstance" script="#screenMaterial">
+                    <float name="time">20.0</float>
+                    <texture name="wt">
+                        <video id="webcam" src="../video/Firefox.ogv" autoplay="true"></video>
+                    </texture>
+                </shader>
+            </defs>
+            <group id="myScene">
+                <group id="VikendSpecijalTv_obj">
+                    <group id="VikendSpecijal_TV" shader="./materials.xml#mat_m3BlackPlastic">
+                        <mesh data-xr-id="42ed63e8-5946-4f6f-a00c-a95a127dccf6" data-xr-name="mesh 2">
+                            <data src="./meshes/42ed63e8-5946-4f6f-a00c-a95a127dccf6.json"></data>
+                        </mesh>
+                    </group>
+                    <group id="defaultobject">
+                        <group shader="./materials.xml#mat_m6Logo">
+                            <mesh data-xr-id="00f4daf5-84bd-4f8f-855f-c5cc7c9583d6" data-xr-name="mesh 9">
+                                <data src="./meshes/00f4daf5-84bd-4f8f-855f-c5cc7c9583d6.json"></data>
+                            </mesh>
+                        </group>
+                        <group shader="./materials.xml#mat_m8Yellow">
+                            <mesh data-xr-id="76479c89-553d-42b7-b920-fa05155ce423" data-xr-name="mesh 3">
+                                <data src="./meshes/76479c89-553d-42b7-b920-fa05155ce423.json"></data>
+                            </mesh>
+                        </group>
+                        <!--<group shader="#screenMaterialInstance">
+                            <mesh data-xr-id="b913e031-0720-4e13-8063-8f7d84295c07" data-xr-name="mesh 4">
+                                <data src="./meshes/b913e031-0720-4e13-8063-8f7d84295c07.json"></data>
+                            </mesh>
+                        </group>-->
+                        <group shader="./materials.xml#mat_m2Black">
+                            <mesh data-xr-id="e95e4a2d-4258-4cae-b9cf-0e3e2dc7fe01" data-xr-name="mesh 5">
+                                <data src="./meshes/e95e4a2d-4258-4cae-b9cf-0e3e2dc7fe01.json"></data>
+                            </mesh>
+                        </group>
+                        <group shader="#screenMaterialInstance">
+                            <mesh data-xr-id="61ff75df-0af3-438e-add1-607ce806622b" data-xr-name="mesh 6">
+                                <data src="./meshes/61ff75df-0af3-438e-add1-607ce806622b.json"></data>
+                            </mesh>
+                        </group>
+                        <group shader="./materials.xml#mat_m1Antenna">
+                            <mesh data-xr-id="1d723b5c-97e9-45d2-b240-9536dad7fc76" data-xr-name="mesh 7">
+                                <data src="./meshes/1d723b5c-97e9-45d2-b240-9536dad7fc76.json"></data>
+                            </mesh>
+                            <mesh data-xr-id="903c27a1-47a0-4277-ad42-a25afda5a476" data-xr-name="mesh 13">
+                                <data src="./meshes/903c27a1-47a0-4277-ad42-a25afda5a476.json"></data>
+                            </mesh>
+                        </group>
+                    </group>
+                    <group id="Cable" shader="./materials.xml#mat_m4Cable">
+                        <mesh data-xr-id="46093357-11ba-43fc-93e5-3046367db675" data-xr-name="mesh 11">
+                            <data src="./meshes/46093357-11ba-43fc-93e5-3046367db675.json"></data>
+                        </mesh>
+                        <mesh data-xr-id="2e72c98d-f73c-41f9-9096-8740a55c04b8" data-xr-name="mesh 12">
+                            <data src="./meshes/2e72c98d-f73c-41f9-9096-8740a55c04b8.json"></data>
+                        </mesh>
+                    </group>
+
+                </group>
+            </group>
+            <group id="viewGroup">
+                <view position="0.28688493371009827 1.2059874534606934 6.089585304260254" orientation="0 1 0 0"></view>
+            </group>
+            <light shader="#ls"></light>
+        </xml3d>
+
+        <div class="description">
+            Animated shader using shade.js. The great <a href="http://www.blendswap.com/blends/view/21874">TV</a> is modeled in Blender by <a href="http://www.blendswap.com/user/vAonom">Dejan Petrovic</a> and released under Creative Commons Attribution 3.0.
+        </div>
+    </div>
+    <script type="text/javascript">
+        // http://www.html5rocks.com/en/tutorials/getusermedia/intro/
+        window.URL = window.URL || window.webkitURL;
+        navigator.getUserMedia  =
+                navigator.getUserMedia || navigator.webkitGetUserMedia ||
+                navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+        function activateWebCam() {
+            var video = document.getElementById('webcam');
+
+            if (!video) {
+                XML3D.debug.logError("No webcam element");
+                return;
+            }
+            // audio: true does not work with chrome
+            if (navigator.getUserMedia) {
+                navigator.getUserMedia({video: true, audio: false},
+                        function(stream) {
+                            XML3D.debug.logInfo("Accessing WebCam");
+                            video.src = window.URL.createObjectURL(stream);
+                        },
+                        function (e) {
+                            var code = e.code || -1;
+                            if (code == 1) {
+                                $("#fail").text("You declined the access to your webcam. Reload the page if you changed your opinion.");
+                            } else {
+                                $("#fail").text("Could not access the video of your webcam: " + (e.name ? e.name : e));
+                            }
+                            XML3D.debug.logError("Cannot access WebCam", e);
+                        });
+            } else {
+                $("#fail").text("Your browser does not support the WebRTC API required to access your webcam.");
+                XML3D.debug.logError("No getUserMedia");
+            }
+        }
+
+        var anim = {};
+
+        function initAnim() {
+            anim.xfm = document.querySelector("[name=time]");
+            anim.startTime = (new Date()).getTime();
+            anim.intervalID = window.setInterval(function () {
+                anim.xfm.innerText = (new Date).getTime() - anim.startTime;
+            }, 20);
+        }
+
+		$(document).ready(function() {
+            activateWebCam();
+            initAnim();
+        });
+    </script>
+</div>
+</body>
+</html>

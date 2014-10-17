@@ -10,6 +10,9 @@ var CATEGORY_LIST = {
 }
 
 var EXAMPLE_LIST = [
+
+    {cat: "basic", name: "Assets", href: "examples/assets/assets.html",
+        info: "Demonstrates the use of assets to include 3D models in your scene."},
     {cat: "basic", name: "Directional Light", href: "examples/directionalLight/index.html",
         info: "Demonstrates the directional light shader."},
     {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.html",
@@ -40,6 +43,9 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
     {cat: "shader", name: "Shader Overrides", href: "examples/shaderOverrides/index.html",
         info: "Demonstrates overriding of shader attributes in the mesh."},
+    {cat: "shader", name: "shade.js: Animated shader", href: "examples/shade-tv/index.html",
+        info: "Animated shader with shade.js."},
+
 	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
     {cat: "xflow", name: "Facemorphing", href: "examples/facemorph/facemorph.html",

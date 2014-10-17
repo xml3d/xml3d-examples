@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d xmlns="http://www.w3.org/1999/xhtml">
+  <!--
+
+ Shaders
+
+ -->
+  <shader script="urn:xml3d:shader:phong" id="shader_scout_red">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.078125</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="tex/scout_red.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_scout_head">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.1 0.1 0.1</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="tex/scout_head.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.5 0.5 0.5</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="tex/eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+    <float3 name="diffuseColor">1 1 1</float3>
+    <float3 name="specularColor">0.5 0.5 0.5</float3>
+    <float name="ambientIntensity">1</float>
+    <float name="shininess">0.390625</float>
+    <float name="transparency">0</float>
+    <texture name="diffuseTexture">
+      <img src="tex/eye-iris-blue.jpg" />
+    </texture>
+  </shader>
+  <!--
+
+ Mesh Base
+
+ -->
+  <data id="meshbase" filter="keep(position, normal, texcoord, boneIdx, boneWeight, boneParent, bindTranslation, bindRotation)" src="geom/scout.json" ></data>
+  <!--
+
+ Meshes
+
+ -->
+  <data id="index_scout_red" src="geom/scout.json" filter="keep( {index: index_scout_red} )" ></data>
+  <data id="index_scout_head" src="geom/scout.json" filter="keep( {index: index_scout_head} )" ></data>
+  <data id="index_eyeball_r" src="geom/scout.json" filter="keep( {index: index_eyeball_r} )" ></data>
+  <data id="index_eyeball_l" src="geom/scout.json" filter="keep( {index: index_eyeball_l} )" ></data>
+  <!--
+
+ Animations
+
+ -->
+  <data id="anim_taunt05_DeathTaunt">
+    <data src="geom/scout.json" filter="keep( {translation: taunt05_DeathTaunt_translation, rotation: taunt05_DeathTaunt_rotation } )" ></data>
+    <float name="maxKey">6.04167</float>
+  </data>
+
+
+  <asset id="asset" >
+    <assetdata name="base">
+        <data src="#meshbase" ></data>
+    </assetdata>
+
+    <assetdata name="defaultAnim" >
+        <data src="#anim_taunt05_DeathTaunt"></data>
+    </assetdata>
+
+    <assetmesh shader="#shader_scout_red" src="#index_scout_red" includes="base" />
+    <assetmesh shader="#shader_scout_head" src="#index_scout_head" includes="base" />
+    <assetmesh shader="#shader_eyeball_r" src="#index_eyeball_r" includes="base" />
+    <assetmesh shader="#shader_eyeball_l" src="#index_eyeball_l" includes="base" />
+  </asset>
+
+</xml3d>
