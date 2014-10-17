@@ -48,14 +48,6 @@
             </data>
         </data>
 
-        <data id="arBase"
-              compute="transforms, visibilities, perspective = xflar.detect(arvideo, markers)">
-            <int name="markers">22 64</int>
-            <texture name="arvideo">
-                <video autoplay="true" src="videostream.ogg" ></video>
-            </texture>
-        </data>
-
 
         <!-- Viewpoint with connection to AR data -->
         <view id="View" perspective="#arBase" ></view>
