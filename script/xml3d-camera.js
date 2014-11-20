@@ -210,12 +210,12 @@ XML3D.Xml3dSceneController.prototype.attach = function() {
     document.addEventListener("mouseup", this._evt_mouseup, false);
     document.addEventListener("mousemove",this._evt_mousemove, false);
 
-    this.canvas.addEventListener("touchstart", this._evt_touchstart, false);
+    document.addEventListener("touchstart", this._evt_touchstart, false);
     document.addEventListener("touchend", this._evt_touchend, false);
     document.addEventListener("touchmove",this._evt_touchmove, false);
     document.addEventListener("touchcancel", this._evt_touchend, false);
 
-    this.canvas.addEventListener("contextmenu", this._evt_contextmenu, false);
+    document.addEventListener("contextmenu", this._evt_contextmenu, false);
     if (this.useKeys)
         document.addEventListener("keydown", this._evt_keydown, false);
 };
