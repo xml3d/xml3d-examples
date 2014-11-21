@@ -210,7 +210,7 @@ XML3D.Xml3dSceneController.prototype.attach = function() {
     document.addEventListener("mouseup", this._evt_mouseup, false);
     document.addEventListener("mousemove",this._evt_mousemove, false);
 
-    document.addEventListener("touchstart", this._evt_touchstart, false);
+    document.querySelector("#content").addEventListener("touchstart", this._evt_touchstart, false);
     document.addEventListener("touchend", this._evt_touchend, false);
     document.addEventListener("touchmove",this._evt_touchmove, false);
     document.addEventListener("touchcancel", this._evt_touchend, false);
