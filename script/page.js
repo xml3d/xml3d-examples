@@ -106,6 +106,8 @@ function initPage(){
             idx++; window.LINK_PREFIX += "../";
         }
     }
+    var statsScript = $('<script type="text/javascript" src="../../script/stats.js">');
+    $("head").append(statsScript);
 
     var overall = $("#overall");
     var inner = $('<div id="inner" class="inner-wrap">');
@@ -114,7 +116,25 @@ function initPage(){
     var navbar = $('<nav id="nav-bar" class="tab-bar">');
     var navbarCenter = $('<section id="navbar-middle" class="middle tab-bar-section"><h1>' + (CURRENT ? CURRENT.name : "XML3D Examples") + '</h1></section>');
     navbar.append(navbarCenter);
+
+    var right = $('<section id="navbar-right" class="right"></section>');
+    navbar.append(right);
+
+    if (window.Stats) {
+        var stats = new Stats();
+        stats.setMode(0); // 0: fps, 1: ms
+        //this.$el.hide();
+        right.append(stats.domElement);
+        var loop = function () {
+            stats.update();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    }
+
     inner.append(navbar);
+
+
 
     var breadcrumb = $('<ul class="breadcrumbs right">');
     breadcrumb.append($('<li><a href="../../index.html">XML3D Examples</a>'));
