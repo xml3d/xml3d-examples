@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <!--<script type="text/javascript" src="../../../xml3d.js/build/output/xml3d.js"></script>-->
+    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
+
+    <script type="text/javascript">
+        window.addEventListener('load', function() {
+            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"), {revolveAroundPoint:
+                new XML3DVec3(-2,-14,-160), sceneRadius: 110});
+            var xml3d = document.getElementById("MyXml3d");
+            xml3d.addEventListener("mousedown", function(e) {
+                controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
+            }, false);
+            window.addEventListener("mouseup", function() {
+                controller.stop();
+            }, false);
+            window.addEventListener("mousemove", function(e) {
+                controller.doAction({x: e.clientX, y: e.clientY});
+            }, false);
+        }, false);
+    </script>
+    <title>Team Fortress 2 Assets</title>
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+    <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d">
+
+        <defs id="mainDef">
+          <transform id="t_Camera" translation="0 0 30"></transform>
+          <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274"
+                     scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
+
+
+          <shader id="Material" script="urn:xml3d:shader:phong">
+            <float name="ambientIntensity">1</float>
+            <float3 name="diffuseColor">0.400000 0.120000 0.180000</float3>
+            <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
+            <float name="shininess">0.2</float>
+          </shader>
+        </defs>
+        <group id="viewGroup" transform="#t_Camera">
+          <view id="defaultView"></view>
+        </group>
+        <lightshader id="ls_Spot" script="urn:xml3d:lightshader:directional">
+          <bool name="castShadow">true</bool>
+          <float3 name="intensity">0.5 0.5 0.5</float3>
+
+        </lightshader>
+        <group transform="#t_Lamp">
+          <light shader="#ls_Spot" intensity="1.5"></light>
+        </group>
+
+
+        <!-- Sniper -->
+        <model src="template.xml#skinnedCharacter" style="transform: translate3d(0,-50px,-150px)" >
+            <!-- Configuring the current pose -->
+            <assetdata name="config" >
+                <float class="keySniper1" name="animKey">0.0</float>
+            </assetdata>
+            <!-- Select the Character Mesh -->
+            <asset name="character" src="asset/sniper.xml#asset" ></asset>
+            <!-- Select the Hat mesh with transformations for adjustments -->
+
+            <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
+                <assetdata name="config" >
+                    <float class="keySniper2" name="animKey">0.0</float>
+                </assetdata>
+                <asset name="character" src="asset/sniper.xml#asset" ></asset>
+
+                <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
+                    <assetdata name="config" >
+                        <float class="keySniper3" name="animKey">0.0</float>
+                    </assetdata>
+                    <asset name="character" src="asset/sniper.xml#asset" ></asset>
+
+                     <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
+                        <assetdata name="config" >
+                            <float class="keySniper4" name="animKey">0.0</float>
+                        </assetdata>
+                        <asset name="character" src="asset/sniper.xml#asset" ></asset>
+
+                        <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
+                            <assetdata name="config" >
+                                <float class="keySniper5" name="animKey">0.0</float>
+                            </assetdata>
+                            <asset name="character" src="asset/sniper.xml#asset" ></asset>
+                        </asset>
+
+                    </asset>
+
+                </asset>
+
+            </asset>
+
+            <asset name="leftArm" src="template.xml#skinnedCharacter" style="transform: rotateX(90deg) translateY(3px) scale3d(0.1,0.1,0.1) ">
+                <assetdata name="config" >
+                    <float class="keySniper2" name="animKey">0.0</float>
+                </assetdata>
+                <asset name="character" src="asset/sniper.xml#asset" ></asset>
+            </asset>
+
+            <asset name="rightArm" src="template.xml#skinnedCharacter" style="transform: rotateX(90deg) translateY(3px) scale3d(0.1,0.1,0.1) ">
+                <assetdata name="config" >
+                    <float class="keySniper3" name="animKey">0.0</float>
+                </assetdata>
+                <asset name="character" src="asset/sniper.xml#asset" ></asset>
+            </asset>
+
+        </model>
+
+    </xml3d>
+
+    <div class="description">
+      So I heard you like Snipers.<br>
+      This is a demonstration of <b>recursive assets</b> where the Sniper model is used as hat for another Sniper.<br>
+      <a href="http://www.teamfortress.com/" >Team Fortress 2</a> model by <a href="https://developer.valvesoftware.com/wiki/Main_Page" >Valve</a> from
+      <a href="https://developer.valvesoftware.com/wiki/SDK_Installation" >Source SDK</a>.
+    </div>
+</div>
+</div>
+
+<script type="text/javascript">
+/* Run timer for wave animation */
+var mytime = 0;
+var lastTime = Date.now();
+
+var docAnims = {
+  "keySniper1" : {max: 3.375, off: 0, factor: 0.2},
+  "keySniper2" : {max: 3.375, off: 2, factor: 0.8},
+  "keySniper3" : {max: 3.375, off: 1, factor: 2},
+  "keySniper4" : {max: 3.375, off: 3, factor: 1.2},
+  "keySniper5" : {max: 3.375, off: 0.5, factor: 2}
+}
+var reqAniFrame = (window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame).bind(window);
+
+
+function updateAnim() {
+  var diff = Date.now() - lastTime;
+  lastTime = Date.now();
+  mytime += diff / 1200;
+  for(var id in docAnims){
+    var entry = docAnims[id];
+    var value = (mytime * entry.factor + entry.off) % entry.max;
+    $("." + id).text(value);
+  }
+  reqAniFrame(updateAnim);
+}
+reqAniFrame(updateAnim);
+</script>
+</body>
+</html>

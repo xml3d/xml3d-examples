@@ -13,6 +13,8 @@ var EXAMPLE_LIST = [
 
     {cat: "basic", name: "Assets", href: "examples/assets/assets.html",
         info: "Demonstrates the use of assets to include 3D models in your scene."},
+    {cat: "basic", name: "Recursive Assets", href: "examples/recursiveAsset/recursive.html",
+        info: "Demonstrates the recursive embedding of assets to customize complex models."},
     {cat: "basic", name: "Directional Light", href: "examples/directionalLight/index.html",
         info: "Demonstrates the directional light shader."},
     {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.html",

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xml3d xmlns="http://www.xml3d.org/2009/xml3d" >
+
+    <dataflow id="transformDF" out="boneXform, bonePoseXform" >
+        <int    param="true" name="boneParent" ></int>
+        <float3 param="true" name="bindTranslation" ></float3>
+        <float4 param="true" name="bindRotation" ></float4>
+
+        <float3 param="true" name="translation" ></float3>
+        <float4 param="true" name="rotation" ></float4>
+        <float  param="true" name="animKey" >0</float>
+        <compute>
+            bindPose = xflow.createTransformInv({translation: bindTranslation, rotation: bindRotation});
+            bindPose = xflow.forwardKinematicsInv(boneParent, bindPose);
+
+            rot = xflow.slerpSeq(rotation, animKey);
+            trans = xflow.lerpSeq(translation, animKey);
+            pose = xflow.createTransform({translation: trans, rotation: rot});
+            bonePoseXform = xflow.forwardKinematics(boneParent, pose);
+            boneXform = xflow.mul(bindPose, bonePoseXform);
+        </compute>
+    </dataflow>
+
+    <dataflow id="skinningDF" out="position, normal">
+        <float3 param="true" name="position" ></float3>
+        <float3 param="true" name="normal" ></float3>
+        <int4   param="true" name="boneIdx" ></int4>
+        <float4 param="true" name="boneWeight" ></float4>
+
+        <float4x4    param="true" name="boneXform" ></float4x4>
+        <compute>
+            normal = xflow.skinDirection(normal, boneIdx, boneWeight, boneXform);
+            position = xflow.skinPosition(position, boneIdx, boneWeight, boneXform);
+        </compute>
+    </dataflow>
+
+    <asset id="skinnedCharacter" >
+
+        <assetdata name="config" >
+            <float name="animKey" >0</float>
+             <!--
+                May include:
+
+                float3 translation
+                float4 rotation
+             -->
+        </assetdata>
+
+        <asset name="character" >
+            <assetdata  name="boneXform"
+                        compute="dataflow['#transformDF']"
+                        includes="bones, defaultAnim, parent.config" >
+
+            </assetdata>
+            <assetdata  name="base"
+                        compute="dataflow['#skinningDF']"
+                        includes="boneXform">
+                <!--
+                    Should include:
+
+                    float3 position
+                    float3 normal
+                    int4 boneIdx
+                    float4 boneWeight
+                 -->
+            </assetdata>
+            <assetdata name="bones" >
+                <!--
+                    Should include:
+
+                    int boneParent
+                    float3 bindTranslation
+                    float4 bindRotation
+                    int hatBoneIndex
+                 -->
+                 <int name="hatBoneIndex" >0</int>
+                 <int name="leftArmBoneIndex" >0</int>
+                 <int name="rightArmBoneIndex" >0</int>
+            </assetdata>
+            <assetdata name="defaultAnim" >
+                 <!--
+                    Should include:
+
+                    float3 translation
+                    float4 rotation
+                 -->
+            </assetdata>
+        </asset>
+
+        <asset name="hat" >
+            <assetdata name="_postTransform"
+                       includes="parent.character.boneXform"
+                       compute="transform = xflow.get(bonePoseXform, hatBoneIndex)">
+            </assetdata>
+        </asset>
+
+
+        <asset name="leftArm" >
+            <assetdata name="_postTransform"
+                       includes="parent.character.boneXform"
+                       compute="transform = xflow.get(bonePoseXform, leftArmBoneIndex)">
+            </assetdata>
+        </asset>
+
+        <asset name="rightArm" >
+            <assetdata name="_postTransform"
+                       includes="parent.character.boneXform"
+                       compute="transform = xflow.get(bonePoseXform, rightArmBoneIndex)">
+            </assetdata>
+        </asset>
+
+    </asset>
+  
+</xml3d>
