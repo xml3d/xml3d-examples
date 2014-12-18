@@ -6,6 +6,7 @@ float4x4,
 int,
 int4,
 bool,
+xml3d image,
 script  {
    display: none;
 }
