@@ -6,31 +6,13 @@
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/shade.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
     <script type="text/javascript" src="../../script/foundation.min.js"></script>
 
     <script type="text/javascript" src="../../script/page.js"></script>
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/shade.js"></script>
-    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
-
-    <script type="text/javascript">
-        window.addEventListener('load', function() {
-            var controller = new XMOT.ExamineController(document.getElementById("viewGroup"),
-                {revolveAroundPoint: new XML3DVec3(0,2,0), dollySpeed: 40, sceneRadius : 4} );
-            var xml3d = document.getElementById("MyXml3d");
-            xml3d.addEventListener("mousedown", function(e) {
-                controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
-                e.preventDefault();
-            }, false);
-            window.addEventListener("mouseup", function() {
-                controller.stop();
-            }, false);
-            window.addEventListener("mousemove", function(e) {
-                controller.doAction({x: e.clientX, y: e.clientY});
-            }, false);
-        }, false);
-    </script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 
     <title>XML3D Examples</title>
 
@@ -40,6 +22,7 @@
 <div id="overall">
     <div id="content">
         <xml3d class="canvas" id="MyXml3d">
+            <navigation revolveAround="0 2 0"></navigation>
             <defs>
                  <script id="screenMaterial" type="text/shade-javascript">
                      // Inspired by https://www.shadertoy.com/view/Xsl3zf
@@ -75,8 +58,8 @@ function shade(env) {
                 </lightshader>
                 <shader id="screenMaterialInstance" script="#screenMaterial">
                     <float name="time">20.0</float>
-                    <texture name="wt">
-                        <video id="webcam" src="../video/Firefox.ogv" autoplay="true"></video>
+                    <texture name="wt" filterMin="linear" filterMag="linear" wrapS="clamp" wrapT="clamp">
+                        <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay="true"></video>
                     </texture>
                 </shader>
             </defs>

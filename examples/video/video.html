@@ -3,6 +3,7 @@
   <head>
       <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
       <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
       <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
 
       <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
@@ -48,18 +49,22 @@
             <shader id="ex4_2_texShader" script="urn:xml3d:shader:phong">
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
-              <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
-                <video src="Firefox.ogv" id="myvideo" autoplay="true"></video>
+              <texture name="diffuseTexture" filterMin="linear" filterMag="linear"  wrapS="clamp" wrapT="clamp">
+                <video src="../../resources/videos/nescafe.mp4" id="myvideo" autoplay loop></video>
               </texture>
             </shader>
             <transform id="myxfm" rotation="1 0 1 0"></transform>
           </defs>
-          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldOfView="0.7854" ></view>
+          <view id="myview" position="0 0 -8" orientation="0 1 0 3.14159" fieldOfView="0.7854" ></view>
           <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
             <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
           </group>
         </xml3d>
       </div>
+    </div>
+
+    <div class="description">
+        Video Source: <a href="https://archive.org/details/movies">link</a>
     </div>
   </body>
 </html>
