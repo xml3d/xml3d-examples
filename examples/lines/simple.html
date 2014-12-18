@@ -27,16 +27,25 @@
                 <float3 name="diffuseColor">0 0 0</float3>
                 <bool name="useVertexColor">false</bool>
             </shader>
-            <data id="lineData">
-                 <int name="index">0 1 2 3 0 4 5 6 7 4 0 4 1 5 2 6 3 7</int>
+            <data id="baseData">
                  <int name="vertexCount">5 5 2 2 2 2</int>
+                 <float3 name="position">-1 1 1 1 1 1 1 1 -1 -1 1 -1 -1 1 1 -1 -1 1 1 -1 1 1 -1 -1 -1 -1 -1 -1 -1 1 -1 1 1 -1 -1 1 1 1 1 1 -1 1 1 1 -1 1 -1 -1 -1 1 -1  -1 -1 -1</float3>
+                 <float3 name="color">1 0 0 1 0 0 1 1 0 1 1 0 0 1 0 0 1 0 0 0 1 0 0 1  1 0 0 1 0 0 1 0 0  1 0 0  1 0 0  1 0 0  1 0 0  1 0 0  1 0 0  1 0 0</float3>
+            </data>
+            <data id="lineDataIndexed">
+                 <data src="#baseData"></data>
+                 <int name="index">0 1 2 3 0 4 5 6 7 4 0 4 1 5 2 6 3 7</int>
                  <float3 name="position"> -1 1 1 1 1 1 1 1 -1 -1 1 -1 -1 -1 1 1 -1 1 1 -1 -1 -1 -1 -1 </float3>
                  <float3 name="color">1 0 0 1 0 0 1 1 0 1 1 0 0 1 0 0 1 0 0 0 1 0 0 1 </float3>
+            </data>
+            <data id="lineData">
+                 <data src="#baseData"></data>
             </data>
         </defs>
         <view position="0 0 10" id="defaultView"></view>
         <group shader="#lineShader">
-            <mesh src="#lineData" type="linestrips"></mesh>
+            <mesh style="transform: translate3d(-1.5,0,0);" src="#lineData" type="linestrips"></mesh>
+            <mesh style="transform: translate3d(1.5,0,0);" src="#lineDataIndexed" type="linestrips"></mesh>
         </group>
     </xml3d>
                 <div class="controls" >
