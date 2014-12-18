@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (20.11.2014 15:17:53 GMT+0100)
+@version: 4.8.0
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = 'DEVELOPMENT SNAPSHOT (20.11.2014 15:17:53 GMT+0100)';
+XML3D.version = '4.8.0';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -1852,7 +1852,7 @@ window.requestAnimFrame = (function(){
         if (typeof other == 'string')
             other = new URI(other);
 
-        if (this.scheme == "blob") {
+        if (this.scheme == "blob" || this.scheme == "data") {
             return true;
         }
 
@@ -2124,7 +2124,7 @@ window.requestAnimFrame = (function(){
      */
 
     function hasWebCLNamespace() {
-        WebCLNamespaceAvailable = window.WebCL && WebCL.getPlatforms;
+        WebCLNamespaceAvailable = window.webcl && webcl.getPlatforms;
 
         return WebCLNamespaceAvailable;
 
@@ -2142,7 +2142,7 @@ window.requestAnimFrame = (function(){
         OpenCLDriversAvailable = true;
 
         try {
-            platArr = WebCL.getPlatforms();
+            platArr = webcl.getPlatforms();
         } catch (e) {
             OpenCLDriversAvailable = false;
         }
@@ -2194,7 +2194,7 @@ window.requestAnimFrame = (function(){
         devices = getDevicesByType(type || DEFAULT_DEVICE);
 
         // Creating default context
-        ctx = createContext({devices: devices});
+        ctx = createContext(devices);
 
         return true;
     }
@@ -2208,7 +2208,7 @@ window.requestAnimFrame = (function(){
 
     function getPlatforms() {
         if(platforms.length === 0) {
-            platforms = WebCL.getPlatforms();
+            platforms = webcl.getPlatforms();
         }
 
         return platforms;
@@ -2234,11 +2234,11 @@ window.requestAnimFrame = (function(){
 
         try {
             if (type === "CPU") {
-                deviceArr = platform.getDevices(WebCL.DEVICE_TYPE_CPU);
+                deviceArr = platform.getDevices(webcl.DEVICE_TYPE_CPU);
             } else if (type === "GPU") {
-                deviceArr = platform.getDevices(WebCL.DEVICE_TYPE_GPU);
+                deviceArr = platform.getDevices(webcl.DEVICE_TYPE_GPU);
             } else if (type === "ALL") {
-                deviceArr = platform.getDevices(WebCL.DEVICE_TYPE_ALL);
+                deviceArr = platform.getDevices(webcl.DEVICE_TYPE_ALL);
             }
 
         } catch (e) {
@@ -2299,7 +2299,7 @@ window.requestAnimFrame = (function(){
         }
 
         try {
-            platform = device.getInfo(WebCL.DEVICE_PLATFORM);
+            platform = device.getInfo(webcl.DEVICE_PLATFORM);
         } catch (e) {
             var errCode = getErrorCodeFromCLError(e);
 
@@ -2328,7 +2328,7 @@ window.requestAnimFrame = (function(){
         }
 
         try {
-            deviceArr = clCtx.getInfo(WebCL.CONTEXT_DEVICES);
+            deviceArr = clCtx.getInfo(webcl.CONTEXT_DEVICES);
         }catch(e) {
             errCode = getErrorCodeFromCLError(e);
 
@@ -2352,14 +2352,15 @@ window.requestAnimFrame = (function(){
      */
 
     function createContext(properties) {
+      /*
         var props = {
             devices: getDevicesByType(DEFAULT_DEVICE)
             }, context;
 
-        XML3D.extend(props, properties);
+        XML3D.extend(props, properties);*/
 
         try {
-            context = WebCL.createContext(props);
+            var context = webcl.createContext(properties);
         } catch (e) {
             var errCode = getErrorCodeFromCLError(e);
 
@@ -2449,7 +2450,7 @@ window.requestAnimFrame = (function(){
                 throw e;
             }
             throw new WebCLError(getCLErrorName(errCode),
-                program.getBuildInfo(deviceArr[0], WebCL.CL_PROGRAM_BUILD_LOG));
+                program.getBuildInfo(deviceArr[0], WebCL.PROGRAM_BUILD_LOG));
         }
 
         return program;
@@ -2557,11 +2558,11 @@ window.requestAnimFrame = (function(){
 
         try {
             if (type === "r") {
-                return clCtx.createBuffer(WebCL.CL_MEM_READ_ONLY, size);
+                return clCtx.createBuffer(webcl.MEM_READ_ONLY, size);
             } else if (type === "w") {
-                return clCtx.createBuffer(WebCL.CL_MEM_WRITE_ONLY, size);
+                return clCtx.createBuffer(webcl.MEM_WRITE_ONLY, size);
             } else if (type === "rw") {
-                return clCtx.createBuffer(WebCL.CL_MEM_READ_WRITE, size);
+                return clCtx.createBuffer(webcl.MEM_READ_WRITE, size);
             } else {
                 XML3D.debug.logError("WebCL API: createBuffer(): Unknown buffer type:", type);
                 return false;
@@ -2707,7 +2708,7 @@ window.requestAnimFrame = (function(){
                     return false;
                 }
 
-                nKernelArgs = kernel.getInfo(WebCL.CL_KERNEL_NUM_ARGS);
+                nKernelArgs = kernel.getInfo(webcl.KERNEL_NUM_ARGS);
 
                 if (inputArgs.length > nKernelArgs) {
                     XML3D.debug.logWarning("WebCL: setArgs: Input args amount > kernel program args amount! Ignoring extra arguments.");
@@ -2716,7 +2717,7 @@ window.requestAnimFrame = (function(){
                     return false;
                 }
 
-                XML3D.debug.logDebug("Args for kernel:", kernel.getInfo(WebCL.KERNEL_FUNCTION_NAME));
+                XML3D.debug.logDebug("Args for kernel:", kernel.getInfo(webcl.KERNEL_FUNCTION_NAME));
 
                 i = nKernelArgs;
 
@@ -10786,10 +10787,11 @@ if(typeof(exports) !== 'undefined') {
      *                            Listeners will be called with event as the first and video as the second parameter.
      * @return {HTMLVideoElement}
      */
-    ResourceManager.prototype.getVideo = function(uri, autoplay, listeners) {
+    ResourceManager.prototype.getVideo = function(uri, autoplay, loop, listeners) {
         // we use canvasId 0 to represent videos loaded in a document
         getOrCreateCounterObject(0).counter++;
 
+        // FIXME: Creating configured video, play/pause won't work
         var video = document.createElement("video");
 
         function loadCompleteCallback(event) {
@@ -10802,6 +10804,7 @@ if(typeof(exports) !== 'undefined') {
         }
 
         video.autoplay = autoplay;
+        video.loop = loop;
 
         function createCallback(listener) {
             return function(event) {
@@ -10818,7 +10821,7 @@ if(typeof(exports) !== 'undefined') {
 
         video.src = uri.toString(); // here loading starts
         return video;
-    }
+    };
 
     XML3D.base.resourceManager = new ResourceManager();
 
@@ -11279,7 +11282,8 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             eh.notify(n);
         }
 
-        var handler = eh && eh.handlers[e.attrName];
+        var isHTML = e.target instanceof HTMLElement;
+        var handler = eh && eh.handlers[isHTML ? e.attrName.toLowerCase() : e.attrName];
         if(!handler)
             return;
 
@@ -11467,7 +11471,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
                     if (config[prop].a !== undefined) {
                         var attrName = config[prop].id || prop;
                         var handler = new config[prop].a(attrName, config[prop].params);
-                        handlers[attrName] = handler;
+                        handlers[isHTML ? attrName.toLowerCase() : attrName] = handler;
                         if(proto) {
                             try {
                                 Object.defineProperty(proto, prop, handler.desc);
@@ -11501,7 +11505,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
                 if(prop =="_cache") continue;
                 if(config[prop] && config[prop].a !== undefined){
                     var attrName = config[prop].id || prop;
-                    var handler = this.handlers[attrName];
+                    var handler = this.handlers[isHTML ? attrName.toLowerCase() : attrName];
                     handler.init && handler.init(elem, this.storage);
                     delete elem[prop];
                 }
@@ -11515,7 +11519,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
                 }
                 else if (config[prop].a !== undefined){
                     var attrName = config[prop].id || prop;
-                    var handler = this.handlers[attrName];
+                    var handler = this.handlers[isHTML ? attrName.toLowerCase() : attrName];
                     handler.init && handler.init(elem, this.storage);
                     try {
                         Object.defineProperty(elem, prop, handler.desc);
@@ -11666,7 +11670,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
     handler.IDHandler = function(id) {
         this.setFromAttribute = function(value, prevValue, elem) {
             XML3D.base.resourceManager.notifyNodeIdChange(elem, prevValue, value);
-        }
+        };
         this.desc = {
             get : function() {
                 return this.getAttribute(id) || "";
@@ -11734,7 +11738,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             storage[id] = null;
             if (elem.hasAttribute(id))
                 this.setFromAttribute(elem.getAttribute(id), null, elem, storage);
-        }
+        };
 
         this.setFromAttribute = function(value, prevValue, elem, storage) {
             if(storage[id] != null)
@@ -11772,7 +11776,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             storage[id] = defaultValue;
             if (elem.hasAttribute(id))
                 this.setFromAttribute(elem.getAttribute(id), null, elem, storage);
-        }
+        };
 
         this.setFromAttribute = function(value, prevValue, elem, storage) {
             var v = value.match(/^\d+/);
@@ -11816,7 +11820,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             storage[id] = defaultValue;
             if (elem.hasAttribute(id))
                 this.setFromAttribute(elem.getAttribute(id), null, elem, storage);
-        }
+        };
 
         this.setFromAttribute = function(value, prevValue, elem, storage) {
             var v = +value;
@@ -11855,7 +11859,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             storage[id] = defaultValue;
             if (elem.hasAttribute(id))
                 this.setFromAttribute(elem.getAttribute(id), null, elem, storage);
-        }
+        };
         this.setFromAttribute = function(value, prevValue, elem, storage) {
             storage[id] = string2bool(value + '');
             return false;
@@ -11880,7 +11884,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
 
         this.init = function(elem, storage){
             storage[id] = null;
-        }
+        };
 
         this.initVec3 = function(elem, storage, x, y, z){
             var changed = function(value) {
@@ -11898,7 +11902,6 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             var m = /^\s*(\S+)\s+(\S+)\s+(\S+)\s*$/.exec(value);
             if (!m || isNaN(+m[1]) || isNaN(+m[2]) || isNaN(+m[3])) {
                 v._data.set(d);
-                !initializing && elem.setAttribute(id, prevValue);
                 !initializing && XML3D.debug.logWarning("Invalid attribute ["+id+"] value: " + value, elem);
             } else {
                 v._data[0] = +m[1];
@@ -11928,7 +11931,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
 
         this.init = function(elem, storage){
             storage[id] = null;
-        }
+        };
 
         this.initRotation = function(elem, storage){
             var changed = function(v) {
@@ -11950,7 +11953,6 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
                 v._axis._data[2] = d[2];
                 v._angle = d[3];
                 v._updateQuaternion();
-                !initializing && elem.setAttribute(id, prevValue);
                 !initializing && XML3D.debug.logWarning("Invalid attribute ["+id+"] value: " + value, elem);
             } else {
                 v._axis._data[0] = +m[1];
@@ -11980,7 +11982,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
     var mixedContent = function(handler) {
         handler.init = function(elem, storage){
             elem._configured.registerMixed();
-        }
+        };
         handler.desc = {
             get : function() {
                 XML3D._flushDOMChanges();
@@ -12059,7 +12061,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
         this.init = function(elem, storage){
             if (elem.hasAttribute(id))
                 this.setFromAttribute(elem.getAttribute(id), null, elem, storage);
-        }
+        };
 
         this.setFromAttribute = function(value, prevValue, elem, storage) {
             elem._configured.canvas.setAttribute(id, value);
@@ -12079,7 +12081,7 @@ if (!MutationObserver && navigator.userAgent.indexOf("WebKit") != -1) {
             canvas.className = "_xml3d"; // Class name always defined for xml3d canvas
             if (elem.hasAttribute(id))
                 this.setFromAttribute(elem.getAttribute(id), null, elem, storage);
-        }
+        };
 
         this.setFromAttribute = function(value, prevValue, elem, storage) {
             var canvas = elem._configured.canvas;
@@ -14193,7 +14195,7 @@ function initWebCLPlatform(graph) {
 
         // Creating a new WebCL context
         try {
-            clCtx = webcl.createContext({devices: clDevices});
+            clCtx = webcl.createContext(clDevices);
         } catch (e) {
             return false;
         }
@@ -16310,9 +16312,11 @@ Xflow.VertexShader.prototype.getGLSLCode = function(){
             return;
         }
 
-        //TODO: Add better platform selection logic: Apply forced platform attribute value from Xml3D Data/Dataflow adapter
+        //TODO: Improve platform selection logic.
+        // Currently we use forced platform if graph platform is something other than JavaScript
+        // and forced platform (owner._platform) is defined
 
-        platform = graph.platform;
+        platform = owner._platform !== null && graph.platform !== Xflow.PLATFORM.JAVASCRIPT ? owner._platform : graph.platform;
 
         channelNode.platform = platform;
     }
@@ -18444,9 +18448,49 @@ function initOperator(operator){
                         this.type = "int";
                     }
                         break;
+                    case xflowDataTypes.INT4:
+                    {
+                        helperMap = helperParamMap.buffer;
+                        this.type = "int4*";
+                        addressSpace = "__global";
+                        this.needsMemObject = true;
+                    }
+                        break;
                     case xflowDataTypes.FLOAT:
                     {
                         this.type = "float";
+                    }
+                        break;
+                    case xflowDataTypes.FLOAT2:
+                    {
+                        helperMap = helperParamMap.buffer;
+                        this.type = "float2*";
+                        addressSpace = "__global";
+                        this.needsMemObject = true;
+                    }
+                        break;
+                    case xflowDataTypes.FLOAT3:
+                    {
+                        helperMap = helperParamMap.buffer;
+                        this.type = "float*";
+                        addressSpace = "__global";
+                        this.needsMemObject = true;
+                    }
+                        break;
+                    case xflowDataTypes.FLOAT4:
+                    {
+                        helperMap = helperParamMap.buffer;
+                        this.type = "float4*";
+                        addressSpace = "__global";
+                        this.needsMemObject = true;
+                    }
+                        break;
+                    case xflowDataTypes.FLOAT4X4:
+                    {
+                        helperMap = helperParamMap.buffer;
+                        this.type = "float16*";
+                        addressSpace = "__global";
+                        this.needsMemObject = true;
                     }
                         break;
                     default:
@@ -18493,6 +18537,32 @@ function initOperator(operator){
                         helperVal = self.entryValue.height;
                     } else if (p === "length") {
                         helperVal = self.entryValue.length;
+                        var type = self.xflowType;
+                        switch (type) {
+                        case Xflow.DATA_TYPE.FLOAT2:
+                        {
+                            helperVal = helperVal / 2;
+                        }
+                            break;
+                        case Xflow.DATA_TYPE.FLOAT3:
+                        {
+                            helperVal = helperVal / 3;
+                        }
+                            break;
+                        case Xflow.DATA_TYPE.FLOAT4:
+                        case Xflow.DATA_TYPE.INT4:
+                        {
+                            helperVal = helperVal / 4;
+                        }
+                            break;
+                        case Xflow.DATA_TYPE.FLOAT4X4:
+                        {
+                            helperVal = helperVal / 16;
+                        }
+                            break;
+                        default:
+                            break;
+                        }
                     }
                     self.helpers.push(new KernelParam(self.program, pName, null, helperMap.type, new Uint32Array([helperVal])));
                 });
@@ -18525,12 +18595,30 @@ function initOperator(operator){
                 this.arg.release();
             }
 
-            this.byteSize = byteSize;
+            this.byteSize = isNaN(byteSize) ? 1 : byteSize;
 
             if (this.xflowType === Xflow.DATA_TYPE.TEXTURE) { // Texture is a special case
                 memObjectSize = entryValue.width * entryValue.height * byteSize;
+                this.byteSize = 4;
             } else {
-                memObjectSize = entryValue.length * byteSize;
+                switch (this.xflowType) {
+                case Xflow.DATA_TYPE.INT4:
+                {
+                    memObjectSize = entryValue.length * Int32Array.BYTES_PER_ELEMENT;
+                }
+                    break;
+                case Xflow.DATA_TYPE.FLOAT2:
+                case Xflow.DATA_TYPE.FLOAT3:
+                case Xflow.DATA_TYPE.FLOAT4:
+                case Xflow.DATA_TYPE.FLOAT4x4:
+                {
+                    memObjectSize = entryValue.length * Float32Array.BYTES_PER_ELEMENT;
+                }
+                    break;
+                default:
+                    memObjectSize = entryValue.length * 4;
+                    break;
+                }
             }
 
             memObject = clAPI.createBuffer(memObjectSize, memObjectMode, clCtx);
@@ -18545,7 +18633,7 @@ function initOperator(operator){
 
         updateValue: function (entry) {
             if (this.hasMemObject) {
-                this.val = entry.data;
+                this.val = entry.data === undefined ? entry : entry.data;
                 this.entryValue = entry;
                 this.checkEntrySize();
             } else {
@@ -18563,7 +18651,14 @@ function initOperator(operator){
                     } else if (name.indexOf("height") !== -1) {
                         p.updateValue(new Uint32Array([self.entryValue.height]));
                     } else if (name.indexOf("length") !== -1) {
-                        p.updateValue(new Uint32Array([self.entryValue.length]));
+                        var len = self.entryValue.length;
+                        if (self.xflowType === Xflow.DATA_TYPE.FLOAT4 ||
+                            self.xflowType === Xflow.DATA_TYPE.INT4) {
+                            len = len / 4;
+                        } else if (self.xflowType === Xflow.DATA_TYPE.FLOAT4X4) {
+                            len = len / 16;
+                        }
+                        p.updateValue(new Uint32Array([len]));
                     }
                 });
         },
@@ -18573,6 +18668,13 @@ function initOperator(operator){
 
             if(this.xflowType === Xflow.DATA_TYPE.TEXTURE) {
                 newSize = entryVal.width * entryVal.height * this.byteSize;
+            } else if (this.xflowType === Xflow.DATA_TYPE.FLOAT2 ||
+                       this.xflowType === Xflow.DATA_TYPE.FLOAT3 ||
+                       this.xflowType === Xflow.DATA_TYPE.FLOAT4 ||
+                       this.xflowType === Xflow.DATA_TYPE.FLOAT4X4) {
+                newSize = entryVal.length * Float32Array.BYTES_PER_ELEMENT;  
+            } else if (this.xflowType === Xflow.DATA_TYPE.INT4) {
+                newSize = entryVal.length * Int32Array.BYTES_PER_ELEMENT;
             } else {
                 newSize = entryVal.length * this.byteSize;
             }
@@ -18829,7 +18931,7 @@ function initOperator(operator){
 
             codeLines.push("int " + firstInput.name + "_i = get_global_id(0);");
 
-            codeLines.push("if (int " + firstInput.name + "_i >= " + firstInput.name + "_length) return;");
+            codeLines.push("if (" + firstInput.name + "_i >= " + firstInput.name + "_length) return;");
         }
 
         return codeLines.join('\n');
@@ -18876,17 +18978,17 @@ function initOperator(operator){
                 len = inputMemObjs.length;
                 for (i = 0; i < len; i++) {
                     memObj = inputMemObjs[i];
-                    cmdQueue.enqueueWriteBuffer(memObj.arg, false, 0, memObj.arg.getInfo(WebCL.MEM_SIZE), memObj.val, []);
+                    cmdQueue.enqueueWriteBuffer(memObj.arg, false, 0, /*memObj.arg.getInfo(WebCL.MEM_SIZE)*/memObj.memObjectSize, memObj.val, []);
                 }
 
                 // Execute (enqueue) kernel
-                cmdQueue.enqueueNDRangeKernel(kernel, WSSizes[1].length, [], WSSizes[1], WSSizes[0], []);
+                cmdQueue.enqueueNDRangeKernel(kernel, WSSizes[1].length, [], WSSizes[1], WSSizes[0]);
 
                 // Read the result buffer from OpenCL device
                 len = outputMemObjs.length;
                 for (i = 0; i < len; i++) {
                     memObj = outputMemObjs[i];
-                    cmdQueue.enqueueReadBuffer(memObj.arg, false, 0, memObj.arg.getInfo(WebCL.MEM_SIZE), memObj.val, []);
+                    cmdQueue.enqueueReadBuffer(memObj.arg, false, 0, /*memObj.arg.getInfo(WebCL.MEM_SIZE)*/memObj.memObjectSize, memObj.val, []);
                 }
 
                 cmdQueue.finish(); //Finish all the operations
@@ -18954,8 +19056,27 @@ function initOperator(operator){
             globalWS = [Math.ceil(entryVal.width / localWS[0]) * localWS[0],
                 Math.ceil(entryVal.height / localWS[1]) * localWS[1]];
         } else {
+            var k = 1;
+            switch (targetInput.xflowType) {
+            case Xflow.DATA_TYPE.INT4:
+            case Xflow.DATA_TYPE.FLOAT4:
+            {
+                k = 4;
+            }
+                break;
+            case Xflow.DATA_TYPE.FLOAT3:
+            {
+                k = 3;
+            }
+                break;
+            case Xflow.DATA_TYPE.FLOAT4X4:
+            {
+                k = 16;
+            }
+                break;
+            }
             localWS = [16];
-            globalWS = [Math.ceil(entryVal.length / localWS[0]) * localWS[0]];
+            globalWS = [Math.ceil(entryVal.length / (localWS[0] * k)) * localWS[0]];
         }
 
         return [localWS, globalWS];
@@ -18963,6 +19084,7 @@ function initOperator(operator){
 
 
 }());
+
 Xflow.registerOperator("xflow.morph", {
     outputs: [{type: 'float3', name: 'result'}],
     params:  [
@@ -23038,7 +23160,7 @@ XML3D.data.AssetMeshAdapter.prototype.notifyChanged = function(evt) {
     VideoDataAdapter.prototype.createVideoFromURL = function(url) {
         var that = this;
         var uri = new XML3D.URI(url).getAbsoluteURI(this.node.ownerDocument.documentURI);
-        this.video = XML3D.base.resourceManager.getVideo(uri, this.node.autoplay,
+        this.video = XML3D.base.resourceManager.getVideo(uri, this.node.autoplay, this.node.loop,
             {
                 canplay : function(event, video) {
                     XML3D.util.dispatchCustomEvent(that.node, 'canplay', true, true, null);
@@ -23196,6 +23318,7 @@ XML3D.data.AssetMeshAdapter.prototype.notifyChanged = function(evt) {
     XML3D.data.VideoDataAdapter = VideoDataAdapter;
 
 }());
+
 // data/factory.js
 (function() {
     "use strict";
@@ -27990,6 +28113,7 @@ XML3D.webgl.stopEvent = function(ev) {
         this.vertexCount = null;
         this.minAttributeCount = -1;
         this.context.getStatistics().meshes++;
+        this.multiDraw = this.glType == WebGLRenderingContext.LINE_STRIP;
     };
 
     XML3D.extend(GLMesh.prototype, {
@@ -28009,12 +28133,12 @@ XML3D.webgl.stopEvent = function(ev) {
                 }
             }
             else if(this.vertexCount !== null){
-                if(cnt < this.vertexCount)
-                    throw new Error("VertexCount " + this.vertexCount +
+                if(cnt < this.vertexCount[0])
+                    throw new Error("VertexCount " + this.vertexCount[0] +
                         " is larger than element count " + cnt + " of attribute '" + name + "'");
             }
         },
-        removeBuffer: function(name, buffer){
+        removeBuffer: function(name){
             delete this.buffers[name];
         },
 
@@ -28057,7 +28181,7 @@ XML3D.webgl.stopEvent = function(ev) {
          */
         getVertexCount: function () {
             try {
-                return (this.vertexCount != null ? this.vertexCount : this.minAttributeCount );
+                return (this.vertexCount != null ? this.vertexCount[0] : this.minAttributeCount );
             } catch (e) {
                 //XML3D.debug.logError("Could not calculate vertex count.", e);
                 return 0;
@@ -28071,55 +28195,65 @@ XML3D.webgl.stopEvent = function(ev) {
             var gl = this.context.gl,
                 sAttributes = program.attributes,
                 buffers = this.buffers,
-                triCount = 0;
+                triCount = 0, j = 0, offset = 0;
+
+            var vertexAttributeNames = Object.keys(program.attributes);
+            var enabledLocations = [];
 
             //Bind vertex buffers
-            for (var name in sAttributes) {
-                var shaderAttribute = sAttributes[name];
-                var buffer = buffers[name];
+            for (var i = 0; i < vertexAttributeNames.length; i++) {
+                var shaderAttribute = sAttributes[vertexAttributeNames[i]];
+                var buffer = buffers[vertexAttributeNames[i]];
                 if (!buffer) {
                     continue;
                 }
-                gl.enableVertexAttribArray(shaderAttribute.location);
+                var location = shaderAttribute.location;
+                gl.enableVertexAttribArray(location);
+                enabledLocations.push(location);
+
                 gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
                 gl.vertexAttribPointer(shaderAttribute.location, buffer.tupleSize, buffer.glType, false, 0, 0);
             }
 
+
+
+
             //Draw the object
             if (this.isIndexed) {
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.index);
+                var indexBuffer = buffers.index;
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
 
-                if (this.segments) {
-                    //This is a segmented mesh (eg. a collection of disjunct line strips)
-                    var offset = 0;
-                    var sd = this.segments.value;
-                    for (var j = 0; j < sd.length; j++) {
-                        gl.drawElements(this.glType, sd[j], gl.UNSIGNED_SHORT, offset);
-                        offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
-                    }
+                if (this.multiDraw && this.vertexCount) {
+                      offset = 0;
+                      for (j = 0; j < this.vertexCount.length; j++) {
+                          var count = this.vertexCount[j];
+                          gl.drawElements(this.glType, count, indexBuffer.glType, offset * indexBuffer.bytesPerElement);
+                          offset += count;
+                      }
                 } else {
-                    gl.drawElements(this.glType, this.getElementCount(), buffers.index.glType, 0);
+                        gl.drawElements(this.glType, this.getElementCount(), indexBuffer.glType, 0);
                 }
                 triCount = this.getElementCount() / 3;
-            } else {
-                if (this.size) {
-                    var offset = 0;
-                    var sd = this.size.data;
-                    for (var j = 0; j < sd.length; j++) {
-                        gl.drawArrays(this.glType, offset, sd[j]);
-                        offset += sd[j] * 2; //GL size for UNSIGNED_SHORT is 2 bytes
-                    }
+            } else { // not indexed
+                 if (this.multiDraw && this.vertexCount) {
+                      offset = 0;
+                      for (j = 0; j < this.vertexCount.length; j++) {
+                          var count = this.vertexCount[j];
+                          gl.drawArrays(this.glType, offset, count);
+                          offset += count;
+                      }
                 } else {
-                    // console.log("drawArrays: " + mesh.getVertexCount());
-                    gl.drawArrays(this.glType, 0, this.getVertexCount());
-                }
-                triCount = this.getVertexCount();
+                     gl.drawArrays(this.glType, 0, this.getVertexCount());
+                     triCount = this.getVertexCount();
+                 }
             }
 
+
+
+
             //Unbind vertex buffers
-            for (var name in sAttributes) {
-                var shaderAttribute = sAttributes[name];
-                gl.disableVertexAttribArray(shaderAttribute.location);
+            for (i = 0; i < enabledLocations.length; i++) {
+                gl.disableVertexAttribArray(enabledLocations[i]);
             }
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
@@ -28171,6 +28305,7 @@ XML3D.webgl.stopEvent = function(ev) {
         var bufferData = data;
         var glType = gl.UNSIGNED_INT;
 
+        // Downgrade buffer if possible or required
         if(maxIndex < (1 << 8)) {
             glType = gl.UNSIGNED_BYTE;
             bufferData = new Uint8Array(data);
@@ -28188,6 +28323,7 @@ XML3D.webgl.stopEvent = function(ev) {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
         buffer.length = data.length;
         buffer.glType = glType;
+        buffer.bytesPerElement = bufferData.BYTES_PER_ELEMENT;
         return buffer;
     };
 
@@ -31810,6 +31946,7 @@ XML3D.webgl.stopEvent = function(ev) {
     MESH_PARAMETERS[WebGLRenderingContext.LINE_STRIP] = MESH_PARAMETERS[WebGLRenderingContext.TRIANGLES];
     MESH_PARAMETERS[WebGLRenderingContext.LINES] = MESH_PARAMETERS[WebGLRenderingContext.TRIANGLES];
     MESH_PARAMETERS[WebGLRenderingContext.POINTS] = MESH_PARAMETERS[WebGLRenderingContext.TRIANGLES];
+    MESH_PARAMETERS[WebGLRenderingContext.TRIANGLE_STRIP] = MESH_PARAMETERS[WebGLRenderingContext.TRIANGLES];
 
 
     /**
@@ -32054,7 +32191,7 @@ XML3D.webgl.stopEvent = function(ev) {
             var dataResult = this.typeRequest.getResult();
 
             var entry = dataResult.getOutputData("vertexCount");
-            this.mesh.setVertexCount(entry && entry.getValue() ? entry.getValue()[0] : null);
+            this.mesh.setVertexCount(entry ? entry.getValue() :  null);
             this.typeDataValid = true;
         },
         /**
