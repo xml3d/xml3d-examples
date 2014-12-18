@@ -106,10 +106,10 @@ span.info {
     /*float: left;*/
 /*}*/
 
-.controls::before {
+/*.controls::before {
     font-weight: bolder;
     content: "Options";
- }
+ }*/
 
 .controls {
     position: fixed;

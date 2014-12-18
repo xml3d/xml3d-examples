@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
+    <title>XML3D Examples - EDF Line Strips</title>
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+
+    <xml3d activeView="#defaultView" class="xml3d">
+        <navigation revolveAround="202 200 200" speed="100"></navigation>
+        <defs>
+            <shader id="lineShader" script="urn:xml3d:shader:flat">
+                <float3 name="diffuseColor">1 1 1</float3>
+                <bool name="useVertexColor">true</bool>
+            </shader>
+        </defs>
+        <view position='202 200 1400' orientation="0 0 1 1.57"  id="defaultView"></view>
+        <group shader="#lineShader">
+            <mesh src="edf-strips.json" type="linestrips"></mesh>
+        </group>
+    </xml3d>
+                <div class="controls" >
+            <div class="option">
+                <label for="check">Vertex Colors</label>
+                <input type="checkbox" id="check" checked/>
+            </div>
+        </div>
+
+        <div class="description">
+            A collection of lines visualizing the result of a flow simulation. Dataset by kind courtesy of EDF R&amp;D.
+        </div>
+    </div>
+    <script>
+        $(function() {
+			$( "#check" ).button().click(function(e) {
+				var shouldVertexColor = e.target.checked;
+                if (shouldVertexColor) {
+                    $("#lineShader *[name=diffuseColor]").text("1 1 1");
+                    $("#lineShader *[name=useVertexColor]").text("true");
+                } else {
+                    $("#lineShader *[name=diffuseColor]").text("0.2 0.2 0.2");
+                    $("#lineShader *[name=useVertexColor]").text("false");
+                }
+			});
+		});
+    </script>
+</div>
+</body>
+</html>

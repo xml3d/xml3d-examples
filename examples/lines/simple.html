@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
+    <title>XML3D Examples - Linestrips Simple</title>
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+
+    <xml3d activeView="#defaultView" class="xml3d">
+        <defs>
+            <shader id="lineShader" script="urn:xml3d:shader:flat">
+                <float3 name="diffuseColor">0 0 0</float3>
+                <bool name="useVertexColor">false</bool>
+            </shader>
+            <data id="lineData">
+                 <int name="index">0 1 2 3 0 4 5 6 7 4 0 4 1 5 2 6 3 7</int>
+                 <int name="vertexCount">5 5 2 2 2 2</int>
+                 <float3 name="position"> -1 1 1 1 1 1 1 1 -1 -1 1 -1 -1 -1 1 1 -1 1 1 -1 -1 -1 -1 -1 </float3>
+                 <float3 name="color">1 0 0 1 0 0 1 1 0 1 1 0 0 1 0 0 1 0 0 0 1 0 0 1 </float3>
+            </data>
+        </defs>
+        <view position="0 0 10" id="defaultView"></view>
+        <group shader="#lineShader">
+            <mesh src="#lineData" type="linestrips"></mesh>
+        </group>
+    </xml3d>
+                <div class="controls" >
+            <div class="option">
+                <label for="check">Vertex Colors</label>
+                <input type="checkbox" id="check" />
+            </div>
+        </div>
+
+        <div class="description">
+            A simple examples for primitive type <b>line strips</b>.
+        </div>
+    </div>
+    <script>
+        $(function() {
+			$( "#check" ).button().click(function(e) {
+				var shouldVertexColor = e.target.checked;
+                if (shouldVertexColor) {
+                    $("#lineShader *[name=diffuseColor]").text("1 1 1");
+                    $("#lineShader *[name=useVertexColor]").text("true");
+                } else {
+                    $("#lineShader *[name=diffuseColor]").text("0 0 0");
+                    $("#lineShader *[name=useVertexColor]").text("false");
+                }
+			});
+		});
+    </script>
+</div>
+</body>
+</html>

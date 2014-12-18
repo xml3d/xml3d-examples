@@ -27,6 +27,10 @@ var EXAMPLE_LIST = [
         info: "Demonstrates webcam as a source of a video texture."},
     {cat: "basic", name: "Canvas Resizing", href: "examples/canvasresizing/resizing.html",
         info: "Demonstrates dynamic canvas resizing through an attached jQuery UI widget."},
+    {cat: "basic", name: "Line Strips Simple", href: "examples/lines/simple.html",
+        info: "Demonstrates a simple line strip."},
+    {cat: "basic", name: "Line Strips Large", href: "examples/lines/edf-vtk.html",
+        info: "Demonstrates a larger line strip."},
     {cat: "basic", name: "Script Value", href: "examples/scriptValue/scriptValue.html",
         info: "Demonstrates efficient data update with TypedArrays and setScriptValue."},
 
