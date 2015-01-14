@@ -33,6 +33,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates a larger line strip."},
     {cat: "basic", name: "Script Value", href: "examples/scriptValue/scriptValue.html",
         info: "Demonstrates efficient data update with TypedArrays and setScriptValue."},
+    {cat: "basic", name: "XML3D Architecture Poster", href: "examples/poster/index.html",
+        info: "Scene that uses a whole range of features of the XML3D architecture."},
 
     {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.html",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},

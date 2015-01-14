@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+   <!-- The scene corresponds to the scene of the poster. However, some scripts and stylesheets have been added in order
+        to fit into the XML3D Example framework.
+    -->
+
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <title>XML3D Architecture Poster Example</title>
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+
+     <xml3d activeView="#defaultView" >
+      <defs>
+        <script id="customMaterial" type="text/javascript">
+          function shade(env) {
+            var shininess = env.shininess || 0.25;
+            var kd = env.diffuseColor || new Vec3(0.8);
+            var ks = env.specularColor || new Vec3(1);
+
+            if (env.kd && env.kd.sample2D && env.texcoord) {
+              kd = env.kd.sample2D(env.texcoord).rgb();
+            }
+            return new Shade().diffuse(kd, env.normal).phong(ks, env.normal, shininess);
+          }
+        </script>
+
+        <lightshader id="light1" script="urn:xml3d:lightshader:directional">
+          <float3 name="intensity">1 1 1</float3>
+        </lightshader>
+
+        <shader id="myMaterial" script="urn:xml3d:shader:phong">
+          <float3 name="diffuseColor">0.4 0.12 0.18</float3>
+          <float3 name="specularColor">0.5 0.5 0.5</float3>
+          <float name="shininess">0.2</float>
+          <texture name="diffuseTexture">
+            <img src="../spotLight/arcanepalette_wood-006.jpg"/>
+          </texture>
+        </shader>
+
+        <!-- TODO: <data id="mesh_data" compute="tangent = xflow.computeTangent(index, position, normal, texcoord)">  -->
+        <data id="mesh_data">
+          <!-- TODO: Blast format -->
+          <data src="../../resources/meshes/teapot.json"></data>
+        </data>
+
+        <transform id="t_Suzanne" rotation="0 1 0 1.57" scale="0.1 0.1 0.1"></transform>
+
+      </defs>
+
+      <group style="shader: url(#myMaterial)" >
+        <mesh type="triangles" transform="#t_Suzanne">
+          <data src="#mesh_data"></data>
+          <float3 name="diffuseColor">0.8 0.0 0.2</float3>
+        </mesh>
+        <group>
+          <model src="../../resources/assets/robots/ciccio.xml#asset" onclick="alert('Hi, my name is Ciccio!');">
+            <assetdata name="animation">
+              <float name="key">0.5</float>
+            </assetdata>
+          </model>
+        </group>
+      </group>
+      <group style="transform: rotateX(90deg);">
+        <light shader="#ls_Spot"></light>
+      </group>
+         <view id="defaultView" position="0 9 60"></view>
+
+    </xml3d>
+    <script type="text/javascript">
+      // Keyframe animation with jQuery
+      var current_frame = 0;
+      $("xml3d").on("framedrawn", function(e) {
+         current_frame = (current_frame + 0.01) % 16.875;
+         $('*[name=key]').text(current_frame);
+      });
+    </script>
+    <div class="description">
+      An example on how to use model and assets in xml3d.
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
