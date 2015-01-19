@@ -37,8 +37,10 @@
           }
         </script>
 
-        <lightshader id="light1" script="urn:xml3d:lightshader:directional">
+        <lightshader id="light1" script="urn:xml3d:lightshader:spot">
           <float3 name="intensity">1 1 1</float3>
+          <float3 name="attenuation">1 0 0</float3>
+	  <bool name="castShadow">true</bool>
         </lightshader>
 
         <shader id="myMaterial" script="urn:xml3d:shader:phong">
@@ -73,8 +75,12 @@
           </model>
         </group>
       </group>
-      <group style="transform: rotateX(90deg);">
-        <light shader="#ls_Spot"></light>
+      <group style="transform:  translate3d(0px, 40px, 0px) rotateX(-90deg);">
+        <light shader="#light1"></light>
+	<!--<mesh type="triangles" transform="#t_Suzanne">
+          <data src="#mesh_data"></data>
+          <float3 name="diffuseColor">0.8 0.0 0.2</float3>
+        </mesh>-->
       </group>
          <view id="defaultView" position="0 9 60"></view>
 

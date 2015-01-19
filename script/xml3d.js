@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: 4.8.0
+@version: DEVELOPMENT SNAPSHOT (19.01.2015 21:42:00 GMT+0100)
 **/
 /** @namespace * */
 var XML3D = XML3D || {};
 
 /** @define {string} */
-XML3D.version = '4.8.0';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (19.01.2015 21:42:00 GMT+0100)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
