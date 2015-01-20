@@ -1,28 +1,28 @@
 <!doctype html>
 <html lang="en">
 <head>
-   <!-- The scene corresponds to the scene of the poster. However, some scripts and stylesheets have been added in order
-        to fit into the XML3D Example framework.
-    -->
+  <!-- The scene corresponds to the scene of the poster. However, some scripts and stylesheets have been added in order
+       to fit into the XML3D Example framework.
+   -->
 
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
 
-    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
-    <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
-    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+  <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+  <script type="text/javascript" src="../../script/foundation.min.js"></script>
 
-    <script type="text/javascript" src="../../script/page.js"></script>
-    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <script type="text/javascript" src="../../script/page.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
   <title>XML3D Architecture Poster Example</title>
 </head>
 <body>
 <div id="overall">
   <div id="content">
 
-     <xml3d activeView="#defaultView" >
+    <xml3d activeView="#defaultView">
       <defs>
         <script id="customMaterial" type="text/javascript">
           function shade(env) {
@@ -39,8 +39,8 @@
 
         <lightshader id="light1" script="urn:xml3d:lightshader:spot">
           <float3 name="intensity">1 1 1</float3>
-          <float3 name="attenuation">1 0 0</float3>
-	  <bool name="castShadow">true</bool>
+          <float3 name="attenuation">1 0 0.0008</float3>
+          <bool name="castShadow">true</bool>
         </lightshader>
 
         <shader id="myMaterial" script="urn:xml3d:shader:phong">
@@ -58,39 +58,40 @@
           <data src="../../resources/meshes/teapot.json"></data>
         </data>
 
-        <transform id="t_Suzanne" rotation="0 1 0 1.57" scale="0.1 0.1 0.1"></transform>
+        <transform id="t_Suzanne" translation="-15 0 10" rotation="0 1 0 1.57" scale="0.1 0.1 0.1"></transform>
 
       </defs>
 
-      <group style="shader: url(#myMaterial)" >
+      <group style="shader: url(#myMaterial)">
         <mesh type="triangles" transform="#t_Suzanne">
           <data src="#mesh_data"></data>
           <float3 name="diffuseColor">0.8 0.0 0.2</float3>
         </mesh>
         <group>
-          <model src="../../resources/assets/robots/ciccio.xml#asset" onclick="alert('Hi, my name is Ciccio!');">
+          <model src="../../resources/assets/robots/ciccio.xml#asset">
+            <!-- onclick="alert('Hi, my name is Ciccio!');"-->
             <assetdata name="animation">
               <float name="key">0.5</float>
             </assetdata>
           </model>
         </group>
       </group>
-      <group style="transform:  translate3d(0px, 40px, 0px) rotateX(-90deg);">
+      <group style="transform:  translate3d(-20px, 40px, 0px) rotateX(-90deg) rotateY(-30deg);">
         <light shader="#light1"></light>
-	<!--<mesh type="triangles" transform="#t_Suzanne">
-          <data src="#mesh_data"></data>
-          <float3 name="diffuseColor">0.8 0.0 0.2</float3>
-        </mesh>-->
+        <!--<mesh type="triangles" transform="#t_Suzanne">
+                <data src="#mesh_data"></data>
+                <float3 name="diffuseColor">0.8 0.0 0.2</float3>
+              </mesh>-->
       </group>
-         <view id="defaultView" position="0 9 60"></view>
+      <view id="defaultView" position="0 9 60"></view>
 
     </xml3d>
     <script type="text/javascript">
       // Keyframe animation with jQuery
       var current_frame = 0;
-      $("xml3d").on("framedrawn", function(e) {
-         current_frame = (current_frame + 0.01) % 16.875;
-         $('*[name=key]').text(current_frame);
+      $("xml3d").on("framedrawn", function (e) {
+        current_frame = (current_frame + 0.01) % 16.875;
+        $('*[name=key]').text(current_frame);
       });
     </script>
     <div class="description">
