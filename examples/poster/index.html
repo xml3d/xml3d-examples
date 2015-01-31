@@ -11,6 +11,8 @@
 
   <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
   <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/shade.js"></script>
+  <script type="text/javascript" src="./calculateTangents.js"></script>
   <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
   <script type="text/javascript" src="../../script/foundation.min.js"></script>
 
@@ -24,7 +26,7 @@
 
     <xml3d activeView="#defaultView">
       <defs>
-        <script id="customMaterial" type="text/javascript">
+        <script id="customMaterial" type="text/shade-javascript">
           function shade(env) {
             var shininess = env.shininess || 0.25;
             var kd = env.diffuseColor || new Vec3(0.8);
@@ -33,7 +35,7 @@
             if (env.kd && env.kd.sample2D && env.texcoord) {
               kd = env.kd.sample2D(env.texcoord).rgb();
             }
-            return new Shade().diffuse(kd, env.normal).phong(ks, env.normal, shininess);
+            return new Shade().diffuse(kd, env.normal).ward(ks, env.normal, env.tangent.xyz(), 0.6, 0.1);
           }
         </script>
 
@@ -41,24 +43,25 @@
           <float3 name="intensity">1 1 1</float3>
           <float3 name="attenuation">1 0 0.0008</float3>
           <bool name="castShadow">true</bool>
+          <float name="shadowBias">0.00005</float>
         </lightshader>
 
-        <shader id="myMaterial" script="urn:xml3d:shader:phong">
+        <shader id="myMaterial" script="#customMaterial">
           <float3 name="diffuseColor">0.4 0.12 0.18</float3>
           <float3 name="specularColor">0.5 0.5 0.5</float3>
           <float name="shininess">0.2</float>
-          <texture name="diffuseTexture">
+         <texture name="kd">
             <img src="../spotLight/arcanepalette_wood-006.jpg"/>
           </texture>
         </shader>
 
-        <!-- TODO: <data id="mesh_data" compute="tangent = xflow.computeTangent(index, position, normal, texcoord)">  -->
-        <data id="mesh_data">
+        <!-- TODO: <data id="mesh_data">  -->
+        <data id="mesh_data" compute="tangent = xflow.calculateTangents(index, position, normal, texcoord)">
           <!-- TODO: Blast format -->
-          <data src="../../resources/meshes/teapot.json"></data>
+          <data src="../../resources/meshes/suzanne.xml#Suzanne"></data>
         </data>
 
-        <transform id="t_Suzanne" translation="-15 0 10" rotation="0 1 0 1.57" scale="0.1 0.1 0.1"></transform>
+        <transform id="t_Suzanne" translation="-15 4 15" rotation="1 0 0 -1.57" scale="4 4 4"></transform>
 
       </defs>
 
