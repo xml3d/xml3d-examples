@@ -13,6 +13,7 @@
   <script type="text/javascript" src="../../script/xml3d.js"></script>
   <script type="text/javascript" src="../../script/shade.js"></script>
   <script type="text/javascript" src="./calculateTangents.js"></script>
+  <script type="text/javascript" src="./xml3d-blast-loader.js"></script>
   <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
   <script type="text/javascript" src="../../script/foundation.min.js"></script>
 
@@ -58,7 +59,7 @@
         <!-- TODO: <data id="mesh_data">  -->
         <data id="mesh_data" compute="tangent = xflow.calculateTangents(index, position, normal, texcoord)">
           <!-- TODO: Blast format -->
-          <data src="../../resources/meshes/suzanne.json"></data>
+          <data src="../../resources/meshes/suzanne.blst"></data>
         </data>
 
         <transform id="t_Suzanne" translation="-15 4 15" rotation="1 0 0 -1.57" scale="4 4 4"></transform>
