@@ -10,7 +10,7 @@
     </shader>
 
     <shader id="armorShader" script="urn:xml3d:shader:phong">
-        <float3 name="emissiveColor">0.8 0.5 0.8</float3>
+        <float3 name="emissiveColor">0.8 0.0 0.2</float3>
         <float name="ambientIntensity">0.2</float>
         <texture name="diffuseTexture">
             <img src="tex/Ciccio_Armor_D_notransparency.png"/>
