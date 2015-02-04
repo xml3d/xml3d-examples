@@ -39,6 +39,8 @@
 
         <!-- shared data -->
         <assetdata name="shared" compute="dataflow['protos.xml#skinning']" includes="animation" >
+            <float3 name="boundingBox">-30 -5 -30 30 30 30</float3>
+
             <data src="data/ciccio-mesh.xml#shared" />
             <data src="data/ciccio-anims.xml#animation" />
         </assetdata>
