@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- The scene corresponds to the scene of the poster. However, some scripts and stylesheets have been added in order
+       to fit into the XML3D Example framework.
+   -->
+  <meta charset="UTF-8">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+
+  <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/shade.js"></script>
+  <script type="text/javascript" src="./calculateTangents.js"></script>
+  <script type="text/javascript" src="./xml3d-blast-loader.js"></script>
+  <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+  <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+  <script type="text/javascript" src="../../script/page.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <title>XML3D Architecture Poster Example</title>
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+
+    <xml3d activeView="#defaultView">
+      <defs>
+
+        <script id="customMaterial" type="text/shade-javascript">
+          function shade(env) {
+            var ks = env.specularColor || new Vec(0.8);
+            var tx = env.texcoord.mul(200.0);
+            var sweep = Math.sin(env.time * .25) * tx.x() * 0.005;
+            var px = tx.x() + tx.y() * (1.75 * sweep + 1.0);
+            var modAmount = (px / 48) % 3;
+
+            var tints0 = new Vec3(1, .5, .2);
+            if (env.tints0 && env.tints0.sample2D) {
+              tints0 = env.tints0.sample2D(env.texcoord).rgb()
+            }
+            var tints1 = env.tint1 || new Vec3(.3, .8, .4);
+            var tints2 = env.tint2 || new Vec3(.3, .6, 1);
+            var tint = modAmount > 2 ? tints2 : (modAmount > 1) ? tints1 : tints0;
+            return new Shade().diffuse(tint.mul(Math.fract(modAmount)), env.normal)
+                              .ward(ks, env.normal, env.tangent.xyz(), 0.4, 0.1);
+          }
+        </script>
+
+        <lightshader id="light1" script="urn:xml3d:lightshader:spot">
+          <float3 name="intensity">1 1 1</float3>
+          <float3 name="attenuation">1 0 0.0008</float3>
+          <bool name="castShadow">true</bool>
+          <float name="shadowBias">0.00005</float>
+        </lightshader>
+
+        <shader id="myMaterial" script="#customMaterial">
+          <float name="ambientIntensity">0.1</float>
+          <float3 name="specularColor">0.5 0.5 0.5</float3>
+          <float name="time">0.5</float>
+          <texture name="tints0" wraps="repeat" wraps="repeat">
+            <img src="../../resources/textures/wood.jpg"/>
+          </texture>
+        </shader>
+
+        <data id="mesh_data" compute="tangent = xflow.calculateTangents(index, position, normal, texcoord)">
+          <data src="../../resources/meshes/suzanne.blst"></data>
+        </data>
+
+        <transform id="t_Suzanne" translation="-17 2 15" rotation="1 0 0 -2.2" scale="4 4 4"></transform>
+
+      </defs>
+
+      <group style="shader: url(#myMaterial)">
+        <mesh type="triangles" transform="#t_Suzanne" onclick="alert('Hi, my name is Suzanne!');">
+          <data src="#mesh_data"></data>
+          <float3 name="tint1">0.8 0.0 0.2</float3>
+        </mesh>
+        <group>
+
+          <model src="../../resources/assets/robots/ciccio.xml#asset">
+            <assetdata name="animation">
+              <float name="key">0.5</float>
+            </assetdata>
+          </model>
+
+        </group>
+      </group>
+      <group style="transform:  translate3d(-20px, 40px, 0px) rotateX(-90deg) rotateY(-30deg);">
+        <light shader="#light1"></light>
+      </group>
+      <view id="defaultView" position="0 9 60"></view>
+    </xml3d>
+    <script type="text/javascript">
+      // Keyframe animation with jQuery
+      var current_frame = 0;
+      var lastAnimation = window.performance.now();
+      $("xml3d").on("framedrawn", function (e) {
+        var now = window.performance.now();
+        var deltaTime = now - lastAnimation;
+        current_frame = (current_frame + deltaTime / 1000) % 16.875;
+        $('*[name=key]').text(current_frame);
+        lastAnimation = now;
+      });
+    </script>
+    <div class="description">
+      Ciccio from <a href="http://mediafi.org/open-platforms/pervasive-games/">FI content</a> together with Suzanne from <a href="http://www.blender.org/">Blender</a>.
+      This scene uses <a href="http://www.xml3d-org">XML3D</a> for the DOM-based declarative scene description including <a href="http://xml3d.org/xml3d/slides/web3d-instancing/">Asset Instancing</a>, <a href="https://graphics.cg.uni-saarland.de/fileadmin/cguds/papers/2012/klein_web3d2012/Xflow_Web3D_2012_final.pdf">Xflow</a> for the skeleton-based animation, a <a href="http://xml3d.org/xml3d/papers/shade.js/">programmable shade.js material</a>  for Suzanne and <a href="http://xml3d.org/xml3d/slides/web3d-blast/">BLAST</a> for transmission.
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

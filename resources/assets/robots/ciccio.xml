@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xml3d xmlns="http://www.xml3d.org/2009/xml3d" >
+    <shader id="glassShader" script="urn:xml3d:shader:phong">
+        <float3 name="emissiveColor">0 0 0</float3>
+        <float3 name="diffuseColor">0.1936 0.636474 0.8</float3>
+        <float3 name="specularColor">0.5 0.5 0.5</float3>
+        <float name="shininess">0.5</float>
+        <float name="ambientIntensity">0.0</float>
+        <float name="transparency">0.85</float>
+    </shader>
+
+    <shader id="armorShader" script="urn:xml3d:shader:phong">
+        <float3 name="emissiveColor">0.8 0.0 0.2</float3>
+        <float name="ambientIntensity">0.2</float>
+        <texture name="diffuseTexture">
+            <img src="tex/Ciccio_Armor_D_notransparency.png"/>
+        </texture>
+        <texture name="emissiveTexture">
+            <img src="tex/Ciccio_Armor_EM.png"/>
+        </texture>
+        <texture name="normalTexture">
+            <img src="tex/Ciccio_Armor_NM.png"/>
+        </texture>
+        <float3 name="specularColor">0.5 0.5 0.5</float3>
+        <float name="shininess">0.25625</float>
+        <float name="transparency">0.0</float>
+    </shader>
+
+    <shader id="floorMaterial" script="urn:xml3d:shader:phong">
+       <float name="ambientIntensity">0.2</float>
+       <float3 name="diffuseColor">0.5 0.5 0.5</float3>
+    </shader>
+
+    <asset id="asset" >
+        <!-- config -->
+        <assetdata name="animation">
+            <float name="key" >0</float>
+        </assetdata>
+
+        <!-- shared data -->
+        <assetdata name="shared" compute="dataflow['protos.xml#skinning']" includes="animation" >
+            <float3 name="boundingBox">-30 -5 -30 30 30 30</float3>
+
+            <data src="data/ciccio-mesh.xml#shared" />
+            <data src="data/ciccio-anims.xml#animation" />
+        </assetdata>
+
+        <!-- meshes -->
+        <assetmesh name="armor" shader="#armorShader" includes="shared" >
+            <data src="data/ciccio-mesh.xml#index1" />
+        </assetmesh>
+        <assetmesh name="glass" shader="#glassShader" includes="shared" >
+            <data src="data/ciccio-mesh.xml#index2" />
+        </assetmesh>
+	 <asset name="Cube">
+      <assetdata name="Mesh-006">
+        <float3 name="position">-30.0 0.0 -30.0 -30.0 -5.0 -30.0 -30.0 -5.0 30.0 -30.0 0.0 30.0 -30.0 0.0 30.0 30.0 0.0 30.0 30.0 0.0 -30.0 -30.0 0.0 -30.0 30.0 0.0 30.0 30.0 -5.0 30.0 30.0 -5.0 -30.0 30.0 0.0 -30.0 -30.0 -5.0 -30.0 30.0 -5.0 -30.0 30.0 -5.0 30.0 -30.0 -5.0 30.0 -30.0 -5.0 -30.0 -30.0 0.0 -30.0 30.0 0.0 -30.0 30.0 -5.0 -30.0 30.0 -5.0 30.0 30.0 0.0 30.0 -30.0 0.0 30.0 -30.0 -5.0 30.0</float3>
+        <float3 name="normal">-1.0 0.0 -0.0 -1.0 0.0 -0.0 -1.0 0.0 -0.0 -1.0 0.0 -0.0 0.0 1.0 -0.0 0.0 1.0 -0.0 0.0 1.0 -0.0 0.0 1.0 -0.0 1.0 0.0 -0.0 1.0 0.0 -0.0 1.0 0.0 -0.0 1.0 0.0 -0.0 0.0 -1.0 -0.0 0.0 -1.0 -0.0 0.0 -1.0 -0.0 0.0 -1.0 -0.0 -0.0 0.0 -1.0 -0.0 0.0 -1.0 -0.0 0.0 -1.0 -0.0 0.0 -1.0 -0.0 0.0 1.0 -0.0 0.0 1.0 -0.0 0.0 1.0 -0.0 0.0 1.0</float3>
+      </assetdata>
+      <assetmesh includes="Mesh-006" name="Mesh-006_Material.002" shader="#floorMaterial">
+        <int name="index">0 1 2 2 3 0 4 5 6 6 7 4 8 9 10 10 11 8 12 13 14 14 15 12 16 17 18 18 19 16 20 21 22 22 23 20 </int>
+      </assetmesh>
+    </asset>
+    </asset>
+
+</xml3d>
