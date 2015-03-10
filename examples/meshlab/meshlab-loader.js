@@ -92,7 +92,7 @@
         if (jsonData.version != "0.1.0")
             throw new Error("Unknown MeshLab JSON version: " + jsonData.version);
 
-        var node = XML3D.data.xflowGraph.createDataNode();
+        var node = new Xflow.DataNode();
         if (jsonData.mapping.length) {
             var attributes = jsonData.mapping[0].attributes;
             for (var i in attributes) {
@@ -101,7 +101,7 @@
                 var name = attributeMapping.semantic;
                 var buffer = createXflowBuffer(findSourceInArray(source, jsonData.vertices));
                 if (buffer) {
-                    var inputNode = XML3D.data.xflowGraph.createInputNode();
+                    var inputNode = new Xflow.InputNode();
                     inputNode.data = buffer;
                     inputNode.name = name;
                     node.appendChild(inputNode);
@@ -110,7 +110,7 @@
             var primitives = jsonData.mapping[0].primitives;
             var primbuffer = createXflowBuffer(findSourceInArray(primitives, jsonData.connectivity));
             if (primbuffer) {
-                var inputNode = XML3D.data.xflowGraph.createInputNode();
+                var inputNode = new Xflow.InputNode();
                 inputNode.data = primbuffer;
                 inputNode.name = "index";
                 node.appendChild(inputNode);
@@ -125,7 +125,7 @@
                 if (buffer) {
                     var buffPos = entry.name.indexOf("_buffer");
                     var name = buffPos > 0 ? entry.name.substring(0, buffPos) : entry.name;
-                    var inputNode = XML3D.data.xflowGraph.createInputNode();
+                    var inputNode = new Xflow.InputNode();
                     inputNode.data = buffer;
                     inputNode.name = name;
                     node.appendChild(inputNode);
@@ -151,11 +151,11 @@
      * @implements {XML3D.base.IFactory}
      */
     var MeshLabJSONFactory = function () {
-        XML3D.base.AdapterFactory.call(this, XML3D.data);
+        XML3D.base.AdapterFactory.call(this, "data");
     };
     XML3D.createClass(MeshLabJSONFactory, XML3D.base.AdapterFactory);
 
-    MeshLabJSONFactory.prototype.aspect = XML3D.data;
+    MeshLabJSONFactory.prototype.aspect = "data";
     MeshLabJSONFactory.prototype.createAdapter = function (xflowNode) {
         return new MeshLabJSONDataAdapter(xflowNode);
     }
