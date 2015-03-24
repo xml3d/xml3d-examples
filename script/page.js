@@ -3,7 +3,7 @@ var CATEGORY_LIST = {
     unknown : { name : "???" },
     basic: { name: "Basics" },
     external : { name: "External References" },
-    shader : { name: "Shaders" },
+    shader : { name: "Materials" },
     xflow : { name: "Xflow" },
     ar : { name: "Augmented Reality"},
     ip : {name: "Image Processing"}
@@ -53,6 +53,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates overriding of shader attributes in the mesh."},
     {cat: "shader", name: "shade.js: Animated shader", href: "examples/shade-tv/index.html",
         info: "Animated shader with shade.js."},
+    {cat: "shader", name: "shade.js: Wireframe Rendering", href: "examples/shade-wireframe/index.html",
+        info: "Wireframes with shade.js."},
 
 	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
