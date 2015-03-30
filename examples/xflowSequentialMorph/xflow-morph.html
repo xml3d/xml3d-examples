@@ -101,7 +101,7 @@
         ++anim_i;
         var numFrames = 10;
         var time = anim_i / 40;
-        target.childNodes[0].nodeValue = time;
+        target.textContent = time;
         if (time >= numFrames)
           anim_i = 0;
 
