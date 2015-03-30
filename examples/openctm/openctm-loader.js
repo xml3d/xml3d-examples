@@ -3,7 +3,7 @@
 	var hasWebWorkerSupport = !!window.Worker;
 
 	var OpenCTMFormatHandler = function() {
-		XML3D.base.BinaryFormatHandler.call(this);
+		XML3D.resource.FormatHandler.call(this);
 		if (hasWebWorkerSupport) {
 			this.worker = new Worker("openctm-worker.js");
 			this.callbackMap = [];
@@ -29,7 +29,7 @@
 		}
 	};
 
-	XML3D.createClass(OpenCTMFormatHandler, XML3D.base.BinaryFormatHandler);
+	XML3D.createClass(OpenCTMFormatHandler, XML3D.resource.FormatHandler);
 
 	OpenCTMFormatHandler.prototype.isFormatSupported = function(response, responseType, mimetype) {
 		if (!(response instanceof ArrayBuffer))
@@ -67,7 +67,7 @@
 	}
 
 	function createXflowDataNode (file) {
-		var xflowDataNode = XML3D.data.xflowGraph.createDataNode();
+		var xflowDataNode = new Xflow.DataNode();
 		xflowDataNode.appendChild(createInputNode("index", "int", file.indices));
 		xflowDataNode.appendChild(createInputNode("position", "float3", file.vertices));
 		if (file.normals)
@@ -80,11 +80,11 @@
 
 		return xflowDataNode;
 	}
-
+	
 	function createInputNode(name, type, typedArray) {
-		var inputNode = XML3D.data.xflowGraph.createInputNode();
+		var inputNode = new Xflow.InputNode();
 		inputNode.name = name;
-		inputNode.data = new Xflow.BufferEntry(XML3D.data.BUFFER_TYPE_TABLE[type], typedArray);
+		inputNode.data = new Xflow.BufferEntry(Xflow.constants.DATA_TYPE.fromString(type), typedArray);
 		return inputNode;
 	}
 
@@ -94,7 +94,7 @@
 		OpenCTMFormatHandler.prototype.getFormatData = getFormatDataSynchronously;
 
 	var openctmFormatHandler = new OpenCTMFormatHandler();
-	XML3D.base.registerFormat(openctmFormatHandler);
+	XML3D.resource.registerFormat(openctmFormatHandler);
 
 	/**
 	 * @implements IDataAdapter
@@ -112,17 +112,17 @@
 	 * @implements {XML3D.base.IFactory}
 	 */
 	var OpenCTMFactory = function(){
-		XML3D.base.AdapterFactory.call(this, XML3D.data);
+		XML3D.resource.AdapterFactory.call(this, "data");
 	};
 
-	XML3D.createClass(OpenCTMFactory, XML3D.base.AdapterFactory);
+	XML3D.createClass(OpenCTMFactory, XML3D.resource.AdapterFactory);
 
-	OpenCTMFactory.prototype.aspect = XML3D.data;
+	OpenCTMFactory.prototype.aspect = "data";
 	OpenCTMFactory.prototype.createAdapter = function(xflowNode) {
 		return new OpenCTMDataAdapter(xflowNode);
 	};
 
-	XML3D.base.resourceManager.addBinaryExtension('.ctm');
+	XML3D.resource.addBinaryExtension('.ctm');
 	openctmFormatHandler.registerFactoryClass(OpenCTMFactory);
 
 }());
