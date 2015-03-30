@@ -20,7 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (30.03.2015 09:05:03 GMT+0200)
+@version: DEVELOPMENT SNAPSHOT (30.03.2015 14:52:40 GMT+0200)
 **/
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
@@ -8073,17 +8073,17 @@ DataAdapter.prototype.notifyChanged = function (evt) {
 };
 
 DataAdapter.prototype.connectedAdapterChanged = function (key, adapter /*, status */) {
-    if (key === "src") {
-        this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
-    } else if (key === "dataflow") {
-        this.xflowDataNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
-    } else if (this.externalScripts[key]) {
-        window.eval(adapter.script);
-        this.xflowDataNode.notify(XC.RESULT_STATE.CHANGED_STRUCTURE);
-    }
-    // Cycle the load state to force a load event even if the new sourceNode is cached
-    this.xflowDataNode.setLoading(true);
-    updateLoadState(this);
+	if (key === "src") {
+		this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
+	} else if (key === "dataflow") {
+		this.xflowDataNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
+	} else if (this.externalScripts[key]) {
+		window.eval(adapter.script);
+		this.xflowDataNode.notify(XC.RESULT_STATE.CHANGED_STRUCTURE);
+	}
+	// Cycle the load state to force a load event even if the new sourceNode is cached
+	this.xflowDataNode.setLoading(true);
+	updateLoadState(this);
 };
 
 /**
@@ -9266,7 +9266,7 @@ var Xflow = Xflow || {};
 window.XML3D = XML3D;
 window.Xflow = Xflow;
 
-XML3D.version = 'DEVELOPMENT SNAPSHOT (30.03.2015 09:05:03 GMT+0200)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (30.03.2015 14:52:40 GMT+0200)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -22003,6 +22003,7 @@ XML3D.extend(GLScene.prototype, {
 		if (this.lightsNeedUpdate) {
 			this.lightsNeedUpdate = false;
 			this.updateLightParameters();
+            this.lights.lightValueChanged();
 		}
 		this.updateObjectsForRendering();
 
@@ -22123,8 +22124,8 @@ XML3D.extend(GLScene.prototype, {
 			this.context.requestRedraw("Light value changed.");
 		});
 		 this.addEventListener(C.EVENT_TYPE.SCENE_SHAPE_CHANGED, function (event) {
-			// Need to update light frustum
-			this.lights.lightValueChanged();
+			// Need to update light frustum. Defer this until the next render phase
+             this.lightsNeedUpdate = true;
 		});
 
 		Options.addObserver(this.onFlagsChange.bind(this));

@@ -138,7 +138,7 @@ function createXflowDataNode (data) {
 function createInputNode(name, type, typedArray) {
     var inputNode = new Xflow.InputNode();
     inputNode.name = name;
-    inputNode.data = new Xflow.data.BufferEntry(Xflow.constants.DATA_TYPE.fromString(type), typedArray);
+    inputNode.data = new Xflow.BufferEntry(Xflow.constants.DATA_TYPE.fromString(type), typedArray);
     return inputNode;
 }
 
