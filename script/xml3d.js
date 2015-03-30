@@ -20,7 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-@version: DEVELOPMENT SNAPSHOT (27.03.2015 09:22:22 GMT+0100)
+@version: DEVELOPMENT SNAPSHOT (30.03.2015 09:05:03 GMT+0200)
 **/
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
@@ -5804,6 +5804,7 @@ var xml3dFormatHandler = new XML3DFormatHandler();
 registerFormat(xml3dFormatHandler);
 XML3D.xml3dFormatHandler = xml3dFormatHandler;
 XML3D.resource.FormatHandler = FormatHandler;
+XML3D.resource.JSONFormatHandler = JSONFormatHandler;
 
 module.exports = {
 	JSONFormatHandler: JSONFormatHandler,
@@ -8072,18 +8073,17 @@ DataAdapter.prototype.notifyChanged = function (evt) {
 };
 
 DataAdapter.prototype.connectedAdapterChanged = function (key, adapter /*, status */) {
-	// we first set loading to true, to force a load event when a new, but cached xflow node is attached
-	this.xflowDataNode.setLoading(true);
-	if (key === "src") {
-		this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
-	} else if (key === "dataflow") {
-		this.xflowDataNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
-	} else if (this.externalScripts[key]) {
-		window.eval(adapter.script);
-		this.xflowDataNode.notify(XC.RESULT_STATE.CHANGED_STRUCTURE);
-	}
-
-	updateLoadState(this);
+    if (key === "src") {
+        this.xflowDataNode.sourceNode = adapter ? adapter.getXflowNode() : null;
+    } else if (key === "dataflow") {
+        this.xflowDataNode.dataflowNode = adapter ? adapter.getXflowNode() : null;
+    } else if (this.externalScripts[key]) {
+        window.eval(adapter.script);
+        this.xflowDataNode.notify(XC.RESULT_STATE.CHANGED_STRUCTURE);
+    }
+    // Cycle the load state to force a load event even if the new sourceNode is cached
+    this.xflowDataNode.setLoading(true);
+    updateLoadState(this);
 };
 
 /**
@@ -9266,7 +9266,7 @@ var Xflow = Xflow || {};
 window.XML3D = XML3D;
 window.Xflow = Xflow;
 
-XML3D.version = 'DEVELOPMENT SNAPSHOT (27.03.2015 09:22:22 GMT+0100)';
+XML3D.version = 'DEVELOPMENT SNAPSHOT (30.03.2015 09:05:03 GMT+0200)';
 /** @const */
 XML3D.xml3dNS = 'http://www.xml3d.org/2009/xml3d';
 /** @const */
@@ -9349,6 +9349,7 @@ XML3D.shaders = require("./renderer/webgl/materials/urn/shaders.js");
 XML3D.resource = require("./base/resourcemanager.js").Resource; //Required for the test library because the RM needs to "belong" to the same document as the XML3D element in order to resolve references correctly
 XML3D.resource.registerFormat = require("./base/resourcemanager.js").registerFormat;
 //XML3D.resource.FormatHandler
+//XML3D.resource.JSONFormatHandler
 //XML3D.resource.AdapterFactory
 XML3D.webcl = require("./utils/webcl.js").webcl;
 XML3D.math = require("gl-matrix");
@@ -9365,7 +9366,7 @@ window.XML3DVec3 = require("./types/vec3.js");
 Xflow.registerOperator = require("./xflow/operator/operator.js").registerOperator;
 Xflow.constants = require("./xflow/interface/constants.js");
 XML3D.extend(Xflow, require("./xflow/interface/graph.js"));
-Xflow.data = require("./xflow/interface/data.js");
+XML3D.extend(Xflow, require("./xflow/interface/data.js"));
 Xflow.ComputeRequest = require("./xflow/interface/request.js").ComputeRequest;
 
 require("./xflow/operator/default");
