@@ -16,7 +16,6 @@
     <script src="scripts/SOTC-Trackbar.js" type="text/javascript"></script>
 
    <script src="scripts/shape.js" type="text/javascript"></script>
-   <script src="scripts/pca_kernel.js" type="text/javascript"></script>
    <script src="scripts/deltashader.js" type="text/javascript"></script>
 
    <title>XML3D Examples</title>
@@ -65,6 +64,7 @@
 
           <!--  Computes vertex positions using the result of a Principle Component Analysis and the 6 sliders on the page -->
             <data id="pcaresult" compute="position = xflow.genWithWeights(reference, pc1, pc2, pc3, pc4, pc5, pc6)">
+				<script name="genWithWeights" src="scripts/pca_kernel.js" type="text/javascript"></script> <!-- External custom Xflow operator -->
 				<data id="meanMeshData" src="#meanPositionsMale" ></data>
 				<float name="pc1" id="pc1weight">0.0</float>
 				<float name="pc2" id="pc2weight">0.0</float>
@@ -77,7 +77,8 @@
           <!--  Computes normals for the new vertex positions and composites all the data into a renderable mesh with id 'face' -->
             <data id="face_data">
               <data compute="normal = xflow.computeNormals(position, index)"> <!-- Compute the new vertex normals using the result of the pcaresult computation -->
-                  <data src="#pcaresult"></data><!-- Compute the vertex positions. This will be re-computed each time one of the sliders is changed. -->
+                  <script name="computeNormals" src="scripts/computeNormals.js" type="text/javascript"></script>
+				  <data src="#pcaresult"></data><!-- Compute the vertex positions. This will be re-computed each time one of the sliders is changed. -->
                   <data src="#faceIndex" ></data> <!-- Pointer to the indices for the face mesh, which are defined below -->
               </data>
 			  <data id="referenceData" src="#meanPositionsMale"></data>
