@@ -15,7 +15,7 @@
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 
-    <title>XML3D Examples - Linestrips Simple</title>
+    <title>XML3D Examples - Linestrips and Tristrips</title>
 </head>
 <body>
 <div id="overall">
@@ -23,7 +23,7 @@
 
     <xml3d activeView="#defaultView" class="xml3d">
         <defs>
-            <shader id="lineShader" script="urn:xml3d:shader:flat">
+            <shader id="stripShader" script="urn:xml3d:shader:flat">
                 <float3 name="diffuseColor">0 0 0</float3>
                 <bool name="useVertexColor">false</bool>
             </shader>
@@ -41,11 +41,28 @@
             <data id="lineData">
                  <data src="#baseData"></data>
             </data>
+            <data id="tristripBase">
+                <float3 name="position">-1 -1 1 1 -1 1 -1 1 1 1 1 1 -1 -1 -1 1 -1 -1 -1 1 -1 1 1 -1</float3>
+                <float3 name="color">1 0 0 1 0 0 1 1 0 1 1 0 0 1 0 0 1 0 0 0 1 0 0 1</float3>
+            </data>
+			<data id="indexedTristrip">
+				<data src="#tristripBase"></data>
+				<int name="index">0 1 2 3 7 1 5 4 7 6 2 4 0 1</int>
+			</data>
+			<data id="tristripData">
+				 <int name="vertexCount">4 4 4 4 4 4</int>
+                 <float3 name="position">-1 -1 1 1 -1 1 -1 1 1 1 1 1 1 -1 1 1 -1 -1 1 1 1 1 1 -1 1 -1 -1 -1 -1 -1 1 1 -1 -1 1 -1 -1 -1 -1 -1 -1 1 -1 1 -1 -1 1 1 -1 -1 -1 1 -1 -1 -1 -1 1 1 -1 1 -1 1 1 1 1 1 -1 1 -1 1 1 -1</float3>
+                 <float3 name="color">0.5 0 0 0.5 0 0 1 0 0 1 0 0 0 0.5 0 0 0.5 0 0 1 0 0 1 0 0.5 0 0.5 0.5 0 0.5 1 0 1 1 0 1 0.5 0.5 0 0.5 0.5 0 1 1 0 1 1 0 0 0.5 0.5 0 0.5 0.5 0 0.5 0.5 0 0.5 0.5 0 0 1 0 0 1 0 0 1 0 0 1</float3>
+			</data>
         </defs>
         <view position="0 0 10" id="defaultView"></view>
-        <group shader="#lineShader">
-            <mesh style="transform: translate3d(-1.5,0,0);" src="#lineData" type="linestrips"></mesh>
-            <mesh style="transform: translate3d(1.5,0,0);" src="#lineDataIndexed" type="linestrips"></mesh>
+        <group shader="#stripShader">
+            <mesh style="transform: translate3d(-1.5px, 2.5px, 0px);" src="#indexedTristrip" type="tristrips"></mesh>
+            <mesh style="transform: translate3d(1.5px, 2.5px, 0px);" src="#tristripData" type="tristrips"></mesh>
+        </group>
+        <group shader="#stripShader">
+            <mesh style="transform: translate3d(-1.5px, 0px, 0px);" src="#lineData" type="linestrips"></mesh>
+            <mesh style="transform: translate3d(1.5px, 0px, 0px);" src="#lineDataIndexed" type="linestrips"></mesh>
         </group>
     </xml3d>
                 <div class="controls" >
@@ -56,22 +73,22 @@
         </div>
 
         <div class="description">
-            A simple examples for primitive type <b>line strips</b>.
+            A simple example for primitive types <b>linestrips</b> and <b>tristrips</b>.
         </div>
     </div>
     <script>
         $(function() {
-			$( "#check" ).button().click(function(e) {
-				var shouldVertexColor = e.target.checked;
+            $( "#check" ).button().click(function(e) {
+                var shouldVertexColor = e.target.checked;
                 if (shouldVertexColor) {
-                    $("#lineShader *[name=diffuseColor]").text("1 1 1");
-                    $("#lineShader *[name=useVertexColor]").text("true");
+                    $("#stripShader *[name=diffuseColor]").text("1 1 1");
+                    $("#stripShader *[name=useVertexColor]").text("true");
                 } else {
-                    $("#lineShader *[name=diffuseColor]").text("0 0 0");
-                    $("#lineShader *[name=useVertexColor]").text("false");
+                    $("#stripShader *[name=diffuseColor]").text("0 0 0");
+                    $("#stripShader *[name=useVertexColor]").text("false");
                 }
-			});
-		});
+            });
+        });
     </script>
 </div>
 </body>

@@ -4,7 +4,7 @@ XML3D.shaders.register("deltashader", {
     vertex : [
         "attribute vec3 position;",
         "attribute vec3 normal;",
-        "attribute vec3 tangent;",
+        "attribute vec3 reference;",
 
         "varying vec3 fragNormal;",
         "varying vec3 fragVertexPosition;",
@@ -14,12 +14,12 @@ XML3D.shaders.register("deltashader", {
         "uniform mat4 modelViewProjectionMatrix;",
         "uniform mat4 modelViewMatrix;",
         "uniform mat4 modelMatrix;",
-        "uniform mat3 normalMatrix;",
+        "uniform mat3 modelViewMatrixN;",
 
         "void main(void) {",
-        "    fragNormal = normalize(normalMatrix * normal);",
+        "    fragNormal = normalize(modelViewMatrixN * normal);",
         "    fragVertexPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;",
-        "    fragReference = tangent;",
+        "    fragReference = reference;",
         "    fragModelPosition = position;",
         "    gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);",
         "}"
@@ -40,7 +40,7 @@ XML3D.shaders.register("deltashader", {
         "uniform vec3 pointLightAttenuation[1];",
         "uniform vec3 pointLightPosition[1];",
         "uniform vec3 pointLightIntensity[1];",
-        "uniform vec3 pointLightVisibility[1];",
+        "uniform bool pointLightOn[1];",
         "uniform mat4 viewMatrix;",
 
         "void main(void) {",
@@ -58,7 +58,7 @@ XML3D.shaders.register("deltashader", {
         "  vec3 Idiff = pointLightIntensity[0] * max(dot(fragNormal,L),0.0) * deltaColor;",
         "  vec3 Ispec = specularColor * pow(max(dot(R, normalize(fragVertexPosition)),0.0), shininess*128.0) * pointLightIntensity[0];",
           
-        "  color = color + (atten*(Idiff + Ispec)) * pointLightVisibility[0];",
+        "  color = color + (atten*(Idiff + Ispec));",
            
         "  gl_FragColor = vec4(color, 1.0);",
         "}"
@@ -66,6 +66,11 @@ XML3D.shaders.register("deltashader", {
 
     addDirectives: function(directives, lights, params) {
     },
+	
+	attributes: {
+		normal : {required : true},
+		reference : {required : true}
+	},
 
     uniforms: {
         shininess    : 0.5,
