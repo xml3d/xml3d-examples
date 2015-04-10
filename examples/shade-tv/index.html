@@ -1,9 +1,7 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
@@ -23,7 +21,7 @@
 <div id="overall">
     <div id="content">
         <xml3d class="canvas" id="MyXml3d">
-            <navigation revolveAround="0 2 0"></navigation>
+            <navigation revolvearound="0 2 0"></navigation>
             <defs>
                  <script id="screenMaterial" type="text/shade-javascript">
                      // Inspired by https://www.shadertoy.com/view/Xsl3zf
@@ -59,7 +57,7 @@ function shade(env) {
                 </lightshader>
                 <shader id="screenMaterialInstance" script="#screenMaterial">
                     <float name="time">20.0</float>
-                    <texture name="wt" filterMin="linear" filterMag="linear" wrapS="clamp" wrapT="clamp">
+                    <texture name="wt" filtermin="linear" filtermag="linear" wraps="clamp" wrapt="clamp">
                         <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay></video>
                     </texture>
                 </shader>
@@ -158,5 +156,6 @@ function shade(env) {
         });
     </script>
 </div>
-</body>
-</html>
+
+
+</body></html>

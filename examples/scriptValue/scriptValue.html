@@ -1,10 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -24,7 +22,7 @@
             <xml3d id="canvas" class="xml3d">
                 <view position="0 0 10"></view>
 
-                <shader id="lineShader" script="urn:xml3d:shader:flat" >
+                <shader id="lineShader" script="urn:xml3d:shader:flat">
                     <float3 name="diffuseColor">1 1 1</float3>
                     <bool name="useVertexColor">true</bool>
                 </shader>
@@ -32,18 +30,18 @@
 
                 <group shader="#lineShader">
                     <mesh type="linestrips">
-                        <float3 name="position" id="posArray" >0 0 0</float3>
-                        <float3 name="color" id="colorArray" >1 0 1</float3>
+                        <float3 name="position" id="posArray">0 0 0</float3>
+                        <float3 name="color" id="colorArray">1 0 1</float3>
                     </mesh>
                 </group>
 
             </xml3d>
 
-            <div class="controls" >
+            <div class="controls">
               <div class="option">
                 <label>Point Count</label>
-                <div id="slider_points" class="slider" ></div>
-                <div class="info" ><span id="point_count_info" ></span> points</div>
+                <div id="slider_points" class="slider"></div>
+                <div class="info"><span id="point_count_info"></span> points</div>
               </div>
             </div>
             <div class="description">
@@ -107,5 +105,6 @@
                 })
             }());
         </script>
-    </body>
-</html>
+    
+
+</body></html>

@@ -1,12 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
+<!DOCTYPE html><html><head>
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -20,7 +18,7 @@
 
     <!-- Application Scrips -->
     <script type="text/javascript" src="../../script/xflip.js"></script>
-    <script type="text/javascript" >
+    <script type="text/javascript">
         Xflip.init(["../../script/xflip-operators.js"]);
     </script>
 </head>
@@ -30,19 +28,19 @@
 
     <!--<h1>Basic Pixel-Wise Operations</h1>-->
 
-    <div class="xflipOverall" >
+    <div class="xflipOverall">
 
     <div class="xflipBox">
         <h2>Original</h2>
-        <img src="img/lena-color.gif" class="input" />
+        <img src="img/lena-color.gif" class="input">
     </div>
 
 	<div class="xflipBox">
         <h2>Grayscale</h2>
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.grayscale(input)">
-                <texture name="input" >
-                    <img src="img/lena-color.gif" />
+                <texture name="input">
+                    <img src="img/lena-color.gif">
                 </texture>
              </data>
         </xflowimg>
@@ -51,10 +49,10 @@
 
 	<div class="xflipBox">
         <h2>Complement</h2>
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.complement(input)">
-                <texture name="input" >
-                    <img src="img/lena-color.gif" />
+                <texture name="input">
+                    <img src="img/lena-color.gif">
                 </texture>
             </data>
         </xflowimg>
@@ -63,17 +61,17 @@
 
     <div class="xflipBox">
         <h2>Dim</h2>
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.dim(image, ratio)">
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
                 <float id="ratio3" name="ratio">0.5</float>
             </data>
         </xflowimg>
         <div class="options">
             Ratio (<font id="div3" style="">0.5</font>):
-            <input id="range3" type="range"  min="0" max="1" step="0.1" value="0.5" onchange="updateRatio()" />
+            <input id="range3" type="range" min="0" max="1" step="0.1" value="0.5" onchange="updateRatio()">
         </div>
 	</div>
 
@@ -89,17 +87,17 @@
     <div class="xflipBox">
         <h2>Threshold</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.threshold(image, threshold)">
-                <texture name="image" >
-                    <img src="img/lena.jpg" />
+                <texture name="image">
+                    <img src="img/lena.jpg">
                 </texture>
                 <int id="threshold4" name="threshold">100</int>
             </data>
         </xflowimg>
         <div class="options">
             Threshold (<font id="div4">100</font>):
-            <input id="range4" type="range"  min="0" max="255" step="1" value="100" onchange="updateThreshold()" />
+            <input id="range4" type="range" min="0" max="255" step="1" value="100" onchange="updateThreshold()">
         </div>
     </div>
 
@@ -116,10 +114,10 @@
     <div class="xflipBox">
         <h2>Slice Color</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.sliceColor(image, color, radius)">
                 <texture name="image">
-                    <img src="img/lena-color.gif" />
+                    <img src="img/lena-color.gif">
                 </texture>
 
                 <int id="color7" name="color">255 0 0</int>
@@ -127,8 +125,8 @@
             </data>
         </xflowimg>
         <div class="options">
-            Radius (<font id="div71">150</font>): <input id="range71" type="range"  min="0" max="200" step="1" value="150" onchange="updateRadius()" /><br />
-            Color (<font id="div72" style="width:60px;">#ff0000</font>): <input id="color72" type="color"  value="#ff0000" onchange="updateColor()" />
+            Radius (<font id="div71">150</font>): <input id="range71" type="range" min="0" max="200" step="1" value="150" onchange="updateRadius()"><br>
+            Color (<font id="div72" style="width:60px;">#ff0000</font>): <input id="color72" type="color" value="#ff0000" onchange="updateColor()">
         </div>
     </div>
 
@@ -154,10 +152,10 @@
     <div class="xflipBox">
         <h2>Multiply Saturate Color Matrix</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.mulColorMatrix(image, weights)">
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
                 <data compute="weights = xflip.createSaturateMatrix(weight)">
                     <float id="weight11" name="weight">1.1</float>
@@ -166,7 +164,7 @@
         </xflowimg>
         <div class="options">
             Ratio (<font id="div11">1.1</font>):
-            <input id="range11" type="range"  min="0" max="2" step="0.1" value="1.1" onchange="updateweight11()" />
+            <input id="range11" type="range" min="0" max="2" step="0.1" value="1.1" onchange="updateweight11()">
 
         </div>
     </div>
@@ -186,5 +184,6 @@
 </div>
 </div>
 
-</body>
-</html>
+
+
+</body></html>

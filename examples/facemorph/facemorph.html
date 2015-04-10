@@ -1,7 +1,4 @@
-<!doctype html>
-<html lang="en">
-
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
@@ -31,15 +28,15 @@
                <!--</div>-->
                <div>
                 <span class="control_caption">Sex:</span>
-                <input type="radio" name="sex" value="male" checked="true" onclick="changeToFaceType('Male')"></input> <span style="margin-right: 10px;">Male</span>
-                <input type="radio" name="sex" value="female" onclick="changeToFaceType('Female')"></input> Female
+                <input type="radio" name="sex" value="male" checked="true" onclick="changeToFaceType('Male')"> <span style="margin-right: 10px;">Male</span>
+                <input type="radio" name="sex" value="female" onclick="changeToFaceType('Female')"> Female
                </div>
                <div>
                 <span class="control_caption">Shader:</span>
-                <input type="radio" name="shader" value="Phong" checked="true" onclick="changeShaderTo('#phongShader')"></input> <span style="margin-right: 10px;">Phong</span>
-                <input type="radio" name="shader" value="Delta" onclick="changeShaderTo('#deltaShader')"></input> <span style="margin-right: 10px;">Delta</span>
+                <input type="radio" name="shader" value="Phong" checked="true" onclick="changeShaderTo('#phongShader')"> <span style="margin-right: 10px;">Phong</span>
+                <input type="radio" name="shader" value="Delta" onclick="changeShaderTo('#deltaShader')"> <span style="margin-right: 10px;">Delta</span>
                </div>
-               <input type="button" class="control_button" name="reset" onclick="resetSliders()" value="Reset Sliders"></input>
+               <input type="button" class="control_button" name="reset" onclick="resetSliders()" value="Reset Sliders">
            </form>
            <div id="trackerdiv">
                <div>
@@ -56,7 +53,7 @@
        </div>
 
     <div>
-        <xml3d id="xml3dmain" activeView="#Camera" >
+        <xml3d id="xml3dmain" activeview="#Camera">
          <defs id="mainDef">
           <transform id="t_Camera" rotation="-0.578102 -0.777834 -0.246520 1.382361" scale="1.000000 1.000000 1.000000" translation="-15.000000 8.000000 5.000000"></transform>
           <transform id="t_Lamp" scale="1.000000 1.000000 1.000000" translation="0 0 0"></transform>
@@ -65,7 +62,7 @@
           <!--  Computes vertex positions using the result of a Principle Component Analysis and the 6 sliders on the page -->
             <data id="pcaresult" compute="position = xflow.genWithWeights(reference, pc1, pc2, pc3, pc4, pc5, pc6)">
 				<script name="genWithWeights" src="scripts/pca_kernel.js" type="text/javascript"></script> <!-- External custom Xflow operator -->
-				<data id="meanMeshData" src="#meanPositionsMale" ></data>
+				<data id="meanMeshData" src="#meanPositionsMale"></data>
 				<float name="pc1" id="pc1weight">0.0</float>
 				<float name="pc2" id="pc2weight">0.0</float>
 				<float name="pc3" id="pc3weight">0.0</float>
@@ -79,7 +76,7 @@
               <data compute="normal = xflow.computeNormals(position, index)"> <!-- Compute the new vertex normals using the result of the pcaresult computation -->
                   <script name="computeNormals" src="scripts/computeNormals.js" type="text/javascript"></script>
 				  <data src="#pcaresult"></data><!-- Compute the vertex positions. This will be re-computed each time one of the sliders is changed. -->
-                  <data src="#faceIndex" ></data> <!-- Pointer to the indices for the face mesh, which are defined below -->
+                  <data src="#faceIndex"></data> <!-- Pointer to the indices for the face mesh, which are defined below -->
               </data>
 			  <data id="referenceData" src="#meanPositionsMale"></data>
              </data>
@@ -148,5 +145,6 @@
             Augusto Salazar, Stefanie Wuhrer, Chang Shu, Flavio Prieto. <em>"Fully Automatic Expression-Invariant Face Correspondence"</em>. arXiv report 1202.1444.
         </p>
     </div>
-</body>
-</html>
+
+
+</body></html>

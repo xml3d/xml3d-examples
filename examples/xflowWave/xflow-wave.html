@@ -1,10 +1,8 @@
-<!doctype html>
-<html lang="en">
-  <head>
+<!DOCTYPE html><html lang="en"><head>
       <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
       <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-      <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-      <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
       <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
       <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -15,7 +13,7 @@
       <script type="text/javascript" src="../../script/xml3d.js"></script>
       <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 
-    <script type="text/javascript" src="./myxflow.js" ></script>
+    <script type="text/javascript" src="./myxflow.js"></script>
     <title>XML3D Examples</title>
     <script type="text/javascript">
       // Init Slider Control
@@ -45,7 +43,7 @@
   </head>
   <body>
   <div id="overall"><div id="content">
-    <xml3d id="myxml3d" class="xml3d" activeView="#Camera" >
+    <xml3d id="myxml3d" class="xml3d" activeview="#Camera">
      <defs id="mainDef">
 
       <!--- Not so important part: -->
@@ -57,7 +55,7 @@
 
       <shader id="Material" script="urn:xml3d:shader:phong">
        <float name="ambientIntensity">0.1</float>
-       <texture name="diffuseTexture"><img src="water.jpg"/></texture>
+       <texture name="diffuseTexture"><img src="water.jpg"></texture>
        <float3 name="diffuseColor">1 1 1</float3>
        <float3 name="specularColor">0.5 0.5 0.5</float3>
        <float name="shininess">0.0978473581213</float>
@@ -69,7 +67,7 @@
 
       <!-- Example Data: -->
 
-      <data id="exampleGrid" >
+      <data id="exampleGrid">
         <float3 name="position">-1 0 -1  -1 0 0  -1 0 1    0 0 -1  0 0 0  0 0 1    1 0 -1  1 0 0  1 0 1</float3>
         <float3 name="normal">0 1 0  0 1 0  0 1 0    0 1 0  0 1 0  0 1 0    0 1 0  0 1 0  0 1 0</float3>
         <float2 name="texcoord">0 0  0 0.5  0 1    0.5 0  0.5 0.5  0.5 1    1 0  1 0.5  1 1</float2>
@@ -84,7 +82,7 @@
 
       <!-- Transform Grid to Waves: -->
 
-      <data id="wave" compute="(position, normal) = xflow.mywave(position, normal, strength, wavelength, phase)" >
+      <data id="wave" compute="(position, normal) = xflow.mywave(position, normal, strength, wavelength, phase)">
         <float name="strength" id="strength">0.01</float>
         <float name="wavelength" id="wavelength">40.0</float>
         <float name="phase" id="ph">0.0</float>
@@ -108,10 +106,10 @@
 		<light shader="#ls_Spot"></light>
      </group>
     </xml3d>
-    <div class="controls" >
+    <div class="controls">
       <div class="option">
         <label>Strength</label>
-        <div id="slider_strength" class="slider" ></div>
+        <div id="slider_strength" class="slider"></div>
       </div>
       <div class="option">
         <label>Wavelength</label>
@@ -120,7 +118,7 @@
       <div class="option">
         <label>Mesh Size</label>
         <div id="slider_meshsize" class="slider"></div>
-        <div class="info" ><span id="meshsize_value" ></span> vertices</div>
+        <div class="info"><span id="meshsize_value"></span> vertices</div>
       </div>
     </div>
     <script type="text/javascript">
@@ -140,5 +138,6 @@
   </script>
 
    </div></div>
-  </body>
- </html>
+  
+ 
+</body></html>

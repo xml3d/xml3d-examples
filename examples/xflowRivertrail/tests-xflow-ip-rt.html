@@ -1,12 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" >
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
+<!--?xml version="1.0" encoding="UTF-8"?--><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head>
 	<title>Image Proc Tests</title>
 
 
     <script type="text/javascript" src="../../../xml3d.js/src/xflow-ip/client.js"></script>
-    <script type="text/javascript" >
+    <script type="text/javascript">
         XflowIP.init("../../../xml3d.js/build/output/xml3d.js",
         ["http://localhost/xml3d-examples/examples/xflowIP/xml3d-xflow-ip-module.js",
          "http://localhost/xml3d-examples/examples/xflowRivertrail/rivertrail/ParallelArray.js",
@@ -38,12 +35,12 @@
 
 	<h2>Gaussian Smoothing</h2>
 
-    <img src="../xflowIP/lena_color.gif" class="input" />
+    <img src="../xflowIP/lena_color.gif" class="input">
 
-    <xflowimg srcname="output" class="output" >
+    <xflowimg srcname="output" class="output">
         <data compute="output = xflow.gaussian(image, size, sigma)">
             <texture name="image">
-                <img src="../xflowIP/lena_color.gif" />
+                <img src="../xflowIP/lena_color.gif">
             </texture>
 
             <int id="size5" name="size">7</int>
@@ -51,8 +48,8 @@
         </data>
     </xflowimg>
 
-	Filter size (<font id="div51">7</font>): <input id="range51" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize()" />
-	Sigma (<font id="div52">3</font>): <input id="range52" type="range"  min="1" max="15" step="1" value="3" onchange="updateSigma()" />
+	Filter size (<font id="div51">7</font>): <input id="range51" type="range" min="3" max="21" step="2" value="7" onchange="updateSize()">
+	Sigma (<font id="div52">3</font>): <input id="range52" type="range" min="1" max="15" step="1" value="3" onchange="updateSigma()">
 
 	<script>
 	function updateSize() {
@@ -68,5 +65,5 @@
 	}
 	</script>
 
-</body>
-</html>
+
+</body></html>

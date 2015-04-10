@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
+<!DOCTYPE html><html><head>
     <!-- Style -->
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css">
     <title>Xflip Example</title>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/jquery.min.js"></script>
@@ -13,7 +11,7 @@
 
     <!-- Application Scrips -->
     <script type="text/javascript" src="../../script/xflip.js"></script>
-    <script type="text/javascript" >
+    <script type="text/javascript">
         Xflip.init(["../../script/xflip-operators.js"]);
     </script>
 </head>
@@ -23,11 +21,11 @@
 
     <h1>Direct Fourier Transform</h1>
 
-    <div class="xflipOverall" >
+    <div class="xflipOverall">
 
         <div class="xflipBox">
             <h2>Original</h2>
-            <img src="img/lena-small.jpg" class="input" />
+            <img src="img/lena-small.jpg" class="input">
         </div>
 
         <div class="xflipBox">
@@ -35,8 +33,8 @@
             <xflowimg srcname="output" class="output">
                 <data compute="output = xflip.createSpectrumImage(inter)">
                     <data id="dftResult" compute="inter = xflip.applyDFT(image)">
-                        <texture name="image" >
-                            <img src="img/lena-small.jpg" />
+                        <texture name="image">
+                            <img src="img/lena-small.jpg">
                         </texture>
                     </data>
                 </data>
@@ -49,13 +47,13 @@
                 <data compute="output = xflip.createSpectrumImage(inter)">
                     <data id="lpfResult" compute="inter = xflip.applyGaussianLPF(inter, sigma)">
                         <float id="sigma201" name="sigma">10</float>
-                        <data src="#dftResult" ></data>
+                        <data src="#dftResult"></data>
                     </data>
                 </data>
             </xflowimg>
-            <div class="options" >
+            <div class="options">
                 Sigma (<font id="div20">10</font>):
-                <input id="range20" type="range"  min="1" max="50" step="1" value="10" onchange="updateSigma20()" />
+                <input id="range20" type="range" min="1" max="50" step="1" value="10" onchange="updateSigma20()">
             </div>
         </div>
 
@@ -64,7 +62,7 @@
             <h2>+ DFTInv</h2>
             <xflowimg srcname="output" class="output">
                 <data compute="output = xflip.applyDFTInv(inter)">
-                    <data src="#lpfResult" ></data>
+                    <data src="#lpfResult"></data>
                 </data>
             </xflowimg>
         </div>
@@ -82,11 +80,11 @@
 
     <h1>Fast Fourier Transform</h1>
 
-    <div class="xflipOverall" >
+    <div class="xflipOverall">
 
         <div class="xflipBox">
             <h2>Original</h2>
-            <img src="img/lena.jpg" class="input" />
+            <img src="img/lena.jpg" class="input">
         </div>
 
 
@@ -96,8 +94,8 @@
                 <data compute="output = xflip.createSpectrumImage(inter)">
                     <data id="fftResult" compute="inter = xflip.applyFFT(inter)">
                         <data compute="(inter, oSize) = xflip.padToPow2(image)">
-                            <texture name="image" >
-                                <img src="img/lena.jpg" />
+                            <texture name="image">
+                                <img src="img/lena.jpg">
                             </texture>
                         </data>
                     </data>
@@ -111,13 +109,13 @@
                 <data compute="output = xflip.createSpectrumImage(inter)">
                     <data id="hpfResult" compute="inter = xflip.applyGaussianHPF(inter, sigma)">
                         <float id="sigma211" name="sigma">10</float>
-                        <data src="#fftResult" ></data>
+                        <data src="#fftResult"></data>
                     </data>
                 </data>
             </xflowimg>
-            <div class="options" >
+            <div class="options">
                 Sigma (<font id="div21">10</font>):
-                <input id="range21" type="range"  min="1" max="50" step="1" value="10" onchange="updateSigma21()" />
+                <input id="range21" type="range" min="1" max="50" step="1" value="10" onchange="updateSigma21()">
             </div>
         </div>
 
@@ -127,7 +125,7 @@
                 <data compute="output = xflip.crop(inter, origin, oSize)">
                     <int name="origin">0 0</int>
                     <data compute="inter = xflip.applyFFTInv(inter)">
-                        <data src="#hpfResult" ></data>
+                        <data src="#hpfResult"></data>
                     </data>
                 </data>
             </xflowimg>
@@ -148,5 +146,6 @@
 </div>
 </div>
 
-</body>
-</html>
+
+
+</body></html>

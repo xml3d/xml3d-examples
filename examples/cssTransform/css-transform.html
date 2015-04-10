@@ -1,9 +1,7 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -19,16 +17,14 @@
   <div id="content">
     <!--<h1>CSS Transforms</h1>-->
 
-    <xml3d id="MyXml3d" class="xml3d"
-           width="600px" height="400px"
-        >
+    <xml3d id="MyXml3d" class="xml3d" width="600px" height="400px">
       <view position="0 0 20"></view>
       <defs>
 
       <!-- Shaders -->
 
         <shader id="GroundShader" script="urn:xml3d:shader:phong">
-          <float name="transparency" >0.5</float>
+          <float name="transparency">0.5</float>
           <float3 name="specularColor">0.025 0.025 0.025</float3>
           <float name="shininess">0.1</float>
           <float name="ambientIntensity">0.3</float>
@@ -49,41 +45,40 @@
 
       <!-- Scene Graph -->
 
-      <group shader="#GroundShader"
-             style="transform: translate3d(0px, -2px, 0px) scale3d(10px, 10px, 10px) rotate3d(1, 0, 0, -90deg)" >
-        <mesh src="basic.xml#mesh_ground" ></mesh>
+      <group shader="#GroundShader" style="transform: translate3d(0px, -2px, 0px) scale3d(10px, 10px, 10px) rotate3d(1, 0, 0, -90deg)">
+        <mesh src="basic.xml#mesh_ground"></mesh>
       </group>
 
 
-      <group shader="#ObjectShader"  >
+      <group shader="#ObjectShader">
         <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px)" >
-        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      <group shader="#ObjectShader" style="transform: translateX(5px)">
+        <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)" >
-        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)">
+        <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
       <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) " >
-        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) ">
+        <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
       <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px)  rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)" >
-          <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)">
+          <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
       <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
               translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)
-              rotate3d(0,0,1,-45deg) translate3d(0, -5px, 0px) scale3d(1,1,0.5)" >
-        <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+              rotate3d(0,0,1,-45deg) translate3d(0, -5px, 0px) scale3d(1,1,0.5)">
+        <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group style="transform: translate3d(0px, 40px, 40px)" >
+      <group style="transform: translate3d(0px, 40px, 40px)">
         <light shader="#light1" intensity="30"></light>
       </group>
 
@@ -95,5 +90,6 @@
     </div>
   </div>
 </div>
-</body>
-</html>
+
+
+</body></html>

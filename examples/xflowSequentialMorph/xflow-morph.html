@@ -1,10 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -19,22 +17,20 @@
 <body>
 <div id="overall">
   <div id="content">
-      <div class="controls" >
+      <div class="controls">
           <div class="option">
-              <input type="checkbox" id="check"/><label for="check">Animate</label>
+              <input type="checkbox" id="check"><label for="check">Animate</label>
           </div>
       </div>
 
-    <xml3d id="MyXml3d" class="xml3d"
-           width="600px" height="400px"
-        >
+    <xml3d id="MyXml3d" class="xml3d" width="600px" height="400px">
       <view position="0 0 40"></view>
       <defs>
 
         <!-- Shaders -->
 
         <shader id="GroundShader" script="urn:xml3d:shader:phong">
-          <float name="transparency" >0.5</float>
+          <float name="transparency">0.5</float>
           <float3 name="specularColor">0.025 0.025 0.025</float3>
           <float name="shininess">0.1</float>
           <float name="ambientIntensity">0.3</float>
@@ -67,16 +63,15 @@
 
       <!-- Scene Graph -->
 
-      <group shader="#ObjectShader" style="transform: translate3d(0px, -5px, 0px)" >
+      <group shader="#ObjectShader" style="transform: translate3d(0px, -5px, 0px)">
         <mesh type="triangles" src="#morphedMesh"></mesh>
       </group>
 
-      <group shader="#GroundShader"
-             style="transform: translate3d(0px, -10px, 0px) scale3d(20px, 20px, 20px) rotate3d(1, 0, 0, -90deg)" >
+      <group shader="#GroundShader" style="transform: translate3d(0px, -10px, 0px) scale3d(20px, 20px, 20px) rotate3d(1, 0, 0, -90deg)">
         <mesh src="mesh.xml#ground"></mesh>
       </group>
 
-      <group style="transform: translate3d(0px, 40px, 40px)" >
+      <group style="transform: translate3d(0px, 40px, 40px)">
         <light shader="#light1" intensity="30"></light>
       </group>
 
@@ -116,5 +111,6 @@
     </div>
   </div>
 </div>
-</body>
-</html>
+
+
+</body></html>

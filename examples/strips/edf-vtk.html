@@ -1,10 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
@@ -21,23 +19,23 @@
 <div id="overall">
     <div id="content">
 
-    <xml3d activeView="#defaultView" class="xml3d">
-        <navigation revolveAround="202 200 200" speed="100"></navigation>
+    <xml3d activeview="#defaultView" class="xml3d">
+        <navigation revolvearound="202 200 200" speed="100"></navigation>
         <defs>
             <shader id="lineShader" script="urn:xml3d:shader:flat">
                 <float3 name="diffuseColor">1 1 1</float3>
                 <bool name="useVertexColor">true</bool>
             </shader>
         </defs>
-        <view position='202 200 1400' orientation="0 0 1 1.57"  id="defaultView"></view>
+        <view position="202 200 1400" orientation="0 0 1 1.57" id="defaultView"></view>
         <group shader="#lineShader">
             <mesh src="edf-strips.json" type="linestrips"></mesh>
         </group>
     </xml3d>
-                <div class="controls" >
+                <div class="controls">
             <div class="option">
                 <label for="check">Vertex Colors</label>
-                <input type="checkbox" id="check" checked/>
+                <input type="checkbox" id="check" checked="">
             </div>
         </div>
 
@@ -60,5 +58,6 @@
 		});
     </script>
 </div>
-</body>
-</html>
+
+
+</body></html>

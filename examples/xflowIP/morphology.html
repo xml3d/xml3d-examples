@@ -1,12 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
+<!DOCTYPE html><html><head>
     <!-- Style -->
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -18,7 +16,7 @@
 
     <!-- Application Scrips -->
     <script type="text/javascript" src="../../script/xflip.js"></script>
-    <script type="text/javascript" >
+    <script type="text/javascript">
         Xflip.init(["../../script/xflip-operators.js"]);
     </script>
 </head>
@@ -26,28 +24,28 @@
 <div id="overall">
 <div id="content">
 
-    <div class="xflipOverall" >
+    <div class="xflipOverall">
 
     <div class="xflipBox">
         <h2>Original</h2>
-        <img src="img/lena-color.gif" class="input" />
+        <img src="img/lena-color.gif" class="input">
     </div>
 
     <div class="xflipBox">
         <h2>Erode</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.erode(image, filter)">
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
                 <data compute="filter = xflip.createSquareMorphologyFilter(size)">
                     <int id="size131" name="size">7</int>
                 </data>
             </data>
         </xflowimg>
-        <div class="options" >
-            Size (<font id="div131">7</font>): <input id="range131" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize131()" />
+        <div class="options">
+            Size (<font id="div131">7</font>): <input id="range131" type="range" min="3" max="21" step="2" value="7" onchange="updateSize131()">
         </div>
     </div>
 
@@ -62,18 +60,18 @@
     <div class="xflipBox">
         <h2>Dilate</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.dilate(image, filter)">
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
                 <data compute="filter = xflip.createSquareMorphologyFilter(size)">
                     <int id="size132" name="size">7</int>
                 </data>
             </data>
         </xflowimg>
-        <div class="options" >
-            Size (<font id="div132">7</font>): <input id="range132" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize132()" />
+        <div class="options">
+            Size (<font id="div132">7</font>): <input id="range132" type="range" min="3" max="21" step="2" value="7" onchange="updateSize132()">
         </div>
     </div>
 
@@ -91,5 +89,6 @@
 </div>
 </div>
 
-</body>
-</html>
+
+
+</body></html>

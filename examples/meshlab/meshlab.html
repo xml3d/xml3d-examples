@@ -1,9 +1,7 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
@@ -38,7 +36,7 @@
 <body>
 <div id="overall">
     <div id="content">
-        <xml3d id="MyXml3d" activeView="#defaultView" class="xml3d">
+        <xml3d id="MyXml3d" activeview="#defaultView" class="xml3d">
             <defs id="mainDef">
                 <transform id="t_Lamp" translation="0 0 -700"></transform>
                 <transform id="r_Lamp" rotation="1 0 0 -0.2"></transform>
@@ -65,7 +63,7 @@
             <group shader="#Material">
                 <mesh id="laurana" src="./Laurana50k.json" type="triangles"></mesh>
             </group>
-            <group transform="#t_boden" >
+            <group transform="#t_boden">
                 <model src="./boden.xml#boden" type="triangles"></model>
             </group>
             <group transform="#t_Lamp" shader="#Material">
@@ -103,5 +101,6 @@
         });
     </script>
 </div>
-</body>
-</html>
+
+
+</body></html>

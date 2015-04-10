@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
+<!DOCTYPE html><html><head>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
-    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+    <link rel="stylesheet" type="text/css" media="all" href="xflip-box.css">
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -17,7 +15,7 @@
 
     <!-- Application Scrips -->
     <script type="text/javascript" src="../../script/xflip.js"></script>
-    <script type="text/javascript" >
+    <script type="text/javascript">
         Xflip.init(["../../script/xflip-operators.js"]);
     </script>
 </head>
@@ -25,22 +23,22 @@
 <div id="overall">
 <div id="content">
 
-    <div class="xflipOverall" >
+    <div class="xflipOverall">
 
     <div class="xflipBox">
         <h2>Original</h2>
-        <img src="img/lena-color.gif" class="input" />
+        <img src="img/lena-color.gif" class="input">
     </div>
 
 
     <div class="xflipBox">
         <h2>Laplacian</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.convolve(image, filter)">
                 <float name="filter">-1, -1, -1, -1, 8, -1, -1, -1, -1</float>
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
             </data>
         </xflowimg>
@@ -48,12 +46,12 @@
     </div>
     <div class="xflipBox">
         <h2>Laplacian + Masking Original Image</h2>
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.mask(image, inter, weight)">
                 <data compute="inter = xflip.convolve(image, filter)">
                     <float name="filter">-1, -1, -1, -1, 8, -1, -1, -1, -1</float>
-                    <texture name="image" >
-                        <img src="img/lena-color.gif" />
+                    <texture name="image">
+                        <img src="img/lena-color.gif">
                     </texture>
                 </data>
                 <float name="weight">1</float>
@@ -64,12 +62,12 @@
     <div class="xflipBox">
         <h2>Sobel + Magnitude</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.getChannelMagnitude(inter1, inter2)">
                 <data compute="inter2 = xflip.convolve(image, vFilter)">
                     <data compute="inter1 = xflip.convolve(image, hFilter)">
-                        <texture name="image" >
-                            <img src="img/lena-color.gif" />
+                        <texture name="image">
+                            <img src="img/lena-color.gif">
                         </texture>
                         <float name="hFilter">-1, 0, 1, -2, 0, 2, -1, 0, 1</float>
                     </data>
@@ -82,10 +80,10 @@
     <div class="xflipBox">
         <h2>Gaussian</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.convolve(image, filter)">
                 <texture name="image">
-                    <img src="img/lena-color.gif" />
+                    <img src="img/lena-color.gif">
                 </texture>
                 <data compute="filter = xflip.createGaussianFilter(size, sigma)">
                     <int id="size5" name="size">7</int>
@@ -93,11 +91,11 @@
                 </data>
             </data>
         </xflowimg>
-        <div class="options" >
+        <div class="options">
             Size (<font id="div51">7</font>):
-            <input id="range51" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize5()" /><br />
+            <input id="range51" type="range" min="3" max="21" step="2" value="7" onchange="updateSize5()"><br>
             Sigma (<font id="div52">3</font>):
-            <input id="range52" type="range"  min="1" max="15" step="1" value="3" onchange="updateSigma5()" />
+            <input id="range52" type="range" min="1" max="15" step="1" value="3" onchange="updateSigma5()">
         </div>
     </div>
 
@@ -121,18 +119,18 @@
     <div class="xflipBox">
         <h2>Averaging</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.convolve(image, filter)">
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
                 <data compute="filter = xflip.createAveragingFilter(size)">
                     <int id="size8" name="size">7</int>
                 </data>
             </data>
         </xflowimg>
-        <div class="options" >
-            Size (<font id="div8">7</font>): <input id="range8" type="range"  min="3" max="21" step="2" value="7" onchange="updateSize8()" />
+        <div class="options">
+            Size (<font id="div8">7</font>): <input id="range8" type="range" min="3" max="21" step="2" value="7" onchange="updateSize8()">
         </div>
     </div>
 
@@ -148,16 +146,16 @@
     <div class="xflipBox">
         <h2>Median</h2>
 
-        <xflowimg srcname="output" class="output" >
+        <xflowimg srcname="output" class="output">
             <data compute="output = xflip.median(image, size)">
-                <texture name="image" >
-                    <img src="img/lena-color.gif" />
+                <texture name="image">
+                    <img src="img/lena-color.gif">
                 </texture>
                 <int id="size9" name="size">3</int>
             </data>
         </xflowimg>
-        <div class="options" >
-            Size (<font id="div9">3</font>): <input id="range9" type="range"  min="3" max="21" step="2" value="3" onchange="updateSize9()" />
+        <div class="options">
+            Size (<font id="div9">3</font>): <input id="range9" type="range" min="3" max="21" step="2" value="3" onchange="updateSize9()">
         </div>
     </div>
 
@@ -173,5 +171,6 @@
 </div>
 </div>
 
-</body>
-</html>
+
+
+</body></html>

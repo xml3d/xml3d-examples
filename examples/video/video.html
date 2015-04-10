@@ -1,10 +1,8 @@
-<!doctype html>
-<html lang="en">
-  <head>
+<!DOCTYPE html><html lang="en"><head>
       <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
       <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
-      <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css"/>
-      <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css"/>
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+      <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
 
       <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
       <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -43,21 +41,20 @@
       <div id="content">
         <!--<h1>Video Texture</h1>-->
 
-        <xml3d id="MyXml3d" activeView="#myview" class="xml3d"
-               onload="initAnim()">
+        <xml3d id="MyXml3d" activeview="#myview" class="xml3d" onload="initAnim()">
           <defs>
             <shader id="ex4_2_texShader" script="urn:xml3d:shader:phong">
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
-              <texture name="diffuseTexture" filterMin="linear" filterMag="linear"  wrapS="clamp" wrapT="clamp">
-                <video src="../../resources/videos/nescafe.mp4" id="myvideo" autoplay loop></video>
+              <texture name="diffuseTexture" filtermin="linear" filtermag="linear" wraps="clamp" wrapt="clamp">
+                <video src="../../resources/videos/nescafe.mp4" id="myvideo" autoplay="" loop=""></video>
               </texture>
             </shader>
             <transform id="myxfm" rotation="1 0 1 0"></transform>
           </defs>
-          <view id="myview" position="0 0 -8" orientation="0 1 0 3.14159" fieldOfView="0.7854" ></view>
+          <view id="myview" position="0 0 -8" orientation="0 1 0 3.14159" fieldofview="0.7854"></view>
           <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
-            <mesh type="triangles" src="basic.xml#mesh_cube" ></mesh>
+            <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
           </group>
         </xml3d>
       </div>
@@ -66,5 +63,6 @@
     <div class="description">
         Video Source: <a href="https://archive.org/details/movies">link</a>
     </div>
-  </body>
-</html>
+  
+
+</body></html>
