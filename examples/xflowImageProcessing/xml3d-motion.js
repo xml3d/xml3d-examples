@@ -4501,7 +4501,7 @@ XMOT.CombinedAnimation = CombinedAnimation;
         // create all elements
         var ds = XMOT.creation.dataSrc;
     
-        var sh = XMOT.creation.element("shader", {script:"urn:xml3d:shader:phong"});
+        var sh = XMOT.creation.element("shader", {script:"urn:xml3d:material:phong"});
     
         if(opts.id)
             sh.setAttribute("id", opts.id);

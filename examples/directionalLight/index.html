@@ -38,7 +38,7 @@
       <lightshader id="ls_directional" script="urn:xml3d:lightshader:directional">
 		<float3 name="intensity">0.8 0.8 1</float3>
 	  </lightshader>
-      <shader id="Material.001" script="urn:xml3d:shader:phong">
+      <material id="Material.001" script="urn:xml3d:material:phong">
        <float3 name="diffuseColor">
         0.400000 0.200000 0.200000
        </float3>
@@ -48,10 +48,10 @@
        <float name="shininess">
         0.2
        </float>
-      </shader>
+      </material>
      </defs>
 	 <view id="defaultView" position="1 1.5 12.90000057220459"></view>
-     <group shader="#Material.001">
+     <group material="#Material.001">
       <mesh src="#Sphere_data" type="triangles"></mesh>
      </group>
      <group transform="#t_Lamp">

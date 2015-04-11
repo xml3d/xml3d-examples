@@ -5,7 +5,7 @@
  Shaders
 
  -->
-  <shader script="urn:xml3d:shader:phong" id="shader_engineer_red">
+  <material script="urn:xml3d:material:phong" id="shader_engineer_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -14,8 +14,8 @@
     <texture name="diffuseTexture">
       <img src="engineer_red.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_engineer_head">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_engineer_head">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -24,7 +24,7 @@
     <texture name="diffuseTexture">
       <img src="engineer_head.jpg" />
     </texture>
-  </shader>
+  </material>
   <!--
 
  Mesh Base

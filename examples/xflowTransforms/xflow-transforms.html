@@ -38,14 +38,14 @@
       <float name="key">0.0</float>
     </data>
     <transform id="t_GeoSphere01" translation="97.04 0.0 -282.2">
-    <shader id="greyShader" script="urn:xml3d:shader:phong">
+    <material id="greyShader" script="urn:xml3d:material:phong">
       <float3 name="diffuseColor">0.451 0.451 0.451</float3>
       <float3 name="specularColor">0.0 0.0 0.0</float3>
       <float3 name="emissiveColor">0.0 0.0 0.0</float3>
       <float name="transparency">0.0</float>
       <float name="shininess">0.2</float>
       <float name="ambientIntensity">0.2</float>
-    </shader>
+    </material>
     <transform id="t_GeoSphere02" translation="0.0 0.0 -292.7">
     <transform id="t_GeoSphere03">
     <transform id="t_Cylinder01" translation="0.0 -99.77 0.0">
@@ -121,7 +121,7 @@
     <transform id="t_Object01" translation="0.0 -99.77 0.0">
   </transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></transform></defs>
   <view id="view_Camera01" fieldofview="1.402" orientation="0.01818502 0.9996477 -0.01933209 1.632427" position="83.5 -13.28 -6.506">
-  <group id="root" shader="#greyShader">
+  <group id="root" material="#greyShader">
     <group transform="#t_Fspot02">
       <light id="Fspot02" intensity="3.217" shader="#ls_Fspot02" visible="true">
     </light></group>

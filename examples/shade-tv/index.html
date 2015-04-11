@@ -55,27 +55,27 @@ function shade(env) {
                 <lightshader id="ls" script="urn:xml3d:lightshader:directional">
 
                 </lightshader>
-                <shader id="screenMaterialInstance" script="#screenMaterial">
+                <material id="screenMaterialInstance" script="#screenMaterial">
                     <float name="time">20.0</float>
                     <texture name="wt" filtermin="linear" filtermag="linear" wraps="clamp" wrapt="clamp">
                         <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay></video>
                     </texture>
-                </shader>
+                </material>
             </defs>
             <group id="myScene">
                 <group id="VikendSpecijalTv_obj">
-                    <group id="VikendSpecijal_TV" shader="./materials.xml#mat_m3BlackPlastic">
+                    <group id="VikendSpecijal_TV" material="./materials.xml#mat_m3BlackPlastic">
                         <mesh data-xr-id="42ed63e8-5946-4f6f-a00c-a95a127dccf6" data-xr-name="mesh 2">
                             <data src="./meshes/42ed63e8-5946-4f6f-a00c-a95a127dccf6.json"></data>
                         </mesh>
                     </group>
                     <group id="defaultobject">
-                        <group shader="./materials.xml#mat_m6Logo">
+                        <group material="./materials.xml#mat_m6Logo">
                             <mesh data-xr-id="00f4daf5-84bd-4f8f-855f-c5cc7c9583d6" data-xr-name="mesh 9">
                                 <data src="./meshes/00f4daf5-84bd-4f8f-855f-c5cc7c9583d6.json"></data>
                             </mesh>
                         </group>
-                        <group shader="./materials.xml#mat_m8Yellow">
+                        <group material="./materials.xml#mat_m8Yellow">
                             <mesh data-xr-id="76479c89-553d-42b7-b920-fa05155ce423" data-xr-name="mesh 3">
                                 <data src="./meshes/76479c89-553d-42b7-b920-fa05155ce423.json"></data>
                             </mesh>
@@ -85,17 +85,17 @@ function shade(env) {
                                 <data src="./meshes/b913e031-0720-4e13-8063-8f7d84295c07.json"></data>
                             </mesh>
                         </group>-->
-                        <group shader="./materials.xml#mat_m2Black">
+                        <group material="./materials.xml#mat_m2Black">
                             <mesh data-xr-id="e95e4a2d-4258-4cae-b9cf-0e3e2dc7fe01" data-xr-name="mesh 5">
                                 <data src="./meshes/e95e4a2d-4258-4cae-b9cf-0e3e2dc7fe01.json"></data>
                             </mesh>
                         </group>
-                        <group shader="#screenMaterialInstance">
+                        <group material="#screenMaterialInstance">
                             <mesh data-xr-id="61ff75df-0af3-438e-add1-607ce806622b" data-xr-name="mesh 6">
                                 <data src="./meshes/61ff75df-0af3-438e-add1-607ce806622b.json"></data>
                             </mesh>
                         </group>
-                        <group shader="./materials.xml#mat_m1Antenna">
+                        <group material="./materials.xml#mat_m1Antenna">
                             <mesh data-xr-id="1d723b5c-97e9-45d2-b240-9536dad7fc76" data-xr-name="mesh 7">
                                 <data src="./meshes/1d723b5c-97e9-45d2-b240-9536dad7fc76.json"></data>
                             </mesh>
@@ -104,7 +104,7 @@ function shade(env) {
                             </mesh>
                         </group>
                     </group>
-                    <group id="Cable" shader="./materials.xml#mat_m4Cable">
+                    <group id="Cable" material="./materials.xml#mat_m4Cable">
                         <mesh data-xr-id="46093357-11ba-43fc-93e5-3046367db675" data-xr-name="mesh 11">
                             <data src="./meshes/46093357-11ba-43fc-93e5-3046367db675.json"></data>
                         </mesh>

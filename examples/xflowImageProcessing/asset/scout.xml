@@ -5,7 +5,7 @@
  Shaders
 
  -->
-  <shader script="urn:xml3d:shader:phong" id="shader_scout_red">
+  <material script="urn:xml3d:material:phong" id="shader_scout_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -14,8 +14,8 @@
     <texture name="diffuseTexture">
       <img src="scout_red.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_scout_head">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_scout_head">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -24,8 +24,8 @@
     <texture name="diffuseTexture">
       <img src="scout_head.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_eyeball_r">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -34,8 +34,8 @@
     <texture name="diffuseTexture">
       <img src="eye-iris-blue.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_eyeball_l">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -44,7 +44,7 @@
     <texture name="diffuseTexture">
       <img src="eye-iris-blue.jpg" />
     </texture>
-  </shader>
+  </material>
   <!--
 
  Mesh Base

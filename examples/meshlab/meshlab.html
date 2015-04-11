@@ -48,25 +48,25 @@
                     <float3 name="intensity">1.000000 1.000000 1.000000</float3>
                     <float name="falloffAngle">0.5</float>
                 </lightshader>
-                <shader id="Material" script="urn:xml3d:shader:phong">
+                <material id="Material" script="urn:xml3d:material:phong">
                     <float name="ambientIntensity">0.5</float>
                     <float3 name="diffuseColor">0.4 0.25 0.25</float3>
                     <float3 name="specularColor">0.3 0.3 0.3</float3>
                     <float name="shininess">0.2</float>
 					<bool name="useVertexColor">true</bool>
-                </shader>
+                </material>
 				<transform id="t_camera" translation="-100 -200 -500" rotation="0 0 1 0"></transform>
             </defs>
 			<group id="viewGroup" transform="#t_camera">
 				<view id="defaultView"></view>
 			</group>
-            <group shader="#Material">
+            <group material="#Material">
                 <mesh id="laurana" src="./Laurana50k.json" type="triangles"></mesh>
             </group>
             <group transform="#t_boden">
                 <model src="./boden.xml#boden" type="triangles"></model>
             </group>
-            <group transform="#t_Lamp" shader="#Material">
+            <group transform="#t_Lamp" material="#Material">
                 <group transform="#r_Lamp">
                     <view id="camView" position="0 0 -100"></view>
                     <light shader="#ls_Spot"></light>

@@ -51,7 +51,7 @@
             </lightshader>
 
 
-            <shader id="Material" script="urn:xml3d:shader:phong">
+            <material id="Material" script="urn:xml3d:material:phong">
               <float name="ambientIntensity">0.1</float>
               <float3 name="diffuseColor">1 1 1</float3>
               <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
@@ -59,7 +59,7 @@
               <texture name="diffuseTexture">
                 <img src="raf22031.jpg">
               </texture>
-            </shader>
+            </material>
 
             <transform id="t_camera" translation="6.984260559082031 -6.632504940032959 2.6888844966888428" rotation="0.8151383399963379 0.3461745083332062 0.4644489884376526 1.5028139300481638"></transform>
 
@@ -68,7 +68,7 @@
             <group id="viewGroup" transform="#t_camera">
               <view id="defaultView"></view>
             </group>
-            <group shader="#Material">
+            <group material="#Material">
               <mesh id="car" src="./raf22031.ctm" type="triangles"></mesh>
             </group>
 

@@ -57,14 +57,14 @@
           </data>
         </data>
         <!-- Shader -->
-        <shader id="obj1Shader" script="urn:xml3d:shader:phongvs">
+        <material id="obj1Shader" script="urn:xml3d:material:phongvs">
           <float3 name="diffuseColor">1.0 0.4 0.2</float3>
           <float name="ambientIntensity">0.2</float>
           <!-- Take visibility from AR -->
           <data filter="keep(visibility)" src="#obj1AR"></data>
-        </shader>
+        </material>
         <!-- Group taking transformation from AR data -->
-        <group transform="#obj1AR" shader="#obj1Shader">
+        <group transform="#obj1AR" material="#obj1Shader">
           <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)">
             <mesh type="triangles" src="res/teapot.xml#mesh"></mesh>
           </group>
@@ -79,14 +79,14 @@
           </data>
         </data>
         <!-- Shader -->
-        <shader id="obj2Shader" script="urn:xml3d:shader:phongvs">
+        <material id="obj2Shader" script="urn:xml3d:material:phongvs">
           <float3 name="diffuseColor">0.2 0.4 1.0</float3>
           <float name="ambientIntensity">0.2</float>
           <!-- Take visibility from AR -->
           <data filter="keep(visibility)" src="#obj2AR"></data>
-        </shader>
+        </material>
         <!-- Group taking transformation from AR data -->
-        <group transform="#obj2AR" shader="#obj2Shader">
+        <group transform="#obj2AR" material="#obj2Shader">
           <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)">
             <mesh type="triangles" src="res/teapot.xml#mesh"></mesh>
           </group>

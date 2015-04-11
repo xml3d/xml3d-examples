@@ -40,9 +40,9 @@
                 <defs>
                     <transform id="t_Armature_001" rotation="-1.0 0.0 0.0 1.5707964"></transform>
                     <transform id="t_camera1" translation="0 3 -1" rotation="1 0 0 -1.57"></transform>
-                    <shader id="blackMaterial" script="urn:xml3d:shader:matte">
+                    <material id="blackMaterial" script="urn:xml3d:material:matte">
                         <float3 name="diffuseColor">0.0 0.0 0.0</float3>
-                    </shader>
+                    </material>
                     <data id="Ben-lib" compute="dataflow['protos.xml#skinning']">
 						<data src="json/ben-data.json"></data>
 						<data src="json/animation-data.json"></data>
@@ -52,7 +52,7 @@
                 <group id="RootNode">
                     <group id="Armature_001" transform="#t_Armature_001">
                         <group id="Ben">
-                            <group shader="#blackMaterial">
+                            <group material="#blackMaterial">
                                 <mesh src="#Ben-lib" type="triangles"></mesh>
                             </group>
                         </group>

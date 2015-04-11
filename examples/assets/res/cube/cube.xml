@@ -119,16 +119,16 @@
     </data>
 
 
-   <shader id="shader" script="urn:xml3d:shader:phong">
+   <material id="shader" script="urn:xml3d:material:phong">
       <float3 name="diffuseColor">1 1 1</float3>
       <float name="ambientIntensity">0.4</float>
       <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
         <img src="tex/xml3d-tex.png" alt="xml3d"/>
       </texture>
-   </shader>
+   </material>
 
    <asset id="asset">
-       <assetmesh type="triangles" shader="#shader" style="transform: translateY(1px)">
+       <assetmesh type="triangles" material="#shader" style="transform: translateY(1px)">
            <data src="#mesh"/>
        </assetmesh>
    </asset>

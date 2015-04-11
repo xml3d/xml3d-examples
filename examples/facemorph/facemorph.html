@@ -105,19 +105,19 @@
             1.3 1.3 1.3
            </float3>
           </lightshader>
-          <shader id="faceShader" script="urn:xml3d:shader:phong">
+          <material id="faceShader" script="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.6 0.7 0.9</float3>
-          </shader>
+          </material>
 
-          <shader id="deltaShader" script="urn:xml3d:shader:deltashader">
+          <material id="deltaShader" script="urn:xml3d:material:deltashader">
             <float3 name="diffuseColor">0.6 0.7 0.9</float3>
-          </shader>
+          </material>
 
-          <shader id="phongShader" script="urn:xml3d:shader:phong">
+          <material id="phongShader" script="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.6 0.7 0.9</float3>
             <float3 name="specularcolor">0.8 0.8 1.0</float3>
             <float name="shininess">2.0</float>
-          </shader>
+          </material>
 
          </defs>
 
@@ -126,7 +126,7 @@
          <group transform="#t_Lamp">
           <light shader="#ls_Point"></light>
          </group>
-         <group transform="#t_face" shader="#phongShader" id="faceGroup">
+         <group transform="#t_face" id="faceGroup" material="#phongShader">
             <mesh src="#face_data" type="triangles"></mesh>
          </group>
 

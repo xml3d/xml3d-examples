@@ -1,4 +1,4 @@
-XML3D.shaders.register("eyelight", {
+XML3D.materials.register("eyelight", {
 
     vertex : [
         "attribute vec3 position;",

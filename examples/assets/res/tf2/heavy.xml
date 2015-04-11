@@ -5,7 +5,7 @@
  Shaders
 
  -->
-  <shader script="urn:xml3d:shader:phong" id="shader_hvyweapon_red">
+  <material script="urn:xml3d:material:phong" id="shader_hvyweapon_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -14,8 +14,8 @@
     <texture name="diffuseTexture">
       <img src="tex/hvyweapon_red.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_heavy_head_red">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_heavy_head_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -24,8 +24,8 @@
     <texture name="diffuseTexture">
       <img src="tex/heavy_head.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_eyeball_r">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -34,8 +34,8 @@
     <texture name="diffuseTexture">
       <img src="tex/eye-iris-blue.jpg" />
     </texture>
-  </shader>
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+  </material>
+  <material script="urn:xml3d:material:phong" id="shader_eyeball_l">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -44,7 +44,7 @@
     <texture name="diffuseTexture">
       <img src="tex/eye-iris-blue.jpg" />
     </texture>
-  </shader>
+  </material>
   <!--
 
  Mesh Base
@@ -77,10 +77,10 @@
         <data src="#anim_taunt05h"></data>
     </assetdata>
 
-    <assetmesh shader="#shader_hvyweapon_red" src="#index_hvyweapon_red" includes="base" />
-    <assetmesh shader="#shader_heavy_head_red" src="#index_heavy_head_red" includes="base" />
-    <assetmesh shader="#shader_eyeball_r" src="#index_eyeball_r" includes="base" />
-    <assetmesh shader="#shader_eyeball_l" src="#index_eyeball_l" includes="base" />
+    <assetmesh material="#shader_hvyweapon_red" src="#index_hvyweapon_red" includes="base" />
+    <assetmesh material="#shader_heavy_head_red" src="#index_heavy_head_red" includes="base" />
+    <assetmesh material="#shader_eyeball_r" src="#index_eyeball_r" includes="base" />
+    <assetmesh material="#shader_eyeball_l" src="#index_eyeball_l" includes="base" />
   </asset>
 
 </xml3d>

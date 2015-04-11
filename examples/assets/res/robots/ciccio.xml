@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <xml3d xmlns="http://www.xml3d.org/2009/xml3d" >
 
-    <shader id="glassShader" script="urn:xml3d:shader:phong">
+    <material id="glassShader" script="urn:xml3d:material:phong">
         <float3 name="emissiveColor">0.5 0.5 0.5</float3>
         <float3 name="diffuseColor">0.1936 0.636474 0.8</float3>
         <float3 name="specularColor">0.5 0.5 0.5</float3>
         <float name="shininess">0.15625</float>
         <float name="ambientIntensity">0.0</float>
         <float name="transparency">0.154467</float>
-    </shader>
+    </material>
 
-    <shader id="armorShader" script="urn:xml3d:shader:phong">
+    <material id="armorShader" script="urn:xml3d:material:phong">
         <float3 name="emissiveColor">0.5 0.5 0.5</float3>
         <float name="ambientIntensity">0.1</float>
         <texture name="diffuseTexture">
@@ -25,7 +25,7 @@
         <float3 name="specularColor">0.5 0.5 0.5</float3>
         <float name="shininess">0.05625</float>
         <float name="transparency">0.01</float>
-    </shader>
+    </material>
 
 
     <asset id="asset" >
@@ -37,10 +37,10 @@
         </assetdata>
 
         <!-- meshes -->
-        <assetmesh name="armor" shader="#armorShader" includes="base" >
+        <assetmesh name="armor" material="#armorShader" includes="base" >
             <data src="data/ciccio-mesh.xml#index1" />
         </assetmesh>
-        <assetmesh name="glass" shader="#glassShader" includes="base" >
+        <assetmesh name="glass" material="#glassShader" includes="base" >
             <data src="data/ciccio-mesh.xml#index2" />
         </assetmesh>
     </asset>

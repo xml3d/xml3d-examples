@@ -53,13 +53,13 @@
        <float3 name="intensity">100 100 100</float3>
       </lightshader>
 
-      <shader id="Material" script="urn:xml3d:shader:phong">
+      <material id="Material" script="urn:xml3d:material:phong">
        <float name="ambientIntensity">0.1</float>
        <texture name="diffuseTexture"><img src="water.jpg"></texture>
        <float3 name="diffuseColor">1 1 1</float3>
        <float3 name="specularColor">0.5 0.5 0.5</float3>
        <float name="shininess">0.0978473581213</float>
-      </shader>
+      </material>
 
       <transform id="t_Camera" rotation="-0.641815 0.733700 0.223063 1.145952" scale="1 1 1" translation="3.184399 3.711076 2.405665"></transform>
       <transform id="t_Grid" rotation="1 0.000000 0.000000 0.000000" scale="25.000000 25.000000 25.000000" translation="0.000000 0.00 0.000000"></transform>
@@ -95,7 +95,7 @@
 
      <!-- Wave Shape Display: -->
 
-     <group shader="#Material" transform="#t_Grid">
+     <group transform="#t_Grid" material="#Material">
       <mesh type="triangles">
         <data src="#wave"></data>
       </mesh>

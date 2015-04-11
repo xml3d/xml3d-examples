@@ -53,14 +53,14 @@
           <float name="shadowBias">0.001</float>
         </lightshader>
 
-        <shader id="myMaterial" script="#customMaterial">
+        <material id="myMaterial" script="#customMaterial">
           <float name="ambientIntensity">0.1</float>
           <float3 name="specularColor">0.5 0.5 0.5</float3>
           <float name="time">0.5</float>
           <texture name="tints0" wraps="repeat">
             <img src="../../resources/textures/wood.jpg">
           </texture>
-        </shader>
+        </material>
 
         <data id="mesh_data" compute="tangent = xflow.calculateTangents(index, position, normal, texcoord)">
           <data src="../../resources/meshes/suzanne.blst"></data>
@@ -70,7 +70,7 @@
 
       </defs>
 
-      <group style="shader: url(#myMaterial)">
+      <group style="material: url(#myMaterial)">
         <mesh type="triangles" transform="#t_Suzanne" onclick="alert('Hi, my name is Suzanne!');">
           <data src="#mesh_data"></data>
           <float3 name="tint1">0.8 0.0 0.2</float3>

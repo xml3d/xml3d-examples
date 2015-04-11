@@ -5,7 +5,7 @@
  Shaders
 
  -->
-  <shader script="urn:xml3d:shader:phong" id="shader_sniper_head">
+  <material script="urn:xml3d:material:phong" id="shader_sniper_head">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -14,9 +14,9 @@
     <texture name="diffuseTexture">
       <img src="tex/sniper_head.jpg" />
     </texture>
-  </shader>
+  </material>
 
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_l">
+  <material script="urn:xml3d:material:phong" id="shader_eyeball_l">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -25,9 +25,9 @@
     <texture name="diffuseTexture">
       <img src="tex/eye-iris-blue.jpg" />
     </texture>
-  </shader>
+  </material>
 
-  <shader script="urn:xml3d:shader:phong" id="shader_eyeball_r">
+  <material script="urn:xml3d:material:phong" id="shader_eyeball_r">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -36,9 +36,9 @@
     <texture name="diffuseTexture">
       <img src="tex/eye-iris-blue.jpg" />
     </texture>
-  </shader>
+  </material>
 
-  <shader script="urn:xml3d:shader:phong" id="shader_sniper_red">
+  <material script="urn:xml3d:material:phong" id="shader_sniper_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -47,9 +47,9 @@
     <texture name="diffuseTexture">
       <img src="tex/sniper_red.jpg" />
     </texture>
-  </shader>
+  </material>
 
-  <shader script="urn:xml3d:shader:phong" id="shader_sniper_lens">
+  <material script="urn:xml3d:material:phong" id="shader_sniper_lens">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -58,9 +58,9 @@
     <texture name="diffuseTexture">
       <img src="tex/sniper_lens.jpg" />
     </texture>
-  </shader>
+  </material>
 
-  <shader script="urn:xml3d:shader:phong" id="shader_c_arrow">
+  <material script="urn:xml3d:material:phong" id="shader_c_arrow">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -69,7 +69,7 @@
     <texture name="diffuseTexture">
       <img src="tex/c_arrow.jpg" />
     </texture>
-  </shader>
+  </material>
     <!--
 
    Mesh Base
@@ -106,12 +106,12 @@
         <data src="#anim_taunt02_heelClick"></data>
     </assetdata>
 
-    <assetmesh shader="#shader_sniper_head" src="#index_sniper_head" includes="base" />
-    <assetmesh shader="#shader_eyeball_l" src="#index_eyeball_l" includes="base" />
-    <assetmesh shader="#shader_eyeball_r" src="#index_eyeball_r" includes="base" />
-    <assetmesh shader="#shader_sniper_red" src="#index_sniper_red" includes="base" />
-    <assetmesh shader="#shader_sniper_lens" src="#index_sniper_lens" includes="base" />
-    <assetmesh shader="#shader_c_arrow" src="#index_c_arrow" includes="base" />
+    <assetmesh material="#shader_sniper_head" src="#index_sniper_head" includes="base" />
+    <assetmesh material="#shader_eyeball_l" src="#index_eyeball_l" includes="base" />
+    <assetmesh material="#shader_eyeball_r" src="#index_eyeball_r" includes="base" />
+    <assetmesh material="#shader_sniper_red" src="#index_sniper_red" includes="base" />
+    <assetmesh material="#shader_sniper_lens" src="#index_sniper_lens" includes="base" />
+    <assetmesh material="#shader_c_arrow" src="#index_c_arrow" includes="base" />
   </asset>
 
 </xml3d>

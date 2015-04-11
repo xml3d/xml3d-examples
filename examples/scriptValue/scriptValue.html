@@ -22,13 +22,13 @@
             <xml3d id="canvas" class="xml3d">
                 <view position="0 0 10"></view>
 
-                <shader id="lineShader" script="urn:xml3d:shader:flat">
+                <material id="lineShader" script="urn:xml3d:material:flat">
                     <float3 name="diffuseColor">1 1 1</float3>
                     <bool name="useVertexColor">true</bool>
-                </shader>
+                </material>
 
 
-                <group shader="#lineShader">
+                <group material="#lineShader">
                     <mesh type="linestrips">
                         <float3 name="position" id="posArray">0 0 0</float3>
                         <float3 name="color" id="colorArray">1 0 1</float3>

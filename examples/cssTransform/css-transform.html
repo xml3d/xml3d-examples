@@ -23,19 +23,19 @@
 
       <!-- Shaders -->
 
-        <shader id="GroundShader" script="urn:xml3d:shader:phong">
+        <material id="GroundShader" script="urn:xml3d:material:phong">
           <float name="transparency">0.5</float>
           <float3 name="specularColor">0.025 0.025 0.025</float3>
           <float name="shininess">0.1</float>
           <float name="ambientIntensity">0.3</float>
           <float3 name="diffuseColor">1 1 1</float3>
-        </shader>
-        <shader id="ObjectShader" script="urn:xml3d:shader:phong">
+        </material>
+        <material id="ObjectShader" script="urn:xml3d:material:phong">
           <float3 name="specularColor">0.55 0.55 0.55</float3>
           <float name="shininess">0.6</float>
           <float name="ambientIntensity">0.3</float>
           <float3 name="diffuseColor">1.5 1.0 0.2</float3>
-        </shader>
+        </material>
         <lightshader id="light1" script="urn:xml3d:lightshader:point">
           <float3 name="intensity">1.0 1.0 1.0</float3>
           <float3 name="attenuation">1 1 0</float3>
@@ -45,36 +45,36 @@
 
       <!-- Scene Graph -->
 
-      <group shader="#GroundShader" style="transform: translate3d(0px, -2px, 0px) scale3d(10px, 10px, 10px) rotate3d(1, 0, 0, -90deg)">
+      <group style="transform: translate3d(0px, -2px, 0px) scale3d(10px, 10px, 10px) rotate3d(1, 0, 0, -90deg)" material="#GroundShader">
         <mesh src="basic.xml#mesh_ground"></mesh>
       </group>
 
 
-      <group shader="#ObjectShader">
+      <group material="#ObjectShader">
         <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px)">
+      <group style="transform: translateX(5px)" material="#ObjectShader">
         <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)">
+      <group style="transform: translateX(5px) translateY(5px) rotateZ(45deg)" material="#ObjectShader">
         <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) ">
+      <group style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) " material="#ObjectShader">
         <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px)  rotateZ(45deg)
-              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)">
+      <group style="transform: translateX(5px) translateY(5px)  rotateZ(45deg)
+              translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)" material="#ObjectShader">
           <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
+      <group style="transform: translateX(5px) translateY(5px) rotateZ(45deg)
               translate3d(-3px, 3px, 0px) scale3d(0.5,2,2) translate3d(-8px, 2px, 0px) scale3d(2,0.5,2)
-              rotate3d(0,0,1,-45deg) translate3d(0, -5px, 0px) scale3d(1,1,0.5)">
+              rotate3d(0,0,1,-45deg) translate3d(0, -5px, 0px) scale3d(1,1,0.5)" material="#ObjectShader">
         <mesh type="triangles" src="basic.xml#mesh_cube"></mesh>
       </group>
 

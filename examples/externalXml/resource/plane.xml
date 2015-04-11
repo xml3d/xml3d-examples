@@ -3,7 +3,7 @@
 
     <!-- Shaders -->
 
-    <shader id="shader_matte" script="urn:xml3d:shader:phong">
+    <material id="shader_matte" script="urn:xml3d:material:phong">
         <float3 name="emissiveColor">0.0 0.0 0.0</float3>
         <texture name="diffuseTexture">
             <img src="./planeDiffuse.png"/>
@@ -12,9 +12,9 @@
         <float name="shininess">0.00238875</float>
         <float name="transparency">0.0</float>
         <float name="ambientIntensity">0.5</float>
-    </shader>
+    </material>
 
-    <shader id="shader_shine" script="urn:xml3d:shader:phong">
+    <material id="shader_shine" script="urn:xml3d:material:phong">
         <float3 name="emissiveColor">0.0 0.0 0.0</float3>
         <texture name="diffuseTexture">
             <img src="./planeDiffuse.png"/>
@@ -22,7 +22,7 @@
         <float3 name="specularColor">0.49586 0.49586 0.49586</float3>
         <float name="shininess">0.6167344</float>
         <float name="ambientIntensity">0.5</float>
-    </shader>
+    </material>
 
     <!-- Mesh Data -->
 

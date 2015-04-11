@@ -57,17 +57,17 @@
 
         <xml3d id="MyXml3d" class="xml3d" activeview="#myview">
           <defs>
-            <shader id="ex4_2_texShader" script="urn:xml3d:shader:phong">
+            <material id="ex4_2_texShader" script="urn:xml3d:material:phong">
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
               <texture name="diffuseTexture">
                 <video id="webcam" src="../video/Firefox.ogv" autoplay></video>
               </texture>
-            </shader>
+            </material>
             <transform id="myxfm" rotation="1 0 1 0"></transform>
           </defs>
           <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldofview="0.7854"></view>
-          <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
+          <group style="material: url(#ex4_2_texShader)" transform="#myxfm">
               <mesh type="triangles">
                   <int name="index">
                       0  1  2      0  2  3    <!-- front -->

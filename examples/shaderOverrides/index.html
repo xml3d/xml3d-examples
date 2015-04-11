@@ -18,16 +18,16 @@
     <div id="content">
   <xml3d onload="init(event);">
       <defs>
-	      <shader id="baseShader" script="urn:xml3d:shader:phong">
+	      <material id="baseShader" script="urn:xml3d:material:phong">
               <float name="ambientIntensity">0.25</float>
 			  <float3 name="emissiveColor">0 0 0</float3>
 			  <float name="shininess">0.4</float>
 			  <float3 name="specularColor">1 1 1</float3>
-          </shader>
+          </material>
 	  </defs>
       <view></view>
 	  <light intensity="0.9"></light>
-      <group shader="#baseShader"></group>
+      <group material="#baseShader"></group>
   </xml3d>
 
         <div class="description">

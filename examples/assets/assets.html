@@ -23,15 +23,15 @@
 
       <!-- Scene Graph -->
 
-      <group shader="#ObjectShader" style="transform: translateX(0px)">
+      <group style="transform: translateX(0px)">
         <model src="res/assets.xml#cube"></model>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(5px) scale3d(0.07,0.07,0.07)">
+      <group style="transform: translateX(5px) scale3d(0.07,0.07,0.07)">
         <model src="res/assets.xml#teapot"></model>
       </group>
 
-      <group shader="#ObjectShader" style="transform: translateX(-5px) scale3d(0.07,0.07,0.07)">
+      <group style="transform: translateX(-5px) scale3d(0.07,0.07,0.07)">
         <model src="res/assets.xml#sniper">
             <assetdata name="base" includes="defaultAnim" compute="dataflow['protos.xml#skinning']">
                 <float name="key">0.8</float>

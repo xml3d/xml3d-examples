@@ -62,13 +62,13 @@
       </data>
 
 
-      <shader id="textureInput5" script="urn:xml3d:shader:phong">
+      <shader id="textureInput5" script="urn:xml3d:material:phong">
 				<float3 name="diffuseColor">1 1 1</float3>
 				<float name="ambientIntensity">1.0</float>
         <data src="#textureData5" filter="keep({diffuseTexture: texInput})" ></data>
 			</shader>
 
-     <shader id="textureOutput5" script="urn:xml3d:shader:phong" >
+     <shader id="textureOutput5" script="urn:xml3d:material:phong" >
 				<float3 name="diffuseColor">1 1 1</float3>
 				<float name="ambientIntensity">1.0</float>
         <data src="#textureData5" filter="keep({diffuseTexture: texOutput})" ></data>

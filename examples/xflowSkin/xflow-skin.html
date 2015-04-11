@@ -26,12 +26,12 @@
               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
 
 
-              <shader id="Material" script="urn:xml3d:shader:phong">
+              <material id="Material" script="urn:xml3d:material:phong">
                 <float name="ambientIntensity">1</float>
                 <float3 name="diffuseColor">0.400000 0.120000 0.180000</float3>
                 <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
                 <float name="shininess">0.2</float>
-              </shader>
+              </material>
             </defs>
             <group id="viewGroup" transform="#t_Camera">
               <view id="defaultView"></view>
@@ -52,25 +52,25 @@
                 <data src="asset/heavy.xml#anim_taunt05h"></data>
                 <float id="keyHeavy" name="key">0.0</float>
               </data>
-              <group shader="asset/heavy.xml#shader_hvyweapon_red">
+              <group material="asset/heavy.xml#shader_hvyweapon_red">
                 <mesh type="triangles">
                   <data src="#heavySkinned"></data>
                   <data src="asset/heavy.xml#index_hvyweapon_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/heavy.xml#shader_heavy_head_red">
+              <group material="asset/heavy.xml#shader_heavy_head_red">
                 <mesh type="triangles">
                   <data src="#heavySkinned"></data>
                   <data src="asset/heavy.xml#index_heavy_head_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/heavy.xml#shader_eyeball_r">
+              <group material="asset/heavy.xml#shader_eyeball_r">
                 <mesh type="triangles">
                   <data src="#heavySkinned"></data>
                   <data src="asset/heavy.xml#index_eyeball_r"></data>
                 </mesh>
               </group>
-              <group shader="asset/heavy.xml#shader_eyeball_l">
+              <group material="asset/heavy.xml#shader_eyeball_l">
                 <mesh type="triangles">
                   <data src="#heavySkinned"></data>
                   <data src="asset/heavy.xml#index_eyeball_l"></data>
@@ -84,37 +84,37 @@
                 <data src="asset/sniper.xml#anim_taunt02_heelClick"></data>
                 <float id="keySniper" name="key">0.0</float>
               </data>
-              <group shader="asset/sniper.xml#shader_sniper_head">
+              <group material="asset/sniper.xml#shader_sniper_head">
                 <mesh type="triangles">
                   <data src="#sniperSkinned"></data>
                   <data src="asset/sniper.xml#index_sniper_head"></data>
                 </mesh>
               </group>
-              <group shader="asset/sniper.xml#shader_eyeball_l">
+              <group material="asset/sniper.xml#shader_eyeball_l">
                 <mesh type="triangles">
                   <data src="#sniperSkinned"></data>
                   <data src="asset/sniper.xml#index_eyeball_l"></data>
                 </mesh>
               </group>
-              <group shader="asset/sniper.xml#shader_eyeball_r">
+              <group material="asset/sniper.xml#shader_eyeball_r">
                 <mesh type="triangles">
                   <data src="#sniperSkinned"></data>
                   <data src="asset/sniper.xml#index_eyeball_r"></data>
                 </mesh>
               </group>
-              <group shader="asset/sniper.xml#shader_sniper_red">
+              <group material="asset/sniper.xml#shader_sniper_red">
                 <mesh type="triangles">
                   <data src="#sniperSkinned"></data>
                   <data src="asset/sniper.xml#index_sniper_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/sniper.xml#shader_sniper_lens">
+              <group material="asset/sniper.xml#shader_sniper_lens">
                 <mesh type="triangles">
                   <data src="#sniperSkinned"></data>
                   <data src="asset/sniper.xml#index_sniper_lens"></data>
                 </mesh>
               </group>
-              <group shader="asset/sniper.xml#shader_c_arrow">
+              <group material="asset/sniper.xml#shader_c_arrow">
                 <mesh type="triangles">
                   <data src="#sniperSkinned"></data>
                   <data src="asset/sniper.xml#index_c_arrow"></data>
@@ -128,31 +128,31 @@
                 <data src="asset/medic.xml#anim_taunt02m"></data>
                 <float id="keyMedic" name="key">0.0</float>
               </data>
-              <group shader="asset/medic.xml#shader_medic_red">
+              <group material="asset/medic.xml#shader_medic_red">
                 <mesh type="triangles">
                   <data src="#medicSkinned"></data>
                   <data src="asset/medic.xml#index_medic_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/medic.xml#shader_medic_backpack_red">
+              <group material="asset/medic.xml#shader_medic_backpack_red">
                 <mesh type="triangles">
                   <data src="#medicSkinned"></data>
                   <data src="asset/medic.xml#index_medic_backpack_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/medic.xml#shader_medic_head">
+              <group material="asset/medic.xml#shader_medic_head">
                 <mesh type="triangles">
                   <data src="#medicSkinned"></data>
                   <data src="asset/medic.xml#index_medic_head"></data>
                 </mesh>
               </group>
-              <group shader="asset/medic.xml#shader_eyeball_r">
+              <group material="asset/medic.xml#shader_eyeball_r">
                 <mesh type="triangles">
                   <data src="#medicSkinned"></data>
                   <data src="asset/medic.xml#index_eyeball_r"></data>
                 </mesh>
               </group>
-              <group shader="asset/medic.xml#shader_eyeball_l">
+              <group material="asset/medic.xml#shader_eyeball_l">
                 <mesh type="triangles">
                   <data src="#medicSkinned"></data>
                   <data src="asset/medic.xml#index_eyeball_l"></data>
@@ -166,13 +166,13 @@
                 <data src="asset/engineer.xml#anim_taunt01e"></data>
                 <float id="keyEngineer" name="key">0.0</float>
               </data>
-             <group shader="asset/engineer.xml#shader_engineer_red">
+             <group material="asset/engineer.xml#shader_engineer_red">
                 <mesh type="triangles">
                   <data src="#engineerSkinned"></data>
                   <data src="asset/engineer.xml#index_engineer_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/engineer.xml#shader_engineer_head">
+              <group material="asset/engineer.xml#shader_engineer_head">
                 <mesh type="triangles">
                   <data src="#engineerSkinned"></data>
                   <data src="asset/engineer.xml#index_engineer_head"></data>
@@ -186,25 +186,25 @@
                 <data src="asset/scout.xml#anim_taunt05_DeathTaunt"></data>
                 <float id="keyScout" name="key">0.0</float>
               </data>
-              <group shader="asset/scout.xml#shader_scout_red">
+              <group material="asset/scout.xml#shader_scout_red">
                 <mesh type="triangles">
                   <data src="#scoutSkinned"></data>
                   <data src="asset/scout.xml#index_scout_red"></data>
                 </mesh>
               </group>
-              <group shader="asset/scout.xml#shader_scout_head">
+              <group material="asset/scout.xml#shader_scout_head">
                 <mesh type="triangles">
                   <data src="#scoutSkinned"></data>
                   <data src="asset/scout.xml#index_scout_head"></data>
                 </mesh>
               </group>
-              <group shader="asset/scout.xml#shader_eyeball_r">
+              <group material="asset/scout.xml#shader_eyeball_r">
                 <mesh type="triangles">
                   <data src="#scoutSkinned"></data>
                   <data src="asset/scout.xml#index_eyeball_r"></data>
                 </mesh>
               </group>
-              <group shader="asset/scout.xml#shader_eyeball_l">
+              <group material="asset/scout.xml#shader_eyeball_l">
                 <mesh type="triangles">
                   <data src="#scoutSkinned"></data>
                   <data src="asset/scout.xml#index_eyeball_l"></data>

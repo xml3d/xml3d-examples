@@ -27,15 +27,15 @@
                     <float3 name="attenuation">1.000000 0.033333 0.000000</float3>
                     <float3 name="intensity">1.000000 1.000000 1.000000</float3>
                 </lightshader>
-                <shader id="Material" script="urn:xml3d:shader:phong">
+                <material id="Material" script="urn:xml3d:material:phong">
                     <float name="ambientIntensity">0.0</float>
                     <float3 name="diffuseColor">0.400000 0.120000 0.180000</float3>
                     <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
                     <float name="shininess">0.2</float>
-                </shader>
+                </material>
             </defs>
             <view id="defaultView" orientation="0.772239 0.341341 0.535848 1.347139" position="7.481132 -6.507640 5.343665"></view>
-            <group shader="#Material" transform="#t_Suzanne">
+            <group transform="#t_Suzanne" material="#Material">
                 <mesh src="./suzanne.json" type="triangles"></mesh>
             </group>
             <group transform="#t_Lamp">

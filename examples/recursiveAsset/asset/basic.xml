@@ -30,15 +30,15 @@
   </data>
 
 
-    <shader id="cubeShader" script="urn:xml3d:shader:phong">
+    <material id="cubeShader" script="urn:xml3d:material:phong">
       <float3 name="specularColor">0.55 0.55 0.55</float3>
       <float name="shininess">0.6</float>
       <float name="ambientIntensity">0.3</float>
       <float3 name="diffuseColor">1.5 1.0 0.2</float3>
-    </shader>
+    </material>
 
   <asset id="cube">
-      <assetmesh shader="#cubeShader" >
+      <assetmesh material="#cubeShader" >
           <data src="#mesh_cube" ></data>
       </assetmesh>
   </asset>
