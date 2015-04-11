@@ -1,4 +1,4 @@
-XML3D.shaders.register("phongvs", {
+XML3D.materials.register("phongvs", {
 
     vertex : [
         "attribute vec3 position;",

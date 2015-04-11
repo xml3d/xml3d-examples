@@ -124,7 +124,7 @@ function setupApp() {
 
     ardata.addOutputFieldListener(['arvideo'], function(values) {
         if (values.arvideo) {
-            var data = XML3D.util.toImageData(values.arvideo);
+            var data = Xflow.constants.toImageData(values.arvideo);
             var width = data.width;
             var height = data.height;
 
