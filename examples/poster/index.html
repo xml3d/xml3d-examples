@@ -46,12 +46,7 @@
           }
         </script>
 
-        <lightshader id="light1" script="urn:xml3d:lightshader:spot">
-          <float3 name="intensity">1 1 1</float3>
-          <float3 name="attenuation">1 0 0.0008</float3>
-          <bool name="castShadow">true</bool>
-          <float name="shadowBias">0.001</float>
-        </lightshader>
+        
 
         <material id="myMaterial" script="#customMaterial">
           <float name="ambientIntensity">0.1</float>
@@ -86,7 +81,12 @@
         </group>
       </group>
       <group style="transform:  translate3d(-20px, 40px, 0px) rotateX(-90deg) rotateY(-30deg);">
-        <light shader="#light1"></light>
+        <light model="urn:xml3d:light:spot">
+          <float3 name="intensity">1 1 1</float3>
+          <float3 name="attenuation">1 0 0.0008</float3>
+          <bool name="castShadow">true</bool>
+          <float name="shadowBias">0.001</float>
+        </light>
       </group>
       <view id="defaultView" position="0 9 60"></view>
     </xml3d>

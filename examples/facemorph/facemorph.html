@@ -97,14 +97,7 @@
                </int>
             </data>
 
-          <lightshader id="ls_Point" script="urn:xml3d:lightshader:point">
-           <float3 name="attenuation">
-            1.000000 0.033333 0.000000
-           </float3>
-           <float3 name="intensity">
-            1.3 1.3 1.3
-           </float3>
-          </lightshader>
+          
           <material id="faceShader" script="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.6 0.7 0.9</float3>
           </material>
@@ -124,7 +117,14 @@
          <view id="Camera" position="0.000000 -6.000000 40.000000"></view>
 
          <group transform="#t_Lamp">
-          <light shader="#ls_Point"></light>
+           <light model="urn:xml3d:light:point">
+             <float3 name="attenuation">
+               1.000000 0.033333 0.000000
+             </float3>
+             <float3 name="intensity">
+               1.3 1.3 1.3
+             </float3>
+           </light>
          </group>
          <group transform="#t_face" id="faceGroup" material="#phongShader">
             <mesh src="#face_data" type="triangles"></mesh>

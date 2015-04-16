@@ -52,9 +52,7 @@ function shade(env) {
     return new Shade().diffuse(new Vec3(1.5 - hash(time) * 0.1).mul(s), env.normal, 0.1).phong(new Vec3(0.7), env.normal, 0.2);
 }
                 </script>
-                <lightshader id="ls" script="urn:xml3d:lightshader:directional">
-
-                </lightshader>
+                
                 <material id="screenMaterialInstance" script="#screenMaterial">
                     <float name="time">20.0</float>
                     <texture name="wt" filtermin="linear" filtermag="linear" wraps="clamp" wrapt="clamp">
@@ -118,7 +116,7 @@ function shade(env) {
             <group id="viewGroup">
                 <view position="0.28688493371009827 1.2059874534606934 6.089585304260254" orientation="0 1 0 0"></view>
             </group>
-            <light shader="#ls"></light>
+            <light model="urn:xml3d:light:directional"></light>
         </xml3d>
 
         <div class="description">

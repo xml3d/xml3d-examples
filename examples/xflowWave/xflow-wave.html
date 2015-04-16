@@ -48,10 +48,7 @@
 
       <!--- Not so important part: -->
 
-      <lightshader id="ls_Spot" script="urn:xml3d:lightshader:point">
-       <float3 name="attenuation">1 0.033333 1</float3>
-       <float3 name="intensity">100 100 100</float3>
-      </lightshader>
+      
 
       <material id="Material" script="urn:xml3d:material:phong">
        <float name="ambientIntensity">0.1</float>
@@ -102,9 +99,12 @@
      </group>
 
      <!-- Light Source: -->
-     <group transform="#t_Lamp">
-		<light shader="#ls_Spot"></light>
-     </group>
+      <group transform="#t_Lamp">
+        <light model="urn:xml3d:light:point">
+          <float3 name="attenuation">1 0.033333 1</float3>
+          <float3 name="intensity">100 100 100</float3>
+        </light>
+      </group>
     </xml3d>
     <div class="controls">
       <div class="option">

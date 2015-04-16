@@ -41,12 +41,12 @@
 
 
 
-      <lightshader id="light1" script="urn:xml3d:lightshader:point">
-          <float3 name="intensity">1.0 1.0 1.0</float3>
-          <float3 name="attenuation">1 1 0</float3>
-      </lightshader>
+      
       <group style="transform: translate3d(0px, 40px, 40px)">
-        <light shader="#light1" intensity="30"></light>
+        <light model="urn:xml3d:light:point">
+          <float3 name="intensity">30 30 30</float3>
+          <float3 name="attenuation">1 1 0</float3>
+        </light>
       </group>
 
     </xml3d>
@@ -56,6 +56,7 @@
     </div>
   </div>
 </div>
+
 
 
 </body></html>

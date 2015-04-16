@@ -85,18 +85,18 @@
 
         <!-- Lights -->
 
-        <lightshader id="light1" script="urn:xml3d:lightshader:point">
-          <float3 name="intensity">1 1 1</float3>
-          <float3 name="attenuation">1 0 0</float3>
-          <bool name="castShadow">true</bool>
-        </lightshader>
+        
 
         <group style="transform: translate3d(0px, 10px, 0px)">
-          <light shader="#light1"></light>
+          <light model="urn:xml3d:light:point">
+            <float3 name="intensity">1 1 1</float3>
+            <float3 name="attenuation">1 0 0</float3>
+            <bool name="castShadow">true</bool>
+          </light>
         </group>
 
         <group style="transform: translate3d(5px, 10px, 0px)">
-          <light shader="#light1"></light>
+          <light model="urn:xml3d:light:point"></light>
         </group>
 
 

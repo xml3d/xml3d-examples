@@ -44,11 +44,7 @@
 
             <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
 
-            <lightshader id="ls_Spot" script="urn:xml3d:lightshader:point">
-              <bool name="castShadow">false</bool>
-              <float3 name="attenuation">1.000000 0.033333 0.000000</float3>
-              <float3 name="intensity">1.000000 1.000000 1.000000</float3>
-            </lightshader>
+            
 
 
             <material id="Material" script="urn:xml3d:material:phong">
@@ -73,7 +69,11 @@
             </group>
 
             <group transform="#t_Lamp">
-              <light shader="#ls_Spot"></light>
+              <light model="urn:xml3d:light:point">
+                <bool name="castShadow">false</bool>
+                <float3 name="attenuation">1.000000 0.033333 0.000000</float3>
+                <float3 name="intensity">1.000000 1.000000 1.000000</float3>
+              </light>
             </group>
         </xml3d>
 

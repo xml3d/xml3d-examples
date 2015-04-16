@@ -84,10 +84,7 @@
                         <float name="ambientIntensity">1</float>
                     </material>
                     <transform id="t_node-candle_light" rotation="0.0 0.0 -1.0 -1.7453291" scale="10.0 10.0 10.0" translation="4.124188 1.174116 134.0145"></transform>
-                    <lightshader id="ls_candle_light-light" script="urn:xml3d:lightshader:point">
-                        <float3 name="intensity">0.9333334 0.5843138 0.2745098</float3>
-                        <float3 name="attenuation">1.0 0.0 0.0</float3>
-                    </lightshader>
+                    
                     <transform id="t_node-candle_flame_2" rotation="1.0 0.0 0.0 1.5707964" scale="1.0 1.0 1.0" translation="-0.04696928 -0.2205394 6.982786"></transform>
                     <transform id="t__A0y7sPamEeGQybiFx83K6w" scale="3.0635312 3.0635312 3.0635312" translation="0.0 4.508157 0.0"></transform>
                     <data id="geom-candle_flame_2">
@@ -130,7 +127,10 @@
                                 </group>
                             </group>
                             <group id="node-candle_light" transform="#t_node-candle_light">
-                                <light shader="#ls_candle_light-light"></light>
+                              <light model="urn:xml3d:light:point">
+                                <float3 name="intensity">0.9333334 0.5843138 0.2745098</float3>
+                                <float3 name="attenuation">1.0 0.0 0.0</float3>
+                              </light>
                             </group>
                         </group>
                     </group>

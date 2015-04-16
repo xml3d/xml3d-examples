@@ -21,14 +21,8 @@
             <transform id="light1Xfm" translation="0 10 0">
             <transform id="light2Xfm" translation="5 10 0">
             <transform id="meshXfm" translation="0 0 20" scale="5 5 5">
-            <lightshader id="light1" script="urn:xml3d:lightshader:point">
-              <float3 name="intensity">200.0 200.0 200.0</float3>
-              <float3 name="attenuation">0.0 0.0 1.0</float3>
-            </lightshader>
-            <lightshader id="light2" script="urn:xml3d:lightshader:point">
-              <float3 name="intensity">0.0 0.0 0.0</float3>
-              <float3 name="attenuation">0.0 0.0 1.0</float3>
-            </lightshader>
+            
+            
             <material id="Phong" script="urn:xml3d:material:sig-eyelight">
               <float3 name="diffuseColor">0.5 0.5 0.5</float3>
               <float name="ambientIntensity">0.0</float>
@@ -59,10 +53,16 @@
           </transform></transform></transform></transform></defs>
           <group id="root">
             <group transform="#light1Xfm">
-              <light shader="#light1"></light>
+              <light model="urn:xml3d:light:point">
+                <float3 name="intensity">200.0 200.0 200.0</float3>
+                <float3 name="attenuation">0.0 0.0 1.0</float3>
+              </light>
             </group>
             <group transform="#light2Xfm">
-              <light shader="#light2"></light>
+              <light model="urn:xml3d:light:point">
+                <float3 name="intensity">0.0 0.0 0.0</float3>
+                <float3 name="attenuation">0.0 0.0 1.0</float3>
+              </light>
             </group>
             <group transform="#dragonXfm" material="#Phong">
               <mesh type="triangles" src="#meshData"></mesh>
