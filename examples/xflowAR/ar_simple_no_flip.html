@@ -29,7 +29,7 @@
     <xml3d style="background: rgba(0,0,0,0); position: absolute; left: calc(50vw - 640px/2); top:  calc(50vh - 480px/2); width: 640px; height: 480px;">
 
         <!-- AR Data -->
-        <data id="arBase" compute="transforms, visibilities, perspective = xflar.detect(arvideo, markers, threshold, noflip)">
+        <data id="arBase" compute="transforms, visibilities, projection = xflar.detect(arvideo, markers, threshold, noflip)">
             <bool name="noflip">true</bool>
             <int name="markers">22 64</int>
             <data compute="threshold = xflar.getOtsuThreshold(histogram)">
@@ -46,7 +46,7 @@
 
 
         <!-- Viewpoint with connection to AR data -->
-        <view id="View" perspective="#arBase"></view>
+        <view id="View" projection="#arBase"></view>
 
         <!-- Object 1: -->
         <!-- Extract visibility and transformation -->
