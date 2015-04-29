@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml3d>
+  <asset id="Plane-007">
+    <assetdata name="Mesh">
+      <float3 name="position">1.0 0.9999999403953552 0.0 -0.9999996423721313 1.0000003576278687 0.0 -1.0000001192092896 -0.9999998211860657 0.0 1.0 -1.0 0.0</float3>
+      <float3 name="normal">0.0 -0.0 1.0 0.0 -0.0 1.0 0.0 -0.0 1.0 0.0 -0.0 1.0</float3>
+      <float2 name="texcoord">-0.268815279006958 -0.268815279006958 1.268815040588379 -0.268815279006958 1.268815279006958 1.268815279006958 -0.268815279006958 1.268815040588379</float2>
+    </assetdata>
+    <assetmesh includes="Mesh" name="Mesh_Clip">
+      <int name="index">0 1 2 2 3 0 </int>
+    </assetmesh>
+  </asset>
+</xml3d>

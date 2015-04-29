@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+
+  <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+  <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+  <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+  <script type="text/javascript" src="../../script/page.js"></script>
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+
+    <xml3d id="MyXml3d" activeview="#v_Camera" class="xml3d">
+      <defs>
+        <data id="baseMaterial">
+          <float3 name="diffuseColor">0.8 0.8 0.8</float3>
+          <float3 name="specularColor">1.0 1.0 1.0</float3>
+          <float name="shininess">0.25</float>
+          <float name="ambientIntensity">0.4</float>
+        </data>
+        <material id="RepeatTexture" script="urn:xml3d:material:phong">
+          <data src="#baseMaterial"></data>
+          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
+            <img src="textures/Reference.jpg"/>
+          </texture>
+        </material>
+        <material id="ClampTexture" script="urn:xml3d:material:phong">
+          <data src="#baseMaterial"></data>
+          <texture name="diffuseTexture" wrapS="clamp" wrapT="clamp">
+            <img src="textures/Reference.jpg"/>
+          </texture>
+        </material>
+        <material id="MixedWrap" script="urn:xml3d:material:phong">
+          <data src="#baseMaterial"></data>
+          <texture name="diffuseTexture" wrapS="clamp" wrapT="repeat">
+            <img src="textures/Reference.jpg"/>
+          </texture>
+        </material>
+        <material id="FilterNearest" script="urn:xml3d:material:phong">
+          <data src="#baseMaterial"></data>
+          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat" filterMin="nearest" filterMag="nearest">
+            <img src="textures/Reference.jpg"/>
+          </texture>
+        </material>
+        <material id="NoMipMap" script="urn:xml3d:material:phong">
+          <data src="#baseMaterial"></data>
+          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat" filterMin="linear" filterMag="linear">
+            <img src="textures/Reference.jpg"/>
+          </texture>
+        </material>
+        <material id="DefaultFilter" script="urn:xml3d:material:phong">
+          <data src="#baseMaterial"></data>
+          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat" filterMin="linear-mipmap-linear"
+                   filterMag="linear">
+            <img src="textures/Reference.jpg"/>
+          </texture>
+        </material>
+      </defs>
+      <view id="v_view"></view>
+      <group material="#RepeatTexture" style="transform:translate3d(-3px,-2px, 0px);">
+        <model src="assets/assets-0.xml#Plane-007"></model>
+      </group>
+      <group material="#ClampTexture" style="transform:translate3d(0px,-2px, 0px);">
+        <model src="assets/assets-0.xml#Plane-007"></model>
+      </group>
+      <group material="#MixedWrap" style="transform:translate3d(3px,-2px, 0px);">
+        <model src="assets/assets-0.xml#Plane-007"></model>
+      </group>
+      <group material="#FilterNearest" style="transform:translate3d(-3px,2px, 0px);">
+        <model src="assets/assets-0.xml#Plane-007"></model>
+      </group>
+      <group material="#NoMipMap" style="transform:translate3d(0px,2px, 0px);">
+        <model src="assets/assets-0.xml#Plane-007"></model>
+      </group>
+      <group material="#DefaultFilter" style="transform:translate3d(3px,2px, 0px);">
+        <model src="assets/assets-0.xml#Plane-007"></model>
+      </group>
+
+      <group id="Lamp" class="layer-0"
+             style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.009185,-0.008859,5.903862,1.000000);">
+        <light model="urn:xml3d:light:spot">
+          <float3 name="attenuation">1.0000 0.0333 0.0000</float3>
+          <float3 name="intensity">1.0000 1.0000 1.0000</float3>
+        </light>
+      </group>
+      <group id="Camera" class="layer-0"
+             style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,12.605586,1.000000);">
+        <view id="v_Camera"></view>
+      </group>
+    </xml3d>
+
+
+    <div class="description">
+      Six textured materials with different texture filtering and texture mapping options.
+      Upper row varies the filtering: nearest (left), linear (middle) and linear with linear mip mapping (right).
+      In the lower row, the wrapping is repeat (left), clamp (middle) and clamp in S and repeat in T direction (right).
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>
