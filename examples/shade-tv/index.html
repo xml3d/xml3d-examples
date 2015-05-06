@@ -13,6 +13,7 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+    <script type="text/javascript" src="../../script/getusermedia.bundle.js"></script>
 
     <title>XML3D Examples</title>
 
@@ -59,7 +60,7 @@ function shade(env) {
                 <shader id="screenMaterialInstance" script="#screenMaterial">
                     <float name="time">20.0</float>
                     <texture name="wt" filterMin="linear" filterMag="linear" wrapS="clamp" wrapT="clamp">
-                        <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay="true"></video>
+                        <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay></video>
                     </texture>
                 </shader>
             </defs>
@@ -127,40 +128,20 @@ function shade(env) {
         </div>
     </div>
     <script type="text/javascript">
-        // http://www.html5rocks.com/en/tutorials/getusermedia/intro/
-        window.URL = window.URL || window.webkitURL;
-        navigator.getUserMedia  =
-                navigator.getUserMedia || navigator.webkitGetUserMedia ||
-                navigator.mozGetUserMedia || navigator.msGetUserMedia;
 
-        function activateWebCam() {
-            var video = document.getElementById('webcam');
+      getUserMedia({video: true, audio: false}, function (err, stream) {
+        var video = document.getElementById('webcam');
 
-            if (!video) {
-                XML3D.debug.logError("No webcam element");
-                return;
-            }
-            // audio: true does not work with chrome
-            if (navigator.getUserMedia) {
-                navigator.getUserMedia({video: true, audio: false},
-                        function(stream) {
-                            XML3D.debug.logInfo("Accessing WebCam");
-                            video.src = window.URL.createObjectURL(stream);
-                        },
-                        function (e) {
-                            var code = e.code || -1;
-                            if (code == 1) {
-                                $("#fail").text("You declined the access to your webcam. Reload the page if you changed your opinion.");
-                            } else {
-                                $("#fail").text("Could not access the video of your webcam: " + (e.name ? e.name : e));
-                            }
-                            XML3D.debug.logError("Cannot access WebCam", e);
-                        });
-            } else {
-                $("#fail").text("Your browser does not support the WebRTC API required to access your webcam.");
-                XML3D.debug.logError("No getUserMedia");
-            }
+        if (err || !video) {
+          $("#fail").text("Could not access camera: " + err);
+          console.log('failed');
+        } else {
+          console.log('got a stream', stream);
+          video.src = window.URL.createObjectURL(stream);
+          console.log(video.src);
         }
+      });
+
 
         var anim = {};
 
@@ -173,7 +154,6 @@ function shade(env) {
         }
 
 		$(document).ready(function() {
-            activateWebCam();
             initAnim();
         });
     </script>

@@ -11,42 +11,25 @@
 
       <script type="text/javascript" src="../../script/page.js"></script>
       <script type="text/javascript" src="../../script/xml3d.js"></script>
+      <script type="text/javascript" src="../../script/getusermedia.bundle.js"></script>
+
 
     <title>XML3D Examples</title>
     <script type="text/javascript">
-        // http://www.html5rocks.com/en/tutorials/getusermedia/intro/
-        window.URL = window.URL || window.webkitURL;
-        navigator.getUserMedia  =
-                navigator.getUserMedia || navigator.webkitGetUserMedia ||
-                navigator.mozGetUserMedia || navigator.msGetUserMedia;
 
         function activateWebCam() {
+          var URL = window.URL || window.webkitURL;
+          getUserMedia({video: true, audio: false}, function (err, stream) {
             var video = document.getElementById('webcam');
 
-            if (!video) {
-                XML3D.debug.logError("No webcam element");
-                return;
-            }
-            // audio: true does not work with chrome
-            if (navigator.getUserMedia) {
-                navigator.getUserMedia({video: true, audio: false},
-                        function(stream) {
-                            XML3D.debug.logInfo("Accessing WebCam");
-                            video.src = window.URL.createObjectURL(stream);
-                        },
-                        function (e) {
-                            var code = e.code || -1;
-                            if (code == 1) {
-                                $("#fail").text("You declined the access to your webcam. Reload the page if you changed your opinion.");
-                            } else {
-                                $("#fail").text("Could not access the video of your webcam: " + (e.name ? e.name : e));
-                            }
-                            XML3D.debug.logError("Cannot access WebCam", e);
-                        });
+            if (err || !video) {
+              $("#fail").text("Could not access camera: " + err);
+              console.log('failed');
             } else {
-                $("#fail").text("Your browser does not support the WebRTC API required to access your webcam.");
-                XML3D.debug.logError("No getUserMedia");
+              video.src = URL.createObjectURL(stream);
             }
+          });
+
         }
 
         var anim = {};
@@ -80,12 +63,12 @@
               <float3 name="diffuseColor">1.0 1.0 1.0</float3>
               <float name="ambientIntensity">1.0</float>
               <texture name="diffuseTexture">
-                <video id="webcam" src="../video/Firefox.ogv" autoplay="true"></video>
+                <video id="webcam" src="../video/Firefox.ogv" autoplay></video>
               </texture>
             </shader>
             <transform id="myxfm" rotation="1 0 1 0"></transform>
           </defs>
-          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldOfView="0.7854" ></view>
+          <view id="myview" position="0 0 -5" orientation="0 1 0 3.14159" fieldofview="0.7854" ></view>
           <group style="shader: url(#ex4_2_texShader)" transform="#myxfm">
               <mesh type="triangles">
                   <int name="index">

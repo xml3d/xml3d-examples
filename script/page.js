@@ -44,6 +44,9 @@ var EXAMPLE_LIST = [
         info: "Demonstrates extending supported formats, here using OpenCTM binary format"},
     {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.html",
         info: "Demonstrates the usage of external mesh data and shaders with XML files."},
+    {cat: "external", name: "Blast", href: "examples/blast/index.html",
+        info: "Demonstrates the usage of external blast resources."},
+
 
     {cat: "shader", name: "Candle Emissive Map", href: "examples/candle/candle.html",
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},

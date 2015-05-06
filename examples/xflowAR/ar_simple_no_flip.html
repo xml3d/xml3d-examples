@@ -20,6 +20,7 @@
     <script type="text/javascript" src="script/JSARToolKit.js"></script>
     <script type="text/javascript" src="script/xflar.js"></script>
     <script type="text/javascript" src="script/phongvs.js"></script>
+    <script type="text/javascript" src="../../script/getusermedia.bundle.js"></script>
 </head>
 
 <body>
@@ -41,7 +42,7 @@
                 <int name="channel">0</int>
                 <data compute="grvideo = xflip.grayscale(arvideo)">
                   <texture name="arvideo">
-                    <video autoplay="true" src="../video/ar_marker.ogg"></video>
+                    <video autoplay src="../video/ar_marker.ogg"></video>
                   </texture>
                 </data>
               </data>
@@ -133,21 +134,24 @@
           navigator.mozGetUserMedia || navigator.msGetUserMedia;
 
   function enableWebcam(videos) {
-    if (!navigator.getUserMedia)
-      return;
-    navigator.getUserMedia(
-        {video: true, audio: false},
-		function(stream) {
-          var url = window.URL.createObjectURL(stream);
-          for(var i = 0; i < videos.length; ++i){
-            videos[i].autoplay = true;
-            videos[i].src = url;
-          }
-        },
-        function(err) {
-            console.log("The following error occured: ", err);
-        });
+    var URL = window.URL || window.webkitURL;
+    getUserMedia({video: true, audio: false}, function (err, stream) {
+
+      if (err) {
+        $("#fail").text("Could not access camera: " + err);
+        console.log('failed');
+      } else {
+        var url = URL.createObjectURL(stream);
+        for (var i = 0; i < videos.length; ++i) {
+          videos[i].autoplay = true;
+          videos[i].src = url;
+        }
+      }
+    });
+
   }
+
+
   function enableVideo(videos) {
     for(var i = 0; i < videos.length; ++i){
       videos[i].autoplay = true;
