@@ -114,7 +114,8 @@ function initPage(){
         }
     }
     var statsScript = $('<script type="text/javascript" src="../../script/stats.js">');
-    $("head").append(statsScript);
+    $("head").append(statsScript).append($('<link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon">'));
+
 
     var overall = $("#overall");
     var inner = $('<div id="inner" class="inner-wrap">');
