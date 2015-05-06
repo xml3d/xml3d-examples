@@ -25407,6 +25407,33 @@ window.requestAnimFrame = (function(){
 
         return v;
     };
+
+    var tmpCanvas, tmpContext;
+
+    exports.toImageData = function(imageData) {
+        if(imageData instanceof ImageData)
+            return imageData;
+        if(!imageData.data)
+            throw new Error("no data property");
+        if(!imageData.width)
+            throw new Error("no width property");
+        if(!imageData.height)
+            throw new Error("no height property");
+        if(!tmpContext) {
+            tmpCanvas = document.createElement('canvas');
+            tmpContext = tmpCanvas.getContext('2d');
+        }
+        var newImageData = tmpContext.createImageData(imageData.width, imageData.height);
+        for(var i = 0; i < imageData.data.length; ++i) {
+            var v = imageData.data[i];
+            if(v > 255)
+                v = 255;
+            if(v < 0)
+                v = 0;
+            newImageData.data[i] = v;
+        }
+        return newImageData;
+    };
 }(module.exports));
 
 },{}],132:[function(require,module,exports){
@@ -27125,33 +27152,6 @@ BufferEntry.prototype.isEmpty = function(){
 //----------------------------------------------------------------------------------------------------------------------
 // TextureEntry
 //----------------------------------------------------------------------------------------------------------------------
-
-var tmpCanvas, tmpContext;
-
-C.toImageData = function(imageData) {
-    if(imageData instanceof ImageData)
-        return imageData;
-    if(!imageData.data)
-        throw new Error("no data property");
-    if(!imageData.width)
-        throw new Error("no width property");
-    if(!imageData.height)
-        throw new Error("no height property");
-    if(!tmpContext) {
-        tmpCanvas = document.createElement('canvas');
-        tmpContext = tmpCanvas.getContext('2d');
-    }
-    var newImageData = tmpContext.createImageData(imageData.width, imageData.height);
-    for(var i = 0; i < imageData.data.length; ++i) {
-        var v = imageData.data[i];
-        if(v > 255)
-            v = 255;
-        if(v < 0)
-            v = 0;
-        newImageData.data[i] = v;
-    }
-    return newImageData;
-};
 
 function TexelSource(sourceOrWidth, height, format, type) {
     if (typeof sourceOrWidth === "object") {

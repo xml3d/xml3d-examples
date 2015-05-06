@@ -9,7 +9,7 @@ window.onload = function() {
 
     var g = document.getElementById('images');
     g.addOutputFieldListener('gauss', function(values) {
-        var data = Xflow.toImageData(values.gauss);
+        var data = XML3D.util.toImageData(values.gauss);
 
         var width = data.width;
         var height = data.height;

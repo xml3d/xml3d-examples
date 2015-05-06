@@ -125,7 +125,7 @@ function setupApp() {
             }
         }
         if (flipvideo) {
-            var data = Xflow.toImageData(flipvideo);
+            var data = XML3D.util.toImageData(flipvideo);
             var width = data.width;
             var height = data.height;
 
