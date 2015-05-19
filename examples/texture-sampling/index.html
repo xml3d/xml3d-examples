@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<!DOCTYPE html><html lang="en"><head>
   <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
   <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
   <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
@@ -28,39 +26,38 @@
         </data>
         <material id="RepeatTexture" script="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
-          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">
-            <img src="textures/Reference.jpg"/>
+          <texture name="diffuseTexture" wrap="repeat">
+            <img src="textures/Reference.jpg">
           </texture>
         </material>
         <material id="ClampTexture" script="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
-          <texture name="diffuseTexture" wrapS="clamp" wrapT="clamp">
-            <img src="textures/Reference.jpg"/>
+          <texture name="diffuseTexture">
+            <img src="textures/Reference.jpg">
           </texture>
         </material>
         <material id="MixedWrap" script="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
-          <texture name="diffuseTexture" wrapS="clamp" wrapT="repeat">
-            <img src="textures/Reference.jpg"/>
+          <texture name="diffuseTexture" wrap="clamp repeat">
+            <img src="textures/Reference.jpg">
           </texture>
         </material>
         <material id="FilterNearest" script="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
-          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat" filterMin="nearest" filterMag="nearest">
-            <img src="textures/Reference.jpg"/>
+          <texture name="diffuseTexture" wrap="repeat" filter="nearest">
+            <img src="textures/Reference.jpg">
           </texture>
         </material>
         <material id="NoMipMap" script="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
-          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat" filterMin="linear" filterMag="linear">
-            <img src="textures/Reference.jpg"/>
+          <texture name="diffuseTexture" wrap="repeat" filter="linear">
+            <img src="textures/Reference.jpg">
           </texture>
         </material>
         <material id="DefaultFilter" script="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
-          <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat" filterMin="linear-mipmap-linear"
-                   filterMag="linear">
-            <img src="textures/Reference.jpg"/>
+          <texture name="diffuseTexture" wrap="repeat">
+            <img src="textures/Reference.jpg">
           </texture>
         </material>
       </defs>
@@ -84,15 +81,13 @@
         <model src="assets/assets-0.xml#Plane-007"></model>
       </group>
 
-      <group id="Lamp" class="layer-0"
-             style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.009185,-0.008859,5.903862,1.000000);">
+      <group id="Lamp" class="layer-0" style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.009185,-0.008859,5.903862,1.000000);">
         <light model="urn:xml3d:light:spot">
           <float3 name="attenuation">1.0000 0.0333 0.0000</float3>
           <float3 name="intensity">1.0000 1.0000 1.0000</float3>
         </light>
       </group>
-      <group id="Camera" class="layer-0"
-             style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,12.605586,1.000000);">
+      <group id="Camera" class="layer-0" style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,12.605586,1.000000);">
         <view id="v_Camera"></view>
       </group>
     </xml3d>
@@ -107,5 +102,6 @@
 </div>
 
 
-</body>
-</html>
+
+
+</body></html>
