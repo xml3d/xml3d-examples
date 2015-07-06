@@ -170,7 +170,6 @@ function setupApp() {
     var quat1 = math.quat4.create();
     var quat2 = math.quat4.create();
     var aa = math.quat4.create();
-    var axis = new XML3DVec3();
     var matrixIndex = [0,0]; // index of two matrices for interpolation
 
     var observer = new XML3DDataObserver(function (records, observer) {
@@ -253,15 +252,12 @@ function setupApp() {
 
             var height = Math.sin(f1*Math.PI)*Math.max(dirLen, 50);
 
-            ballLocalXfm.translation.set(0, 0, height);
+            ballLocalXfm.translation = math.vec3.fromValues(0, 0, height);
 
             if (!(isNaN(aa[0]) || isNaN(aa[1]) || isNaN(aa[2]) || isNaN(aa[3]))) {
-                axis.x = aa[0];
-                axis.y = aa[1];
-                axis.z = aa[2];
-
-                ballXfm.rotation.setAxisAngle(axis, -aa[3]);
-                ballXfm.translation.set(tv[0], tv[1], tv[2]);
+				aa[3] = -aa[3];
+                ballXfm.rotation = aa;
+                ballXfm.translation = tv;
             }
         }
         if (flipvideo) {

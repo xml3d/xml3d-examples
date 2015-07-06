@@ -284,11 +284,13 @@ function setupAR() {
             var aa = math.quat4.toAngleAxis(quat);
             var modelXfm = objects[i].model.transform;
             if (WEBCAM) {
-                modelXfm.rotation.setAxisAngle(new XML3DVec3(aa[0], -aa[1], aa[2]), aa[3]);
-                modelXfm.translation.set(new XML3DVec3(-m4x4[12], m4x4[13], -m4x4[14]));
+				aa[1] = -aa[1];
+                modelXfm.rotation = aa;
+                modelXfm.translation = math.vec3.fromValues(-m4x4[12], m4x4[13], -m4x4[14]);
             } else {
-                modelXfm.rotation.setAxisAngle(new XML3DVec3(aa[0], aa[1], -aa[2]), aa[3]);
-                modelXfm.translation.set(new XML3DVec3(m4x4[12], m4x4[13], -m4x4[14]));
+				aa[2] = -aa[2];
+                modelXfm.rotation = aa
+                modelXfm.translation = math.vec3.fromValues(m4x4[12], m4x4[13], -m4x4[14]));
             }
         }
 
