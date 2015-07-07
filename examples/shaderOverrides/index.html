@@ -68,7 +68,7 @@
           }
       }
 
-      var fd = null, lastTime = Date.now(), dir = new XML3DVec3(), clock = 0;
+      var fd = null, lastTime = Date.now(), dir = XML3D.math.vec3.create(), clock = 0;
       var view = document.querySelector("view");
 
 
@@ -76,12 +76,13 @@
           var now = Date.now();
           var elapsed = (now - lastTime) / 750.0;
           clock += elapsed;
-          var x = Math.sin(clock * 0.3) * 1000;
-		  var z = Math.cos(clock * 0.3) * 1000;
-          var y = Math.sin(clock * 0.7) * 500;
-          dir.set(x,y,z);
+          dir[0] = Math.sin(clock * 0.3) * 1000;
+          dir[1] = Math.sin(clock * 0.7) * 500;
+		  dir[2] = Math.cos(clock * 0.3) * 1000;
           view.lookAt(dir);
-          view.position.x = 3.0;
+		  var pos = view.position;
+		  pos[0] = 3;
+          view.position = pos;
           lastTime = now;
       }
 

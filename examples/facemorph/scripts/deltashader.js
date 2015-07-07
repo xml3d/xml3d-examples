@@ -1,5 +1,5 @@
 
-XML3D.shaders.register("deltashader", {
+XML3D.materials.register("deltashader", {
 
     vertex : [
         "attribute vec3 position;",

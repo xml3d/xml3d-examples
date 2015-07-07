@@ -73,14 +73,14 @@
 				animate();
 			});
 		});
-		var x = new XML3DRotation(new XML3DVec3(0.707,0.707,0),0),
+		var x = XML3D.math.vec4.fromValues(0.707,0.707,0,0),
 		    shouldAnimate = false;
 		function animate() {
 				var t = document.getElementById("t_Lamp");
-				x.angle = x.angle + 0.1;
-				t.rotation.set(x);
+				x[3] += 0.1;
+				t.rotation = x;
 				if (shouldAnimate)
-					window.requestAnimFrame(animate);
+					window.requestAnimationFrame(animate);
 		}
 	  </script>
 

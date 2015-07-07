@@ -32,7 +32,7 @@ function resetSliders() {
 
 // Changes the active shader
 function changeShaderTo(shaderId) {
-    document.getElementById("faceGroup").setAttribute("shader", shaderId);
+    document.getElementById("faceGroup").setAttribute("material", shaderId);
 }
 
 // Sets a new reference point. This is only used in the delta shader, where the amount of change with respect 
