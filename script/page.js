@@ -2,6 +2,7 @@
 var CATEGORY_LIST = {
     unknown : { name : "???" },
     basic: { name: "Basics" },
+    css: { name: "CSS"},
     external : { name: "External References" },
     shader : { name: "Materials" },
     xflow : { name: "Xflow" },
@@ -19,8 +20,6 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the directional light shader."},
     {cat: "basic", name: "Spot Light", href: "examples/spotLight/index.html",
         info: "Demonstrates the spot light shader."},
-    {cat: "basic", name: "CSS Transforms", href: "examples/cssTransform/css-transform.html",
-        info: "Demonstrates the spot light shader."},
     {cat: "basic", name: "Video Texture", href: "examples/video/video.html",
         info: "Demonstrates video textures."},
     {cat: "basic", name: "Webcam Integration", href: "examples/webcam/webcam.html",
@@ -35,6 +34,12 @@ var EXAMPLE_LIST = [
         info: "Demonstrates efficient data update with TypedArrays and setScriptValue."},
     {cat: "basic", name: "XML3D Architecture Poster", href: "examples/poster/index.html",
         info: "Scene that uses a whole range of features of the XML3D architecture."},
+
+    {cat: "css", name: "Transform", href: "examples/cssTransform/css-transform.html",
+        info: "The CSS transform property applied to XML3D elements."},
+    {cat: "css", name: "Display", href: "examples/cssDisplay/index.html",
+        info: "The CSS display property applied to XML3D elements."},
+
 
     {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.html",
         info: "Demonstrates the usage of external mesh data with XML3D JSON format."},

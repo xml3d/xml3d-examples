@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Shader Overrides</title>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/agility.min.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+    <style type="text/css">
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+        <xml3d>
+            <navigation revolvearound="-30 30 -800" speed="100"></navigation>
+            <defs>
+                <material id="baseShader" script="urn:xml3d:material:phong">
+                    <float name="ambientIntensity">0.25</float>
+                    <float3 name="emissiveColor">0 0 0</float3>
+                    <float name="shininess">0.4</float>
+                    <float3 name="specularColor">1 1 1</float3>
+                </material>
+            </defs>
+            <view></view>
+            <light intensity="0.9"></light>
+            <group material="#baseShader"></group>
+        </xml3d>
+
+        <div class="description">
+            Use the CSS display property to control the visibility of objects in the scene.
+
+            <div>
+                <button id="toggle">mesh: toggle</button>
+                <button id="toggleClass">mesh: toggle every second</button>
+                <button id="toggleRows">group: toggle rows</button>
+                <button id="show">reset</button>
+            </div>
+            <div>Command:<br><code id="command"></code></div>
+        </div>
+
+
+        <script>
+            function createInstances(parent) {
+                // make a grid of transforms and put a sphere instance on each one
+                for (var y = 0; y < 5; y++) {
+                    var group = $("<group>").addClass("row");
+                    for (var x = 0; x < 5; x++) {
+                        var transform3d = "transform: translate3d(";
+                        transform3d += (x - 2.5) * 100;
+                        transform3d += "px, ";
+                        transform3d += (y - 2.5) * 80 + 30;
+                        transform3d += "px, ";
+                        transform3d += "-800px);";
+
+                        //parent.appendChild(group);
+                        var mesh = $("<mesh>");
+                        mesh.attr("style", transform3d);
+                        var data = $("<data>");
+                        data.attr("src", "../../resources/meshes/teapot.json");
+                        var color = $("<float3>");
+                        color.attr("name", "diffuseColor");
+                        color.text("" + (x * 0.111) + " " + (y * 0.111) + " 0.5");
+
+                        mesh.append(data);
+                        mesh.append(color);
+                        group.append(mesh);
+
+                    }
+                    parent.append(group);
+                }
+            }
+            createInstances($("group"));
+
+            var command = $("#command");
+
+            $("#toggle").button().click(function () {
+                $("mesh").toggle();
+                command.text("$(\"mesh,group.row\").toggle();")
+            });
+            $("#toggleClass").button().click(function () {
+                $("mesh:nth-of-type(2n)").toggle();
+                command.text(" $(\"mesh:nth-of-type(2n)\").toggle();");
+            });
+            $("#toggleRows").button().click(function () {
+                $("group.row:nth-of-type(2n)").toggle();
+                command.text("$(\"group.row:nth-of-type(2n)\").toggle();");
+            });
+            $("#show").button().click(function () {
+                $("group,mesh").show();
+                command.text("$(\"group,mesh\").show()");
+            })
+
+        </script>
+    </div>
+</div>
+
+
+</body>
+</html>
