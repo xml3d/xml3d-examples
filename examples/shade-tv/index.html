@@ -5,7 +5,7 @@
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/shade.js"></script>
+    <script type="text/javascript" src="../../script/shade-min.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
     <script type="text/javascript" src="../../script/foundation.min.js"></script>
 
@@ -48,7 +48,7 @@ function shade(env) {
     c = c.mul(Math.smoothstep(0.001, 3.5, time));
 
     var s = c.dot(0.2126, 0.7152, 0.0722);
-    return new Shade().diffuse(new Vec3(1.5 - hash(time) * 0.1).mul(s), env.normal, 0.1).phong(new Vec3(0.7), env.normal, 0.2);
+    return Shade.diffuse(new Vec3(1.5 - hash(time) * 0.1).mul(s), env.normal, 0.1).phong(new Vec3(0.7), env.normal, 0.2);
 }
                 </script>
                 

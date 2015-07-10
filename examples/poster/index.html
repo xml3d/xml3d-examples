@@ -9,7 +9,7 @@
 
   <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
   <script type="text/javascript" src="../../script/xml3d.js"></script>
-  <script type="text/javascript" src="../../script/shade.js"></script>
+  <script type="text/javascript" src="../../script/shade-min.js"></script>
   <script type="text/javascript" src="./calculateTangents.js"></script>
   <script type="text/javascript" src="../../script/xml3d-blast-loader.js"></script>
   <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
@@ -49,7 +49,7 @@
             var tints1 = env.tint1 || new Vec3(.3, .8, .4);
             var tints2 = env.tint2 || new Vec3(.3, .6, 1);
             var tint = modAmount > 2 ? tints2 : (modAmount > 1) ? tints1 : tints0;
-            return new Shade().diffuse(tint.mul(Math.fract(modAmount)), env.normal)
+            return Shade.diffuse(tint.mul(Math.fract(modAmount)), env.normal)
                               .ward(ks, env.normal, env.tangent.xyz(), 0.4, 0.1);
           }
         </script>

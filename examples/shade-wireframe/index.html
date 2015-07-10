@@ -5,7 +5,7 @@
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <script type="text/javascript" src="../../script/shade.js"></script>
+    <script type="text/javascript" src="../../script/shade-min.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
     <script type="text/javascript" src="../../script/foundation.min.js"></script>
     <script type="text/javascript" src="./blender-xflow.js"></script>
@@ -48,7 +48,7 @@
            var color =  env.color.mul(0.8);
          }
        }
-       return new Shade().diffuse(color, env.normal);
+       return Shade.diffuse(color, env.normal);
      }
 
    </script>
@@ -130,6 +130,7 @@
  <!--<group id="GROUND" class="layer-10">
   <model src="../../resources/assets/valve/Plane.xml#Plane"></model>
  </group>-->
+            <navigation speed="0.25"></navigation>
 </xml3d>
 
         <div class="description">
