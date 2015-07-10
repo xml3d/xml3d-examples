@@ -102,6 +102,9 @@ var CURRENT_CAT = null;
 
 function initPage(){
 
+    console.log("xml3d.js:", window.XML3D ? window.XML3D.version : "none");
+    console.log("shade.js:", window.Shade ? window.Shade.version : "none");
+
     var url = window.location.href;
     for(var i in EXAMPLE_LIST){
         if(url.indexOf(EXAMPLE_LIST[i].href) != -1){
