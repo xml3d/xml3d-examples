@@ -73,12 +73,12 @@
 				animate();
 			});
 		});
-		var x = XML3D.math.vec4.fromValues(0.707,0.707,0,0),
+		var rot = XML3D.AxisAngle.fromValues(0.707,0.707,0,0),
 		    shouldAnimate = false;
 		function animate() {
 				var t = document.getElementById("t_Lamp");
-				x[3] += 0.1;
-				t.rotation = x;
+				rot.angle += 0.1;
+				t.rotation = rot;
 				if (shouldAnimate)
 					window.requestAnimationFrame(animate);
 		}
