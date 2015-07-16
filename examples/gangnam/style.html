@@ -11,26 +11,16 @@
 
         <script type="text/javascript" src="../../script/page.js"></script>
         <script type="text/javascript" src="../../script/xml3d.js"></script>
-        <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
+        <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
         <script type="text/javascript" src=" http://ajax.googleapis.com/ajax/libs/swfobject/2.1/swfobject.js"></script>
         <script src="animation.js" type="text/javascript"></script>
 
-        <script type="text/javascript">
-            window.addEventListener('load', function() {
-                var controller = new XMOT.ExamineController(document.getElementById("camera1"));
-                var xml3d = document.getElementById("canvas");
-                xml3d.addEventListener("mousedown", function(e) {
-                    controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
-                    e.preventDefault();
-                }, false);
-                window.addEventListener("mouseup", function() {
-                    controller.stop();
-                }, false);
-                window.addEventListener("mousemove", function(e) {
-                    controller.doAction({x: e.clientX, y: e.clientY});
-                }, false);
-            }, false);
-        </script>
+     <script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("canvas");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0.1, 0, -3)});
+	 });
+     </script>
     </head>
     <body>
     <div id="overall">
@@ -67,7 +57,7 @@
             <div class="description">
                 <ul>
                  <li>Ben design, modeling and textures done by Janosch Obenauer, skeleton and rig by Alexis Heloir, skinning by Alexis Heloir and Janosch Obenauer, released under creative common license, design production funded by BMAS: ISSN 0174-4992 Forschungsbericht 417.</li>
-                 <li>Gangnam style motion: embedded according to <a href="http://www.mixamo.com/home/legal">Mixamo's terms and conditions</a>, all right reserved to Mixamo</li>
+                 <li>Gangnam style motion: embedded according to <a href="http://www.mixamo.com/home/legal">Mixamo's terms and conditions</a>, all rights reserved to Mixamo</li>
                 </ul>
             </div>
         </div>

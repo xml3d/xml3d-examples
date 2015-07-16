@@ -8,6 +8,14 @@
   <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
   <script type="text/javascript" src="../../script/page.js"></script>
   <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+			mode:"examine"
+		});
+	 });
+    </script>
   <title>XML3D Examples</title>
 </head>
 <body>
@@ -15,7 +23,7 @@
   <div id="content">
     <h1>Xflow Keyframe Transformations</h1>
     <input type="checkbox" id="check"><label for="check">Animate</label>
-<xml3d style="width: 640px; height: 480px; background-color: grey;" activeview="#view_Camera01">
+<xml3d id="MyXml3d" style="width: 640px; height: 480px; background-color: grey;" activeview="#view_Camera01">
   <defs>
     <transform id="t_Fspot02" translation="0.0 -41.63 0.04591">
     

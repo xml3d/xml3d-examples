@@ -12,22 +12,12 @@
     <title>XML3D Examples</title>
 
     <!-- Camera Control: -->
-    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
     <script type="text/javascript">
-        window.addEventListener('load', function() {
-            var controller = new XMOT.ExamineController(document.getElementById("camera1"));
-            var xml3d = document.getElementById("canvas");
-            xml3d.addEventListener("mousedown", function(e) {
-                controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
-                e.preventDefault();
-            }, false);
-            window.addEventListener("mouseup", function() {
-                controller.stop();
-            }, false);
-            window.addEventListener("mousemove", function(e) {
-                controller.doAction({x: e.clientX, y: e.clientY});
-            }, false);
-        }, false);
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("canvas");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0,0,-27)});
+	 });
     </script>
 
     <!-- Custom Shader: -->

@@ -11,6 +11,12 @@
   <script type="text/javascript" src="../../script/xml3d.js"></script>
   <!-- Camera Control: -->
   <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0,0,2)});
+	 });
+    </script>
   <!-- Eyelight shader plug-in: -->
   <script type="text/javascript" src="../eyelight/eyelightShader.js"></script>
   <!-- Blast loader plug-in: -->
@@ -24,7 +30,7 @@
 <div id="overall">
   <div id="content">
 
-    <xml3d class="canvas" id="view" data-bbox="[-11.129383087158203, -0.6959080100059509, -9.470161437988281, 13.148994445800781, 4.0060200691223145, 7.996581077575684]" activeview="#33fa063f-f2fd-4908-9d5b-5b8c0ce7ba2c">
+    <xml3d id="MyXml3d" class="canvas" id="view" data-bbox="[-11.129383087158203, -0.6959080100059509, -9.470161437988281, 13.148994445800781, 4.0060200691223145, 7.996581077575684]" activeview="#33fa063f-f2fd-4908-9d5b-5b8c0ce7ba2c">
       <defs></defs>
       <group>
         <view id="33fa063f-f2fd-4908-9d5b-5b8c0ce7ba2c" position="1.009805679321289 1.6550559997558594 21.97019386291504" orientation="0 1 0 0"></view>

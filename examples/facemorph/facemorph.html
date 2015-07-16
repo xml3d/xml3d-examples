@@ -9,6 +9,16 @@
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+	<script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("xml3dmain");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+			mode:"examine", 
+			revolveAroundPoint: XML3D.Vec3.fromValues(1,0,5),
+			rotateSpeed: 5
+		});
+	 });
+    </script>
 
     <script src="scripts/SOTC-Trackbar.js" type="text/javascript"></script>
 

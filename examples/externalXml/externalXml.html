@@ -9,28 +9,16 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 
     <title>XML3D Examples</title>
 
     <!-- Camera Control: -->
-
-    <script type="text/javascript" src="../../script/xml3d-motion.js"></script>
     <script type="text/javascript">
-        window.addEventListener('load', function() {
-            var controller = new XMOT.ExamineController(document.getElementById("camera1"),
-                    { "sceneRadius" : 8});
-            var xml3d = document.getElementById("canvas");
-            xml3d.addEventListener("mousedown", function(e) {
-                controller.start({x: e.clientX, y: e.clientY}, e.button == 2 ? XMOT.ExamineController.DOLLY : XMOT.ExamineController.ROTATE);
-                e.preventDefault();
-            }, false);
-            window.addEventListener("mouseup", function() {
-                controller.stop();
-            }, false);
-            window.addEventListener("mousemove", function(e) {
-                controller.doAction({x: e.clientX, y: e.clientY});
-            }, false);
-        }, false);
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("canvas");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(1.5, 0, -27)});
+	 });
     </script>
 
 </head>
@@ -49,7 +37,7 @@
                 <group id="VisualSceneNode">
                     <group id="plane">
                         <group material="resource/plane.xml#shader_matte">
-                            <mesh src="resource/plane.xml#mesh1" type="triangles"></mesh>
+                            <mesh id="blah" src="resource/plane.xml#mesh1" type="triangles"></mesh>
                         </group>
                         <group material="resource/plane.xml#shader_shine">
                             <mesh src="resource/plane.xml#mesh2" type="triangles"></mesh>

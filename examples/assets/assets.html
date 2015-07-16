@@ -5,13 +5,19 @@
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
     <script type="text/javascript" src="../../script/foundation.min.js"></script>
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <!--<script type="text/javascript" src="../../../xml3d.js/build/output/xml3d.js"></script>-->
-    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
   <title>XML3D Examples</title>
+  <script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine"});
+	 });
+  </script>
 </head>
 <body>
 <div id="overall">
@@ -19,7 +25,7 @@
     <!--<h1>CSS Transforms</h1>-->
 
     <xml3d id="MyXml3d" class="xml3d" activeview="#default" width="600px" height="400px">
-      <view id="default" position="0 4 20"></view>
+      <view id="default" position="0 2 20"></view>
 
       <!-- Scene Graph -->
 

@@ -10,6 +10,12 @@
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+	<script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine"});
+	 });
+    </script>
   <title>XML3D Examples</title>
 </head>
 <body>

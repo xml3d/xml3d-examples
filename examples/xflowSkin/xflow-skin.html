@@ -12,6 +12,15 @@
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+	<script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+			mode:"examine",
+			revolveAroundPoint: XML3D.Vec3.fromValues(-3.6, -5.3, -180)
+		});
+	 });
+    </script>
 
     <title>XML3D Examples</title>
 </head>
@@ -20,7 +29,6 @@
     <div id="content">
 
         <xml3d id="MyXml3d" activeview="#defaultView" class="xml3d">
-	    <navigation revolvearound="-3.6 -5.3 -230" speed="50"></navigation>
             <defs id="mainDef">
               <transform id="t_Camera" translation="0 0 75"></transform>
               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>

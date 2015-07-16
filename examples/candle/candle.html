@@ -10,6 +10,12 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+	<script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine"});
+	 });
+    </script>
 
     <title>XML3D Examples</title>
 
@@ -17,7 +23,7 @@
 <body>
 <div id="overall">
 <div id="content">
-            <xml3d class="xml3d" activeview="#defaultView">
+            <xml3d id="MyXml3d" class="xml3d" activeview="#defaultView">
                 <defs>
                     <transform id="t_node-candle_dish" rotation="0.0 0.0 1.0 -1.5707964" scale="65.0 65.0 65.0"></transform>
                     <data id="geom-candle_dish">

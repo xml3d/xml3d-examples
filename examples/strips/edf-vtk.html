@@ -12,14 +12,25 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
-
+	<script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("myxml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+			mode:"examine",
+			revolveAroundPoint: XML3D.Vec3.fromValues(202,200,200),
+			rotateSpeed: 10,
+			zoomSpeed: 200
+		});
+	 });
+	</script>
+	
     <title>XML3D Examples - EDF Line Strips</title>
 </head>
 <body>
 <div id="overall">
     <div id="content">
 
-    <xml3d activeview="#defaultView" class="xml3d">
+    <xml3d id="myxml3d" activeview="#defaultView" class="xml3d">
         <navigation revolvearound="202 200 200" speed="100"></navigation>
         <defs>
             <material id="lineShader" script="urn:xml3d:material:flat">

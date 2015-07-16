@@ -12,6 +12,14 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+	<script type="text/javascript">
+	 window.addEventListener("load", function() {
+		var xml3dElem = document.getElementById("MyXml3d");
+		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+			mode:"examine"
+		});
+	 });
+    </script>
     <title>XML3D Examples - Spot Light</title>
 
 
@@ -20,7 +28,7 @@
         <div id="overall">
     <div id="content">
 	<!--<h1>Spot Light - urn:xml3d:lightshader:spot</h1>-->
-            <xml3d activeview="#defaultView" class="xml3d">
+            <xml3d id="MyXml3d" activeview="#defaultView" class="xml3d">
                 <defs>
                     <transform id="t_group1" scale="1.0 1.0 1.0"></transform>
 
