@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" media="all"
+          href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all"
+          href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all"
+          href="../../style/page.css">
+    <link rel="stylesheet" type="text/css" media="all"
+          href="./style/foundation-icons.css">
+    <style>
+        input[type="color"] {
+            width: 129px;
+            height: 21px;
+            padding: 0px;
+            margin: 0;
+        }
+
+        img {
+            max-width: 100px;
+            display: block;
+            margin: auto;
+        }
+
+        #parameter-controls {
+            position: fixed;
+            margin-bottom: 1em;
+            margin-right: 1em;
+            width: 35%;
+            top: 250px;
+            right: 0px;
+            z-index: 2;
+            max-height: 50%;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            flex-flow: row wrap;
+            align-content: flex-start;
+        }
+
+        #xml-material-serialization-container {
+            overflow: auto;
+            max-height: 50vh;
+        }
+
+        #xml-material-serialization {
+            border: 0px;
+            background-color: white;
+        }
+
+        #switch-model {
+            position: fixed;
+            margin-bottom: 1em;
+            margin-right: 1em;
+            width: 35%;
+            top: 250px;
+            right: 0px;
+            z-index: 2;
+            max-height: 50%;
+        }
+    </style>
+    <script type="text/javascript"
+            src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript"
+            src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+    <script type="text/javascript">
+        window.addEventListener(
+                "load", function () {
+                    var xml3dElem = document.getElementById("MyXml3d");
+                    window.DemoCamera = new XML3D.StandardCamera(
+                            xml3dElem, {
+                                mode: "examine"
+                            }
+                    );
+                }
+        );
+    </script>
+    <script type="text/javascript" src="./jquery-ui.min.js"></script>
+    <script type="text/javascript" src="./widgets/float.js"></script>
+    <script type="text/javascript" src="./widgets/float3.js"></script>
+    <script type="text/javascript" src="./widgets/texture.js"></script>
+    <script type="text/javascript" src="./controller.js"></script>
+
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+        <xml3d id="MyXml3d" activeview="#defaultView" class="xml3d">
+            <defs id="mainDef">
+                <transform id="t-key-light" translation="5 5 10"></transform>
+                <transform id="t-back-light" translation="0 0 -5"></transform>
+                <transform id="t-fill-light" translation="0 1 10"></transform>
+
+                <transform id="t-platform" translation="0 -1 0"></transform>
+
+                <material id="material" script="urn:xml3d:material:default">
+                    <float3 name="baseColor">1 1 1</float3>
+                    <float name="subsurface">0</float>
+                    <float name="metallic">0</float>
+                    <float name="specular">0.5</float>
+                    <float name="specularTint">0</float>
+                    <float name="roughness">0.5</float>
+                    <float name="anisotropic">0</float>
+                    <float name="sheen">0</float>
+                    <float name="sheenTint">0.5</float>
+                    <float name="clearCoat">0</float>
+                    <float name="clearCoatGloss">1</float>
+                    <float name="clearCoatThickness">1</float>
+                    <float name="opacity">1</float>
+                    <float name="ambientIntensity">0.005</float>
+                </material>
+                <material id="platform" script="urn:xml3d:material:default">
+                    <float3 name="baseColor">1.00 1.00 1.00</float3>
+                    <float name="subsurface">0.0</float>
+                    <float name="metallic">0</float>
+                    <float name="specular">0</float>
+                    <float name="specularTint">0</float>
+                    <float name="roughness">0.9</float>
+                    <float name="anisotropic">0</float>
+                    <float name="sheen">1</float>
+                    <float name="sheenTint">1</float>
+                    <float name="clearCoat">0.0</float>
+                    <float name="clearCoatGloss">0.0</float>
+                    <float name="ambientIntensity">0</float>
+                </material>
+            </defs>
+
+            <group material="#material">
+                <model src="blender_solid_material_preview.xml#blender_solid_material_preview">
+                </model>
+            </group>
+
+            <group transform="#t-platform" material="#platform">
+                <model src="platform.xml#platform">
+                </model>
+            </group>
+
+            <group>
+                <group transform="#t-key-light">
+                    <light model="urn:xml3d:light:point">
+                        <bool name="castShadow">false</bool>
+                        <float3 name="attenuation">0 0 1</float3>
+                        <float3 name="intensity">100 90.5 90</float3>
+                        <float name="softness">1</float>
+                        <bool name="castShadow">false</bool>
+                        <float name="shadowBias">0.009</float>
+                    </light>
+                </group>
+                <group transform="#t-back-light">
+                    <light model="urn:xml3d:light:directional">
+                        <float3 name="intensity">0.4 0.45 0.5</float3>
+                        <float3 name="direction">1 0 1</float3>
+                    </light>
+                </group>
+                <group>
+                    <light model="urn:xml3d:light:directional">
+                        <float3 name="intensity">0.4 0.45 0.5</float3>
+                        <float3 name="direction">-1 0 1</float3>
+                    </light>
+                </group>
+                <group transform="#t-fill-light">
+                    <light model="urn:xml3d:light:spot">
+                        <float3 name="attenuation">0 0 1</float3>
+                        <float3 name="intensity">8.000000 9.000000 10.000000</float3>
+                        <bool name="castShadow">true</bool>
+                        <float name="shadowBias">0.009</float>
+                    </light>
+                </group>
+            </group>
+
+            <view id="defaultView"
+                  position="12.918253898620605 4.6889801025390625 9.07081127166748"
+                  orientation="-0.268902987241745 0.9536679983139038 0.13493862748146057 0.9973474740982056"></view>
+        </xml3d>
+
+        <div class="description">
+            Simple Material Designer for the XML3D default material. Click the gear icon on the left of each parameter
+            to change its type to a texture. Click on the texture to set your own.
+            <br>
+            <a href="#" data-reveal-id="xml-material-serialization-container" onclick="showXML()"><i
+                    class="fi-clipboard"></i> Show XML</a>
+            <br>
+        </div>
+
+        <div id="parameter-controls">
+
+        </div>
+
+        <div id="xml-material-serialization-container" class="reveal-modal" data-reveal>
+            <strong>Copy this into your XML3D material tag or directly as children of your mesh.</strong>
+            <br>
+            <br>
+            <pre><code id="xml-material-serialization">
+
+            </code></pre>
+            <a class="close-reveal-modal" aria-label="Close">&#215;</a>
+        </div>
+
+    </div>
+</div>
+
+
+</body>
+</html>
