@@ -96,7 +96,7 @@
                         </group>
                     </group>
                     <group id="spotLight1" transform="#t_spotLight1">
-                        <view id="lightView" fieldofview="1.2"></view>
+                        <view id="lightView"><float name="fovVertical">1.2</float></view>
                         <light model="urn:xml3d:light:spot"><float3 name="intensity">1.0 1.0 1.0</float3><float3 name="attenuation">1.0 0.0 0.015</float3><float name="falloffAngle">0.8</float><float name="softness">10</float><bool name="castShadow">true</bool><float name="shadowBias">0.001</float></light>
                     </group>
                     <group id="directionalLight1" transform="#t_directionalLight1">
@@ -115,7 +115,7 @@
                         <data src="basic.xml#mesh_cube"></data>
                     </mesh>
                 </group>
-                <view id="defaultView" position="-30.944881439208984 -23.090110778808594 21.51552391052246" orientation="0.6988239288330078 -0.18478119373321533 -0.6910144686698914 1.6189127998963848"></view>
+                <view id="defaultView" style="transform: translate3d(-30.944881439208984px, -23.090110778808594px, 21.51552391052246px) rotate3d(0.6988239288330078, -0.18478119373321533, -0.6910144686698914, 92.8deg)"></view>
             </xml3d>
         <div class="description">
             A simple spot light as defined <a href="https://github.com/xml3d/xml3d.js/wiki/Light-Shaders#wiki-Spot_Light">here</a>.
@@ -124,5 +124,6 @@
 
         </div>
     
+
 
 </body></html>

@@ -35,7 +35,7 @@
         <!-- AR Data -->
         <data id="arBase">
           <data compute="flipvideo = xflow.flipVerticalImage(arvideo)">
-            <data compute="transforms, visibilities, projection = xflar.detect(arvideo, markers, threshold)">
+            <data compute="transforms, visibilities, projectionMatrix = xflar.detect(arvideo, markers, threshold)">
               <int name="markers">22 64</int>
               <data compute="threshold = xflar.getOtsuThreshold(histogram)">
                 <data compute="histogram = xflip.createNormalizedHistogram(grvideo,channel)">
@@ -53,7 +53,7 @@
         </data>
 
         <!-- Viewpoint with connection to AR data -->
-        <view id="View" projection="#arBase"></view>
+        <view id="View" src="#arBase" model="urn:xml3d:view:projective"></view>
 
         <!-- Object 1: -->
         <!-- Extract visibility and transformation -->
@@ -149,6 +149,7 @@
     });
   });
 </script>
+
 
 
 
