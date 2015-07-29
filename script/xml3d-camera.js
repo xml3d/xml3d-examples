@@ -274,7 +274,9 @@ XML3D.StandardCamera.prototype.mousePressEvent = function(event) {
 };
 
 XML3D.StandardCamera.prototype.mouseReleaseEvent = function(event) {
-    this.stopEvent(event);
+    if (event.target.nodeName.toLowerCase() == "xml3d") {
+        this.stopEvent(event);
+    }
 
     if (this.action !== this.NO_MOUSE_ACTION) {
         XML3D.options.setValue("renderer-mousemove-picking", true);
@@ -349,6 +351,7 @@ XML3D.StandardCamera.prototype.mouseMoveEvent = function(event, camera) {
 
         this.update();
     }
+
     this.stopEvent(event);
     return false;
 };
