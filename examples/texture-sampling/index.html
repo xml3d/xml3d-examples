@@ -32,37 +32,37 @@
           <float name="shininess">0.25</float>
           <float name="ambientIntensity">0.4</float>
         </data>
-        <material id="RepeatTexture" script="urn:xml3d:material:phong">
+        <material id="RepeatTexture" model="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
           <texture name="diffuseTexture" wrap="repeat">
             <img src="textures/Reference.jpg">
           </texture>
         </material>
-        <material id="ClampTexture" script="urn:xml3d:material:phong">
+        <material id="ClampTexture" model="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
           <texture name="diffuseTexture">
             <img src="textures/Reference.jpg">
           </texture>
         </material>
-        <material id="MixedWrap" script="urn:xml3d:material:phong">
+        <material id="MixedWrap" model="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
           <texture name="diffuseTexture" wrap="clamp repeat">
             <img src="textures/Reference.jpg">
           </texture>
         </material>
-        <material id="FilterNearest" script="urn:xml3d:material:phong">
+        <material id="FilterNearest" model="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
           <texture name="diffuseTexture" wrap="repeat" filter="nearest">
             <img src="textures/Reference.jpg">
           </texture>
         </material>
-        <material id="NoMipMap" script="urn:xml3d:material:phong">
+        <material id="NoMipMap" model="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
           <texture name="diffuseTexture" wrap="repeat" filter="linear">
             <img src="textures/Reference.jpg">
           </texture>
         </material>
-        <material id="DefaultFilter" script="urn:xml3d:material:phong">
+        <material id="DefaultFilter" model="urn:xml3d:material:phong">
           <data src="#baseMaterial"></data>
           <texture name="diffuseTexture" wrap="repeat">
             <img src="textures/Reference.jpg">
