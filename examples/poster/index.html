@@ -19,9 +19,10 @@
   <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
   <script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
-			mode:"examine"
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+			mode:"examine",
+			revolveAroundPoint: XML3D.Vec3.fromValues(0, -9, -60)
 		});
 	 });
     </script>
@@ -96,7 +97,9 @@
           <float name="shadowBias">0.001</float>
         </light>
       </group>
-      <view id="defaultView" style="transform: translate3d(0px, 9px, 60px)"></view>
+	  <group style="transform: translate3d(0px, 9px, 60px)">
+		<view id="defaultView" ></view>
+	  </group>
     </xml3d>
     <script type="text/javascript">
       // Keyframe animation with jQuery

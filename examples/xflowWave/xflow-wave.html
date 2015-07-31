@@ -14,8 +14,8 @@
       <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 	  <script type="text/javascript">
 		 window.addEventListener("load", function() {
-			var xml3dElem = document.getElementById("myxml3d");
-			window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+			var viewElem = document.getElementById("Camera");
+			window.DemoCamera = new XML3D.StandardCamera(viewElem, {
 				mode:"examine"
 			});
 		 });
@@ -95,8 +95,8 @@
       </data>
 
      </defs>
-
-     <view id="Camera" style="transform: translate3d(13.423173904418945px, 6.755307197570801px, 14.065818786621094px) rotate3d(-0.3941052556037903, 0.9096987843513489, 0.13087835907936096, 47.3deg)"></view>
+	 <transform id="cameraTransform" translation="-4.13897705078125 14.549148559570312 48.671165466308594" rotation="-0.9997400045394897 -0.020568829029798508 0.009851687587797642 0.37945687770843506"></transform>
+     <view id="Camera" transform="#cameraTransform"></view>
 
      <!-- Wave Shape Display: -->
 

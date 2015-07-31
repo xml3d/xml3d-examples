@@ -14,9 +14,10 @@
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 	<script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("canvas");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
-			mode:"examine"
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+			mode:"examine",
+			revolveAroundPoint: XML3D.Vec3.fromValues(0, 0, -10)
 		});
 	 });
     </script>
@@ -28,7 +29,9 @@
         <div id="overall"><div id="content">
             <!--<h1>Set mesh data efficiently via setScriptValue</h1>-->
             <xml3d id="canvas" class="xml3d">
-                <view style="transform: translate3d(0px, 0px, 10px)"></view>
+				<group style="transform: translate3d(0px, 0px, 10px)">
+					<view id="defaultView" ></view>
+				</group>
 
                 <material id="lineShader" model="urn:xml3d:material:flat">
                     <float3 name="diffuseColor">1 1 1</float3>

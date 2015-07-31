@@ -13,8 +13,8 @@
     <script type="text/javascript" src="./meshlab-loader.js"></script>
 	<script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
 			mode:"examine", 
 			revolveAroundPoint: XML3D.Vec3.fromValues(0, -380, -1000),
 			zoomSpeed: 200

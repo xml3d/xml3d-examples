@@ -13,8 +13,8 @@
   <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
   <script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0,0,2)});
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0,0,-21)});
 	 });
     </script>
   <!-- Eyelight shader plug-in: -->
@@ -30,10 +30,12 @@
 <div id="overall">
   <div id="content">
 
-    <xml3d id="MyXml3d" class="canvas" data-bbox="[-11.129383087158203, -0.6959080100059509, -9.470161437988281, 13.148994445800781, 4.0060200691223145, 7.996581077575684]" view="#33fa063f-f2fd-4908-9d5b-5b8c0ce7ba2c">
+    <xml3d id="MyXml3d" class="canvas" data-bbox="[-11.129383087158203, -0.6959080100059509, -9.470161437988281, 13.148994445800781, 4.0060200691223145, 7.996581077575684]" view="#defaultView">
       <defs></defs>
       <group>
-        <view id="33fa063f-f2fd-4908-9d5b-5b8c0ce7ba2c" style="transform: translate3d(1.009805679321289px, 1.6550559997558594px, 21.97019386291504px) rotate3d(0, 1, 0, 0.0deg)"></view>
+		<group style="transform: translate3d(1.009805679321289px, 1.6550559997558594px, 21.97019386291504px) rotate3d(0, 1, 0, 0.0deg)">
+			<view id="defaultView" ></view>
+		</group>
         <view id="80260b29-78a3-4466-bb37-e56240c5ddec"></view>
         <view id="4c5ce5cc-83ee-4c78-9ff9-d9628058a40e"></view>
         <view id="443e7f48-d5a3-4cab-9484-1b15dac9c113"></view>

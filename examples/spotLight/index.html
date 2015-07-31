@@ -14,8 +14,8 @@
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 	<script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
 			mode:"examine"
 		});
 	 });
@@ -115,7 +115,9 @@
                         <data src="basic.xml#mesh_cube"></data>
                     </mesh>
                 </group>
-                <view id="defaultView" style="transform: translate3d(-30.944881439208984px, -23.090110778808594px, 21.51552391052246px) rotate3d(0.6988239288330078, -0.18478119373321533, -0.6910144686698914, 92.8deg)"></view>
+				<transform id="cameraTransform" translation="-26 -31 22" rotation="0.8242830634117126 -0.3122488260269165 -0.47229036688804626 1.0554853677749634"></transform>
+				<view id="defaultView" transform="#cameraTransform"></view>
+				
             </xml3d>
         <div class="description">
             A simple spot light as defined <a href="https://github.com/xml3d/xml3d.js/wiki/Light-Shaders#wiki-Spot_Light">here</a>.

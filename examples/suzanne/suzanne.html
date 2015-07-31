@@ -12,8 +12,8 @@
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 	<script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
 			mode:"examine"
 		});
 	 });
@@ -38,7 +38,8 @@
                     <float name="shininess">0.2</float>
                 </material>
             </defs>
-            <view id="defaultView" style="transform: translate3d(7.481132px, -6.50764px, 5.343665px) rotate3d(0.772239, 0.341341, 0.535848, 77.2deg)"></view>
+			<transform id="cameraTransform" translation="10.119519233703613 3.1721770763397217 3.2792904376983643" rotation="0.4126630425453186 0.5140766501426697 0.7519537210464478 2.224778175354004"></transform>
+            <view id="defaultView" transform="#cameraTransform"></view>
             <group transform="#t_Suzanne" material="#Material">
                 <mesh src="./suzanne.json" type="triangles"></mesh>
             </group>

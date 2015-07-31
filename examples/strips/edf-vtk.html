@@ -14,7 +14,7 @@
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 	<script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("myxml3d");
+		var xml3dElem = document.getElementById("defaultView");
 		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
 			mode:"examine",
 			revolveAroundPoint: XML3D.Vec3.fromValues(202,200,200),
@@ -38,7 +38,8 @@
                 <bool name="useVertexColor">true</bool>
             </material>
         </defs>
-        <view id="defaultView" style="transform: translate3d(202px, 200px, 1400px) rotate3d(0, 0, 1, 90.0deg)"></view>
+		<transform id="cameraTransform" translation="202 200 1400" rotation="0 0 1 1.57"></transform>
+        <view id="defaultView" transform="#cameraTransform"></view>	
         <group material="#lineShader">
             <mesh src="edf-strips.json" type="linestrips"></mesh>
         </group>

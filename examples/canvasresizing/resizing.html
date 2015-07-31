@@ -19,8 +19,8 @@
     <script type="text/javascript">
         window.addEventListener('load', function() {
             // Camera controller bindings
-            var xml3dElem = document.getElementById("canvas");
-			window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0,0,-30)});
+            var viewElem = document.getElementById("cameraShape1");
+			window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
             // To bind a jQuery widget to the xml3d element you should specify a class for it (class="xml3d" in this case)
             // and use this as the selector. This ensures the widget is also applied to the canvas element that XML3D creates.
             $(".xml3d").resizable({
@@ -98,9 +98,7 @@
                         </group>
                     </group>
 
-                    <group id="camera1" transform="#t_camera1">
-                        <view id="cameraShape1"><float name="fovVertical">0.66059315</float></view>
-                    </group>
+                    <view id="cameraShape1" transform="#t_camera1"><float name="fovVertical">0.66059315</float></view>
 
                     <group id="dirLightGroup" transform="#t_directionalLight1">
                       <light model="urn:xml3d:light:directional">

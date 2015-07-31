@@ -12,8 +12,8 @@
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 	<script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine"});
+		var viewElem = document.getElementById("defaultView");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
 	 });
     </script>
 
@@ -162,7 +162,8 @@
                         </group>
                     </group>
                 </group>
-                <view id="defaultView" style="transform: translate3d(-31.795778274536133px, -13.9046630859375px, 30.194198608398438px) rotate3d(0.5448651313781738, -0.4238497316837311, -0.7235146164894104, 73.8deg)"></view>
+				<transform id="cameraTransform" translation="-21 -25 25" rotation="0.83 -0.44 -0.32 0.97"></transform>
+				<view id="defaultView" transform="#cameraTransform"></view>
             </xml3d>
         </div></div>
     

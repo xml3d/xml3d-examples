@@ -14,8 +14,8 @@
   <title>XML3D Examples</title>
   <script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var xml3dElem = document.getElementById("MyXml3d");
-		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {mode:"examine"});
+		var viewElem = document.getElementById("default");
+		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0, -2, -20)});
 	 });
   </script>
 </head>
@@ -25,8 +25,9 @@
     <!--<h1>CSS Transforms</h1>-->
 
     <xml3d id="MyXml3d" class="xml3d" width="600px" height="400px" view="#default">
-      <view id="default" style="transform: translate3d(0px, 2px, 20px)"></view>
-
+	<group style="transform: translate3d(0px, 2px, 20px)">
+      <view id="default" ></view>
+	</group>
       <!-- Scene Graph -->
 
       <group style="transform: translateX(0px)">
