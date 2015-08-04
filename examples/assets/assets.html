@@ -14,8 +14,8 @@
   <title>XML3D Examples</title>
   <script type="text/javascript">
 	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("default");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine", revolveAroundPoint: XML3D.Vec3.fromValues(0, -2, -20)});
+		var transform = document.getElementById("default");
+		window.DemoCamera = new XML3D.StandardCamera(transform, {mode:"examine"});
 	 });
   </script>
 </head>
