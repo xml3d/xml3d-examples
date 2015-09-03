@@ -30,7 +30,7 @@
   </data>
 
 
-    <material id="cubeShader" script="urn:xml3d:material:phong">
+    <material id="cubeShader" model="urn:xml3d:material:phong">
       <float3 name="specularColor">0.55 0.55 0.55</float3>
       <float name="shininess">0.6</float>
       <float name="ambientIntensity">0.3</float>

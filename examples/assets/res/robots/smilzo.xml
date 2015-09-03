@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <xml3d xmlns="http://www.xml3d.org/2009/xml3d" >
 
-    <material id="glassShader" script="urn:xml3d:material:phong">
+    <material id="glassShader" model="urn:xml3d:material:phong">
         <float3 name="emissiveColor">0.141604 0.46566 0.585367</float3>
         <float3 name="diffuseColor">0.1936 0.636474 0.8</float3>
         <float3 name="specularColor">0.5 0.5 0.5</float3>
@@ -9,7 +9,7 @@
         <float name="ambientIntensity">0.0</float>
         <float name="transparency">0.154467</float>
     </material>
-    <material id="armorShader" script="urn:xml3d:material:phong">
+    <material id="armorShader" model="urn:xml3d:material:phong">
         <float3 name="emissiveColor">0.5 0.5 0.5</float3>
         <float name="ambientIntensity">0.1</float>
         <texture name="diffuseTexture">

@@ -5,7 +5,7 @@
  Shaders
 
  -->
-    <material script="urn:xml3d:material:phong" id="shader_sniper_head">
+    <material model="urn:xml3d:material:phong" id="shader_sniper_head">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -15,7 +15,7 @@
       <img src="sniper_head.jpg" />
     </texture>
   </material>
-  <material script="urn:xml3d:material:phong" id="shader_eyeball_l">
+  <material model="urn:xml3d:material:phong" id="shader_eyeball_l">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -25,7 +25,7 @@
       <img src="eye-iris-blue.jpg" />
     </texture>
   </material>
-  <material script="urn:xml3d:material:phong" id="shader_eyeball_r">
+  <material model="urn:xml3d:material:phong" id="shader_eyeball_r">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
@@ -35,7 +35,7 @@
       <img src="eye-iris-blue.jpg" />
     </texture>
   </material>
-  <material script="urn:xml3d:material:phong" id="shader_sniper_red">
+  <material model="urn:xml3d:material:phong" id="shader_sniper_red">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -45,7 +45,7 @@
       <img src="sniper_red.jpg" />
     </texture>
   </material>
-  <material script="urn:xml3d:material:phong" id="shader_sniper_lens">
+  <material model="urn:xml3d:material:phong" id="shader_sniper_lens">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
@@ -55,7 +55,7 @@
       <img src="sniper_lens.jpg" />
     </texture>
   </material>
-  <material script="urn:xml3d:material:phong" id="shader_c_arrow">
+  <material model="urn:xml3d:material:phong" id="shader_c_arrow">
     <float3 name="diffuseColor">1 1 1</float3>
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>

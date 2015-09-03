@@ -1,6 +1,6 @@
 <xml3d>
     <def>
-        <material id="bodenMaterial" script="urn:xml3d:material:phong">
+        <material id="bodenMaterial" model="urn:xml3d:material:phong">
             <float name="ambientIntensity">0.4</float>
             <float3 name="diffuseColor">0.4 0.4 0.4</float3>
             <float3 name="specularColor">0 0 0</float3>

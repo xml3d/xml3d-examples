@@ -1,41 +1,41 @@
 <xml3d>
     <defs id="md">
-        <material id="mat_m2Black" script="urn:xml3d:material:phong">
+        <material id="mat_m2Black" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.0000 0.0000 0.0000</float3>
             <float3 name="specularColor">0.0088 0.0088 0.0088</float3>
             <float name="shininess">0.18382343649864197</float>
         </material>
-        <material id="mat_m4Cable" script="urn:xml3d:material:phong">
+        <material id="mat_m4Cable" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.2931 0.2931 0.2931</float3>
             <float3 name="specularColor">0.0000 0.0000 0.0000</float3>
             <float name="shininess">3.002453088760376</float>
         </material>
-        <material id="mat_m3BlackPlastic" script="urn:xml3d:material:phong">
+        <material id="mat_m3BlackPlastic" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.1259 0.1259 0.1259</float3>
             <float3 name="specularColor">0.0000 0.0000 0.0000</float3>
             <float name="shininess">0.18382343649864197</float>
         </material>
-        <material id="mat_m1Antenna" script="urn:xml3d:material:phong">
+        <material id="mat_m1Antenna" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.6400 0.6400 0.6400</float3>
             <float3 name="specularColor">0.5000 0.5000 0.5000</float3>
             <float name="shininess">3.002453088760376</float>
         </material>
-        <material id="mat_m8Yellow" script="urn:xml3d:material:phong">
+        <material id="mat_m8Yellow" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.8000 0.7590 0.3176</float3>
             <float3 name="specularColor">0.0000 0.0000 0.0000</float3>
             <float name="shininess">3.002453088760376</float>
         </material>
-        <material id="mat_m7Screen" script="urn:xml3d:material:phong">
+        <material id="mat_m7Screen" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.6000 0.6000 1</float3>
             <float3 name="specularColor">0.0000 0.0000 0.0000</float3>
             <float name="shininess">3.002453088760376</float>
         </material>
-        <material id="mat_m6Logo" script="urn:xml3d:material:phong">
+        <material id="mat_m6Logo" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">0.6400 0.6400 0.6400</float3>
             <float3 name="specularColor">0.5000 0.5000 0.5000</float3>
             <float name="shininess">3.002453088760376</float>
         </material>
-        <material id="mat_m5Glass" script="urn:xml3d:material:phong">
+        <material id="mat_m5Glass" model="urn:xml3d:material:phong">
             <float3 name="diffuseColor">1 0.6400 0.6400</float3>
             <float3 name="specularColor">0.2772 0.2772 0.2772</float3>
             <float name="shininess">30.57601547241211</float>

@@ -119,7 +119,7 @@
     </data>
 
 
-   <material id="shader" script="urn:xml3d:material:phong">
+   <material id="shader" model="urn:xml3d:material:phong">
       <float3 name="diffuseColor">1 1 1</float3>
       <float name="ambientIntensity">0.4</float>
       <texture name="diffuseTexture" wrapS="repeat" wrapT="repeat">

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d xmlns="http://www.w3.org/1999/xhtml">
 
-    <material id="shader" script="urn:xml3d:material:phong" >
+    <material id="shader" model="urn:xml3d:material:phong" >
         <float3 name="diffuseColor" >1 0.5 0</float3>
         <float name="ambientIntensity" >0.5</float>
     </material>
