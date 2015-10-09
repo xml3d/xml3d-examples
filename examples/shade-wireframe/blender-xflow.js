@@ -78,7 +78,7 @@ Xflow.registerOperator("xflow.blenderMaterial", {
                 {type: 'float3', name: 'diffuseColor'},
                 {type: 'float3', name: 'specularColor'},
                 {type: 'float', name: 'shininess'},
-                {type: 'float', name: 'transparency'}
+                {type: 'float', name: 'opacity'}
              ],
     params:  [
                 {type: 'float3', source: 'diffuse_color'},
@@ -91,7 +91,7 @@ Xflow.registerOperator("xflow.blenderMaterial", {
     evaluate: function(result, value1, value2, info) {
         throw new Error("Not used!");
     },
-    evaluate_core: function(diffuseColor, specularColor, shininess, transparency, diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha){
+    evaluate_core: function(diffuseColor, specularColor, shininess, opacity, diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha){
         diffuseColor[0] = diffuse_color[0] * diffuse_intensity[0];
         diffuseColor[1] = diffuse_color[1] * diffuse_intensity[0];
         diffuseColor[2] = diffuse_color[2] * diffuse_intensity[0];
@@ -99,6 +99,6 @@ Xflow.registerOperator("xflow.blenderMaterial", {
         specularColor[1] = specular_color[1] * specular_intensity[0];
         specularColor[2] = specular_color[2] * specular_intensity[0];
         shininess[0] = specular_hardness[0] / 511;
-        transparency[0] = Math.max(0, 1 - alpha[0]);
+        opacity[0] = Math.max(0, alpha[0]);
     }
 });

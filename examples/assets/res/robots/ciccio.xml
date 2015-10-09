@@ -7,7 +7,7 @@
         <float3 name="specularColor">0.5 0.5 0.5</float3>
         <float name="shininess">0.15625</float>
         <float name="ambientIntensity">0.0</float>
-        <float name="transparency">0.154467</float>
+        <float name="opacity">0.84</float>
     </material>
 
     <material id="armorShader" model="urn:xml3d:material:phong">
@@ -24,7 +24,7 @@
         </texture>
         <float3 name="specularColor">0.5 0.5 0.5</float3>
         <float name="shininess">0.05625</float>
-        <float name="transparency">0.01</float>
+        <float name="opacity">0.99</float>
     </material>
 
 

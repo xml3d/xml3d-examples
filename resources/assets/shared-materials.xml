@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d>
-  <material compute="(diffuseColor, specularColor, shininess, transparency) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-03" model="urn:xml3d:material:phong">
+  <material compute="(diffuseColor, specularColor, shininess, opacity) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-03" model="urn:xml3d:material:phong">
     <float name="diffuse_intensity">0.800000011920929</float>
     <float3 name="diffuse_color">0.7835379838943481 0.0 0.0</float3>
     <float name="specular_intensity">1.0</float>
@@ -8,7 +8,7 @@
     <float name="specular_hardness">100</float>
     <float name="alpha">1</float>
   </material>
-  <material compute="(diffuseColor, specularColor, shininess, transparency) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-01" model="urn:xml3d:material:phong">
+  <material compute="(diffuseColor, specularColor, shininess, opacity) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-01" model="urn:xml3d:material:phong">
     <float name="diffuse_intensity">0.800000011920929</float>
     <float3 name="diffuse_color">0.4698241949081421 0.45842915773391724 0.5070672035217285</float3>
     <float name="specular_intensity">1.0</float>
@@ -16,7 +16,7 @@
     <float name="specular_hardness">100</float>
     <float name="alpha">1</float>
   </material>
-  <material compute="(diffuseColor, specularColor, shininess, transparency) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-04" model="urn:xml3d:material:phong">
+  <material compute="(diffuseColor, specularColor, shininess, opacity) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-04" model="urn:xml3d:material:phong">
     <float name="diffuse_intensity">0.800000011920929</float>
     <float3 name="diffuse_color">0.14166608452796936 0.13840024173259735 0.15232452750205994</float3>
     <float name="specular_intensity">1.0</float>
@@ -24,7 +24,7 @@
     <float name="specular_hardness">100</float>
     <float name="alpha">1</float>
   </material>
-  <material compute="(diffuseColor, specularColor, shininess, transparency) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-02" model="urn:xml3d:material:phong">
+  <material compute="(diffuseColor, specularColor, shininess, opacity) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Metal-02" model="urn:xml3d:material:phong">
     <float name="diffuse_intensity">0.800000011920929</float>
     <float3 name="diffuse_color">0.7835379838943481 0.7835379838943481 0.0</float3>
     <float name="specular_intensity">0.5</float>
@@ -32,7 +32,7 @@
     <float name="specular_hardness">50</float>
     <float name="alpha">1</float>
   </material>
-  <material compute="(diffuseColor, specularColor, shininess, transparency) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Ground" model="urn:xml3d:material:phong">
+  <material compute="(diffuseColor, specularColor, shininess, opacity) = xflow.blenderMaterial(diffuse_color, diffuse_intensity, specular_color, specular_intensity, specular_hardness, alpha)" id="Ground" model="urn:xml3d:material:phong">
     <float name="diffuse_intensity">0.800000011920929</float>
     <float3 name="diffuse_color">0.800000011920929 0.800000011920929 0.800000011920929</float3>
     <float name="specular_intensity">0.5</float>

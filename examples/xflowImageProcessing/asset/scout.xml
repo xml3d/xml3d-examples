@@ -10,7 +10,7 @@
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.078125</float>
-    <float name="transparency">0</float>
+    <float name="opacity">1</float>
     <texture name="diffuseTexture">
       <img src="scout_red.jpg" />
     </texture>
@@ -20,7 +20,7 @@
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.390625</float>
-    <float name="transparency">0</float>
+    <float name="opacity">1</float>
     <texture name="diffuseTexture">
       <img src="scout_head.jpg" />
     </texture>
@@ -30,7 +30,7 @@
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.390625</float>
-    <float name="transparency">0</float>
+    <float name="opacity">1</float>
     <texture name="diffuseTexture">
       <img src="eye-iris-blue.jpg" />
     </texture>
@@ -40,7 +40,7 @@
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.390625</float>
-    <float name="transparency">0</float>
+    <float name="opacity">1</float>
     <texture name="diffuseTexture">
       <img src="eye-iris-blue.jpg" />
     </texture>
