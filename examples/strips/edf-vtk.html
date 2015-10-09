@@ -17,7 +17,7 @@
 		var xml3dElem = document.getElementById("defaultView");
 		window.DemoCamera = new XML3D.StandardCamera(xml3dElem, {
 			mode:"examine",
-			examinePoint: XML3D.Vec3.fromValues(202,200,200),
+			examinePoint: new XML3D.Vec3(202,200,200),
 			rotateSpeed: 10,
 			zoomSpeed: 200
 		});

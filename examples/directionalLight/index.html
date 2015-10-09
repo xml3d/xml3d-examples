@@ -80,7 +80,7 @@
 				animate();
 			});
 		});
-		var rot = XML3D.AxisAngle.fromValues(0.707,0.707,0,0),
+		var rot = new XML3D.AxisAngle(0.707,0.707,0,0),
 		    shouldAnimate = false;
 		function animate() {
 				var t = document.getElementById("t_Lamp");
