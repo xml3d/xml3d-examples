@@ -32,7 +32,7 @@ XML3D.materials.register("eyelight", {
         "uniform vec3 emissiveColor;",
         "uniform float shininess;",
         "uniform vec3 specularColor;",
-        "uniform float transparency;",
+        "uniform float opacity;",
         "uniform mat4 viewMatrix;",
         
         "#if HAS_DIFFUSETEXTURE",
@@ -45,7 +45,7 @@ XML3D.materials.register("eyelight", {
 
         "void main(void) {",
         "  vec3 objDiffuse = diffuseColor;",
-        "  float alpha = max(0.0, 1.0 - transparency);",
+        "  float alpha = max(0.0, opacity);",
         "  #if HAS_DIFFUSETEXTURE",
         "    vec4 texDiffuse = texture2D(diffuseTexture, fragTexCoord);",
         "    objDiffuse *= texDiffuse.rgb;",
@@ -74,7 +74,7 @@ XML3D.materials.register("eyelight", {
         diffuseColor    : [1.0, 1.0, 1.0],
         emissiveColor   : [0.0, 0.0, 0.0],
         specularColor   : [1.0, 1.0, 1.0],
-        transparency    : 0.0,
+        opacity		    : 1.0,
         shininess       : 0.5,
         ambientIntensity: 0.0,
         useVertexColor : false

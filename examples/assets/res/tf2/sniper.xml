@@ -10,7 +10,6 @@
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.390625</float>
-    <float name="transparency">0</float>
     <texture name="diffuseTexture">
       <img src="tex/sniper_head.jpg" />
     </texture>
@@ -21,7 +20,6 @@
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">1.171875</float>
-    <float name="transparency">0</float>
     <texture name="diffuseTexture">
       <img src="tex/eye-iris-blue.jpg" />
     </texture>
@@ -32,7 +30,6 @@
     <float3 name="specularColor">0.5 0.5 0.5</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">1.171875</float>
-    <float name="transparency">0</float>
     <texture name="diffuseTexture">
       <img src="tex/eye-iris-blue.jpg" />
     </texture>
@@ -43,7 +40,6 @@
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.078125</float>
-    <float name="transparency">0</float>
     <texture name="diffuseTexture">
       <img src="tex/sniper_red.jpg" />
     </texture>
@@ -54,7 +50,7 @@
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">1.171875</float>
-    <float name="transparency">0.25</float>
+    <float name="opacity">0.75</float>
     <texture name="diffuseTexture">
       <img src="tex/sniper_lens.jpg" />
     </texture>
@@ -65,7 +61,6 @@
     <float3 name="specularColor">0.1 0.1 0.1</float3>
     <float name="ambientIntensity">1</float>
     <float name="shininess">0.390625</float>
-    <float name="transparency">0</float>
     <texture name="diffuseTexture">
       <img src="tex/c_arrow.jpg" />
     </texture>
