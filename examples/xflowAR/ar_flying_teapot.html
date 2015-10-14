@@ -77,6 +77,29 @@
           </group>
         </group>
 
+        <!-- Object 2: -->
+        <!-- Extract visibility and transformation -->
+        <data id="obj2AR" compute="transform = xflow.selectTransform(index, transforms)">
+          <data compute="visibility = xflow.selectBool(index, visibilities)">
+            <int name="index">1</int>
+            <data src="#arBase"></data>
+          </data>
+        </data>
+        <!-- Material -->
+        <material id="obj2Shader" model="urn:xml3d:material:phongvs">
+          <float3 name="diffuseColor">0.2 0.4 1.0</float3>
+          <float name="ambientIntensity">0.2</float>
+          <!-- Take visibility from AR -->
+          <data filter="keep(visibility)" src="#obj2AR"></data>
+        </material>
+        <!-- Group taking transformation from AR data -->
+        <group transform="#obj2AR" material="#obj2Shader">
+         <group transform="#t_teapot_local">
+          <group style="transform: rotateX(90deg) scale(1.5,1.5,1.5) translate3d(0px, 1px, 0px)">
+            <mesh type="triangles" src="res/teapot.xml#mesh"></mesh>
+          </group>
+         </group>
+        </group>
 
         <!-- Lights -->
 
