@@ -26,11 +26,6 @@
         <canvas id="background" width="640" height="480" style="position: absolute; left: calc(50vw - 640px/2); top: calc(50vh - 480px/2); width: 640px; height: 480px;"></canvas>
 
         <xml3d id="MyXml3d" style="background: rgba(0,0,0,0); position: absolute; left: calc(50vw - 640px/2); top:  calc(50vh - 480px/2); width: 640px; height: 480px;">
-    <!--<div style="position: relative; width: 640px; height: 480px; margin: 0 auto" >-->
-    <!--<canvas id="background" width="640" height="480"-->
-              <!--style="position: absolute; top: 0px; width: 640px; height: 480px;"></canvas>-->
-
-    <!--<xml3d style="background: rgba(0,0,0,0); position: absolute; top: 0; width: 640px; height: 480px;">-->
 
         <!-- AR Data -->
         <data id="arBase">
@@ -82,6 +77,7 @@
           </group>
         </group>
 
+
         <!-- Lights -->
 
         
@@ -105,6 +101,11 @@
       <p>Current Threshold: <span id="thresholdView"></span></p>
       <p><input type="checkbox" id="check"><label for="check">Activate Webcam</label></p>
       <p><a href="markers.xhtml" target="_blank">Print Markers</a></p>
+    </div>
+
+    <div class="description">
+        Here we expand on the Simple AR example to combine the transform from the marker detection with a second animated transform 
+        causing the teapot to bounce on the surface.
     </div>
 </div>
 </div>

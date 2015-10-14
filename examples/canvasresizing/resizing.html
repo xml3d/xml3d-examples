@@ -20,7 +20,7 @@
         window.addEventListener('load', function() {
             // Camera controller bindings
             var viewElem = document.getElementById("cameraShape1");
-			window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
+            window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
             // To bind a jQuery widget to the xml3d element you should specify a class for it (class="xml3d" in this case)
             // and use this as the selector. This ensures the widget is also applied to the canvas element that XML3D creates.
             $(".xml3d").resizable({
@@ -35,7 +35,7 @@
         <div id="overall"><div id="content">
             <!--<h1>Canvas resizing example </h1>-->
             <div style="width: 100vw; height: 100vh;">
-            <xml3d id="canvas" class="xml3d" style="width: 800px;height:600px;" view="#cameraShape1">
+            <xml3d id="canvas" class="xml3d" style="width: 800px;height:600px; background-color:#fafafa;" view="#cameraShape1">
                 <defs>
                     <transform id="t_plane" scale="1.0 1.0 1.0"></transform>
                     <data id="planeShape-lib">
@@ -106,6 +106,9 @@
                     </group>
                 </group>
             </xml3d>
+            </div>
+             <div class="description">
+                This example uses jQuery's <em>resizable</em> widget to dynamically resize the XML3D canvas.
             </div>
         </div></div>
     

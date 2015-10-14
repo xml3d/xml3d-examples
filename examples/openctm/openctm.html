@@ -16,12 +16,12 @@
     <script type="text/javascript" src="./openctm-loader.js"></script>
 
     <script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("defaultView");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
-			mode:"examine"
-		});
-	 });
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("defaultView");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+            mode:"examine"
+        });
+     });
     </script>
     <title>XML3D Examples</title>
 
@@ -70,10 +70,12 @@
         </xml3d>
 
         <div class="description">
+            This is another example of the FormatHandler interface being used to define a <a href="./openctm-loader.js">mesh loader plugin</a> for the OpenCTM format.
+            <br><br>
             The displayed mesh (<a href="http://en.wikipedia.org/wiki/RAF-2203">RAF-22031</a>) is from the <a href="http://openctm.sourceforge.net/">OpenCTM</a> sample set.
             The model was designed by Alexander V. Belov, and can be found at
             <a href="http://www.the3dstudio.com/product_details.aspx?id_product=60673">The3dStudio.com</a>.
-            Model is loaded with the open source <a href="http://code.google.com/p/js-openctm/">js-openctm</a> library.
+            The plugin uses the open source <a href="http://code.google.com/p/js-openctm/">js-openctm</a> library.
             <a href="./licenses.txt">Here</a> is the js-openctm license.
         </div>
     </div>

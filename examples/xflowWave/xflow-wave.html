@@ -12,14 +12,14 @@
       <script type="text/javascript" src="../../script/page.js"></script>
       <script type="text/javascript" src="../../script/xml3d.js"></script>
       <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
-	  <script type="text/javascript">
-		 window.addEventListener("load", function() {
-			var viewElem = document.getElementById("Camera");
-			window.DemoCamera = new XML3D.StandardCamera(viewElem, {
-				mode:"examine"
-			});
-		 });
-	  </script>
+      <script type="text/javascript">
+         window.addEventListener("load", function() {
+            var viewElem = document.getElementById("Camera");
+            window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+                mode:"examine"
+            });
+         });
+      </script>
 
     <script type="text/javascript" src="./myxflow.js"></script>
     <title>XML3D Examples</title>
@@ -82,8 +82,8 @@
       <!-- Generate Grid: -->
 
       <data id="generatedGrid" compute="(position, normal, texcoord, index) = xflow.mygrid(size)">
-		    <int name="size" id="size">50</int>
-	    </data>
+            <int name="size" id="size">50</int>
+        </data>
 
       <!-- Transform Grid to Waves: -->
 
@@ -95,7 +95,7 @@
       </data>
 
      </defs>
-	 <transform id="cameraTransform" translation="-4.13897705078125 14.549148559570312 48.671165466308594" rotation="-0.9997400045394897 -0.020568829029798508 0.009851687587797642 0.37945687770843506"></transform>
+     <transform id="cameraTransform" translation="-4.13897705078125 14.549148559570312 48.671165466308594" rotation="-0.9997400045394897 -0.020568829029798508 0.009851687587797642 0.37945687770843506"></transform>
      <view id="Camera" transform="#cameraTransform"></view>
 
      <!-- Wave Shape Display: -->
@@ -129,6 +129,11 @@
         <div class="info"><span id="meshsize_value"></span> vertices</div>
       </div>
     </div>
+
+    <div class="description">
+        Here <a href="./myxflow.js">custom Xflow operators</a> are used to generate and then deform a grid plane.
+    </div>
+
     <script type="text/javascript">
     /* Run timer for wave animation */
     var mytime = 0;

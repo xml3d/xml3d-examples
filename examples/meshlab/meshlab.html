@@ -11,15 +11,15 @@
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
     <script type="text/javascript" src="./meshlab-loader.js"></script>
-	<script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("defaultView");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
-			mode:"examine", 
-			examinePoint: new XML3D.Vec3(0, -380, -1000),
-			zoomSpeed: 200
-		});
-	 });
+    <script type="text/javascript">
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("defaultView");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+            mode:"examine", 
+            examinePoint: new XML3D.Vec3(0, -380, -1000),
+            zoomSpeed: 200
+        });
+     });
     </script>
     <title>XML3D Examples</title>
 
@@ -38,13 +38,13 @@
                     <float3 name="diffuseColor">0.4 0.25 0.25</float3>
                     <float3 name="specularColor">0.3 0.3 0.3</float3>
                     <float name="shininess">0.2</float>
-					<bool name="useVertexColor">true</bool>
+                    <bool name="useVertexColor">true</bool>
                 </material>
-				<transform id="t_camera" translation="-100 -200 -500" rotation="0 0 1 0"></transform>
+                <transform id="t_camera" translation="-100 -200 -500" rotation="0 0 1 0"></transform>
             </defs>
-			<group id="viewGroup" transform="#t_camera">
-				<view id="defaultView"></view>
-			</group>
+            <group id="viewGroup" transform="#t_camera">
+                <view id="defaultView"></view>
+            </group>
             <group material="#Material">
                 <mesh id="laurana" src="./Laurana50k.json" type="triangles"></mesh>
             </group>
@@ -66,6 +66,7 @@
         </xml3d>
 
         <div class="description">
+            This example uses XML3D's FormatHandler interface to create a <a href="meshlab-loader.js">meshlab loader plugin</a> for the MeshLab JSON format. 
             The displayed mesh (Laurana) is form the <a href="http://meshlab.sourceforge.net/">MeshLab</a> sample set and exported to MeshLab's JSON format.
         </div>
     </div>
@@ -87,7 +88,7 @@
                // console.log(deg, t.getAttribute("translation"), t.lookAt);
                 window.requestAnimationFrame(animate);
                 last = now;
-		    }
+            }
             animate();
         });
     </script>

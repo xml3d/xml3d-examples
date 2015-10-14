@@ -10,11 +10,11 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
-	<script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("defaultView");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
-	 });
+    <script type="text/javascript">
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("defaultView");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
+     });
     </script>
 
     <title>XML3D Examples</title>
@@ -160,9 +160,13 @@
                         </group>
                     </group>
                 </group>
-				<transform id="cameraTransform" translation="-21 -25 25" rotation="0.83 -0.44 -0.32 0.97"></transform>
-				<view id="defaultView" transform="#cameraTransform"></view>
+                <transform id="cameraTransform" translation="-21 -25 25" rotation="0.83 -0.44 -0.32 0.97"></transform>
+                <view id="defaultView" transform="#cameraTransform"></view>
             </xml3d>
+
+            <div class="description">
+                This simple example uses XML3D's built in phong shader with both emissive and diffuse textures.
+            </div>
         </div></div>
     
 
