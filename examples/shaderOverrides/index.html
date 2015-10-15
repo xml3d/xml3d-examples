@@ -18,20 +18,23 @@
     <div id="content">
   <xml3d onload="init(event);">
       <defs>
-	      <material id="baseShader" model="urn:xml3d:material:phong">
+          <material id="baseShader" model="urn:xml3d:material:phong">
               <float name="ambientIntensity">0.25</float>
-			  <float3 name="emissiveColor">0 0 0</float3>
-			  <float name="shininess">0.4</float>
-			  <float3 name="specularColor">1 1 1</float3>
+              <float3 name="emissiveColor">0 0 0</float3>
+              <float name="shininess">0.4</float>
+              <float3 name="specularColor">1 1 1</float3>
           </material>
-	  </defs>
-      <view></view>
-	  <light intensity="0.9"></light>
+      </defs>
+      <transform id="viewt" translation="3 0 10"></transform>
+      <view transform="#viewt">
+		<float name="fovVertical">0.9</float>
+	  </view>
+      <light intensity="0.9"></light>
       <group material="#baseShader"></group>
   </xml3d>
 
         <div class="description">
-            625 teapot (1.35 Mio triangles) all with individual colors using the shader override mechanism of XML3D.
+            125 teapots (1.35 Mio triangles) all with individual colors using the shader override mechanism of XML3D.
         </div>
 
 
@@ -62,14 +65,13 @@
                       mesh.appendChild(data);
                       mesh.appendChild(color);
                       group.appendChild(mesh);
-
                   }
               }
           }
       }
 
       var fd = null, lastTime = Date.now(), dir = new XML3D.Vec3(), clock = 0;
-      var view = document.querySelector("view");
+      var viewt = document.getElementById("viewt");
 
 
       var update = function() {
@@ -78,12 +80,22 @@
           clock += elapsed;
           dir.x = Math.sin(clock * 0.3) * 1000;
           dir.y = Math.sin(clock * 0.7) * 500;
-		  dir.z = Math.cos(clock * 0.3) * 1000;
-          view.lookAt(dir);
-		  var pos = view.position;
-		  pos.x = 3;
-          view.position = pos;
+          dir.z = Math.cos(clock * 0.3) * 1000;
+          setCameraDirection(dir);
           lastTime = now;
+      }
+
+      var setCameraDirection = function(dir) {
+        dir = dir.normalize();
+        var rot = XML3D.Quat.fromAxisAngle(viewt.rotation);
+        var up = new XML3D.Vec3(0,1,0).multiply(rot).normalize();
+
+        var baseX = dir.cross(up);
+        var baseY = baseX.cross(dir);
+        var baseZ = dir.negate();
+
+        var q = XML3D.Quat.fromBasis(baseX, baseY, baseZ);
+        viewt.rotation = XML3D.AxisAngle.fromQuat(q);
       }
 
       var init = function(evt) {
