@@ -5,6 +5,7 @@
 
     <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
     <script type="text/javascript" src="../../script/shade-min.js"></script>
     <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
     <script type="text/javascript" src="../../script/foundation.min.js"></script>
@@ -113,16 +114,23 @@ function shade(env) {
                 </group>
             </group>
             <group id="viewGroup">
-                <view style="transform: translate3d(0.28688493371009827px, 1.2059874534606934px, 6.089585304260254px) rotate3d(0, 1, 0, 0.0deg)"></view>
+                <transform id="viewTransform" translation="0.3 1.2 6"></transform>
+                <view id="myview" transform="#viewTransform"></view>
             </group>
             <light model="urn:xml3d:light:directional"></light>
         </xml3d>
 
         <div class="description">
             Animated shader using shade.js. The great <a href="http://www.blendswap.com/blends/view/21874">TV</a> is modeled in Blender by <a href="http://www.blendswap.com/user/vAonom">Dejan Petrovic</a> and released under Creative Commons Attribution 3.0.
+            <div id="fail" style="color: #e00"></div>
         </div>
+
     </div>
     <script type="text/javascript">
+
+      window.addEventListener("load", function() {
+            var camera = new XML3D.StandardCamera($("#myview")[0], {examinePoint : new XML3D.Vec3(0, 2, 0)});
+      });
 
       getUserMedia({video: true, audio: false}, function (err, stream) {
         var video = document.getElementById('webcam');
@@ -148,7 +156,7 @@ function shade(env) {
             }, 20);
         }
 
-		$(document).ready(function() {
+        $(document).ready(function() {
             initAnim();
         });
     </script>
