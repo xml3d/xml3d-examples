@@ -39,6 +39,8 @@ var EXAMPLE_LIST = [
         info: "The CSS transform property applied to XML3D elements."},
     {cat: "css", name: "Display", href: "examples/cssDisplay/index.html",
         info: "The CSS display property applied to XML3D elements."},
+	{cat: "css", name: "z-index", href: "examples/zindex/index.html",
+        info: "The z-index property used to change the drawing order of objects."},
 
 
     {cat: "external", name: "XML3D JSON Format", href: "examples/suzanne/suzanne.html",
