@@ -124,13 +124,12 @@ BlastFormatHandler.prototype.getFragmentData = function (data, path) {
     return jpath.evaluate(path, data).definedResults.length > 0 ? jpath.evaluate(path, data).definedResults[0].value : null;
 };
 
-BlastFormatHandler.prototype.getAdapter = function(node, aspect, canvasId) {
+BlastFormatHandler.prototype.getAdapter = function(data, aspect, canvasId) {
 	if (aspect === "data")
-		return new BlastDataAdapter(node);
+		return new BlastDataAdapter(data);
 };
 
-var blastFormatHandler = new BlastFormatHandler();
-XML3D.resource.registerFormat(blastFormatHandler);
+XML3D.resource.registerFormatHandler(new BlastFormatHandler());
 
 var BlastDataAdapter = function (data) {
     this._xflowDataNode = createXflowDataNode(data);
