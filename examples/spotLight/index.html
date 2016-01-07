@@ -94,7 +94,14 @@
                     </group>
                     <group id="spotLight1" transform="#t_spotLight1">
                         <view id="lightView"><float name="fovVertical">1.2</float></view>
-                        <light model="urn:xml3d:light:spot"><float3 name="intensity">1.0 1.0 1.0</float3><float3 name="attenuation">1.0 0.0 0.015</float3><float name="falloffAngle">0.8</float><float name="softness">10</float><bool name="castShadow">true</bool><float name="shadowBias">0.001</float></light>
+                        <light model="urn:xml3d:light:spot">
+                            <float3 name="intensity">1.0 1.0 1.0</float3>
+                            <float3 name="attenuation">1.0 0.0 0.015</float3>
+                            <float name="cutoffAngle">0.8</float>
+                            <float name="softness">10</float>
+                            <bool name="castShadow">true</bool>
+                            <float name="shadowBias">0.001</float>
+                        </light>
                     </group>
                     <group id="directionalLight1" transform="#t_directionalLight1">
                       <light model="urn:xml3d:light:directional">
