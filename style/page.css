@@ -12,6 +12,12 @@ script  {
    display: none;
 }
 
+mesh,
+group,
+model {
+	position: relative;
+}
+
 body {
     font-family: 'Helevtica Neue', Helvetica, Arial, sans-serif;
     color: #555;
