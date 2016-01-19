@@ -34,10 +34,10 @@
       });
 
       function createInstances(parent) {
-          // Create 125 teapot instances with unique colors
-          for (var x = 0; x < 5; x++) {
-              for (var y = 0; y < 5; y++) {
-                  for (var z = 0; z < 5; z++) {
+          // Create 64 teapot instances with unique colors
+          for (var x = 0; x < 4; x++) {
+              for (var y = 0; y < 4; y++) {
+                  for (var z = 0; z < 4; z++) {
                       var group = document.createElement("group");
                       group.setAttribute("id", x+"_"+y+"_"+z);
 
@@ -59,9 +59,9 @@
       }
 
       var setTranslations = function() {
-        for (var x = 0; x < 5; x++) {
-            for (var y = 0; y < 5; y++) {
-                for (var z = 0; z < 5; z++) {
+        for (var x = 0; x < 4; x++) {
+            for (var y = 0; y < 4; y++) {
+                for (var z = 0; z < 4; z++) {
                     var tx = 500 - Math.floor(Math.random() * 1000);
                     var ty = 500 - Math.floor(Math.random() * 1000);
                     var tz = 500 - Math.floor(Math.random() * 1000);
