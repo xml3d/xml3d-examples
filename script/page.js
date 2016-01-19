@@ -37,6 +37,8 @@ var EXAMPLE_LIST = [
 
     {cat: "css", name: "Transform", href: "examples/cssTransform/css-transform.html",
         info: "The CSS transform property applied to XML3D elements."},
+	{cat: "css", name: "Transitions", href: "examples/cssTransformAnim/index.html",
+		info: "Using CSS transitions on the 'transform' property to animate objects."},
     {cat: "css", name: "Display", href: "examples/cssDisplay/index.html",
         info: "The CSS display property applied to XML3D elements."},
 	{cat: "css", name: "z-index", href: "examples/zindex/index.html",

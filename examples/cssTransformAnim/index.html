@@ -1,0 +1,122 @@
+<!DOCTYPE html><html>
+<head>
+    <meta charset="utf-8">
+    <title>CSS Transitions</title>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+    <script type="text/javascript" src="../../script/agility.min.js"></script>
+    <script src="http://ricostacruz.com/jquery.transit/jquery.transit.min.js"></script>
+    <script>
+      window.addEventListener("load", function() {
+        var viewElem = document.getElementById("cameraView");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+            mode:"examine",
+            rotateSpeed: 5,
+            zoomSpeed: 350
+        });
+
+        var group = document.querySelector("group");
+        createInstances(group);
+
+        // Since our scene doesn't include any interactive stuff we can turn off object picking during mousemove to
+        // improve performance. This is a good trick whenever you don't need movement based interaction with the scene, 
+        // it can also be left off and turned on only when needed.
+        XML3D.options.setValue("renderer-mousemove-picking", false);
+      });
+
+      function createInstances(parent) {
+          // Create 125 teapot instances with unique colors
+          for (var x = 0; x < 5; x++) {
+              for (var y = 0; y < 5; y++) {
+                  for (var z = 0; z < 5; z++) {
+                      var group = document.createElement("group");
+                      group.setAttribute("id", x+"_"+y+"_"+z);
+
+                      parent.appendChild(group);
+                      var mesh = document.createElement("mesh");
+                      var data = document.createElement("data");
+                      data.setAttribute("src", "../../resources/meshes/teapot.json");
+                      var color = document.createElement("float3");
+                      color.setAttribute("name", "diffuseColor");
+                      color.textContent = "" + (x*0.111) + " " + (y*0.111) + " " + (z*0.111);
+
+                      mesh.appendChild(data);
+                      mesh.appendChild(color);
+                      group.appendChild(mesh);
+                  }
+              }
+          }
+          setTranslations();
+      }
+
+      var setTranslations = function() {
+        for (var x = 0; x < 5; x++) {
+            for (var y = 0; y < 5; y++) {
+                for (var z = 0; z < 5; z++) {
+                    var tx = 500 - Math.floor(Math.random() * 1000);
+                    var ty = 500 - Math.floor(Math.random() * 1000);
+                    var tz = 500 - Math.floor(Math.random() * 1000);
+                    $("#"+x+"_"+y+"_"+z).transition({x: tx, y: ty}, 900);
+                }
+            }
+        }
+        // Calling setRotations indirectly through requestAnimationFrame prevents transitions from piling up when the 
+        // tab isn't active
+        setTimeout(window.requestAnimationFrame.bind(window, setRotations), 1000);
+      }
+
+      var setRotations = function() {
+        var rot = [];
+        for (var x = 0; x < 5; x++) {
+            for (var y = 0; y < 5; y++) {
+                for (var z = 0; z < 5; z++) {
+                    rot[0] = -0.5 + Math.random();
+                    rot[1] = -0.5 + Math.random();
+                    rot[2] = -0.5 + Math.random();
+                    rot[3] = -Math.PI * 1.5 + Math.random() * Math.PI*3;
+                    $("#"+x+"_"+y+"_"+z).transition({rotate3d: rot.join(",")+"rad"}, 900);
+                }
+            }
+        }
+        setTimeout(window.requestAnimationFrame.bind(window, setTranslations), 1000);
+      }
+
+  </script>
+</head>
+<body>
+ <div id="overall">
+    <div id="content">
+     <xml3d>
+      <defs>
+        <material id="baseShader" model="urn:xml3d:material:phong">
+          <float name="ambientIntensity">0.25</float>
+          <float3 name="emissiveColor">0 0 0</float3>
+          <float name="shininess">0.4</float>
+          <float3 name="specularColor">1 1 1</float3>
+        </material>
+      </defs>
+      <transform id="viewt" translation="-102.21932983398438 -46.043270111083984 1282.3646240234375" rotation="-0.9721913933753967 -0.17376476526260376 0.15577614307403564 0.021462270990014076"></transform>
+      <view id="cameraView" transform="#viewt">
+        <float name="fovVertical">0.9</float>
+      </view>
+      <light intensity="0.9"></light>
+      <group material="#baseShader"></group>
+     </xml3d>
+
+     <div class="description">
+        Using CSS3 transitions through the <a href="http://ricostacruz.com/jquery.transit/">Transit</a> jquery plugin to move teapots around the scene.
+     </div>
+   </div>
+ </div>
+
+
+</body></html>
