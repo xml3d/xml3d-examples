@@ -1,0 +1,168 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+  <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+  <link rel="stylesheet" type="text/css" media="all" href="bounce-animation.css">
+
+  <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+  <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+  <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+  <script type="text/javascript" src="../../script/xml3d.js"></script>
+  <script type="text/javascript" src="../../script/page.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+  <script type="text/javascript" src="../../script/xml3d-stl-plugin.js"></script>
+  <script src="http://ricostacruz.com/jquery.transit/jquery.transit.min.js"></script>
+
+  <script>
+    window.addEventListener("load", function() {
+      var viewElem = document.getElementById("cameraView");
+
+      // Create a camera controller for our view element
+      window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+        mode:"examine",
+        rotateSpeed: 5,
+        zoomSpeed: 350
+      });
+
+      createInstances();
+
+      // Since our scene doesn't include any interactive stuff we can turn off object picking during mousemove to
+      // improve performance. This is a good trick whenever you don't need movement based interaction with the scene,
+      // it can also be left off and turned on only when needed.
+      XML3D.options.setValue("renderer-mousemove-picking", false);
+
+      $("#toggle").button().click(function () {
+        var scissorTest = $("#scissorTest");
+        var val = scissorTest.text();
+        if (val === "true") {
+          scissorTest.text("false");
+          $("#command").text("gl.disable(gl.SCISSOR_TEST);");
+        } else {
+          scissorTest.text("true");
+          $("#command").text("gl.enable(gl.SCISSOR_TEST);");
+        }
+      });
+    });
+
+    // Creates the teapot instances and arranges them into a grid
+    function createInstances() {
+      var parent = document.querySelector("#scissorTeapotGroup");
+      var luckyWinnerTeapot = Math.round(Math.random() * 40);
+      var count = 0;
+      for (var x = 0; x < 8; x++) {
+        for (var y = 0; y < 5; y++) {
+            var group = document.createElement("group");
+            group.setAttribute("id", x+"_"+y);
+            var transform3d = "transform: translate3d(";
+            transform3d += (x - 2.5) * 100;
+            transform3d += "px, ";
+            transform3d += (y - 2.5) * 100;
+            transform3d += "px, 0) rotateY(140deg);";
+            group.setAttribute("style", transform3d);
+
+            var mesh = document.createElement("mesh");
+            var data = document.createElement("data");
+            data.setAttribute("src", "../../resources/meshes/teapot.json");
+            var color = document.createElement("float3");
+            color.setAttribute("name", "diffuseColor");
+            color.textContent = "" + (x*0.111) + " " + (y*0.111) + " " + 0.1;
+
+            mesh.appendChild(data);
+            mesh.appendChild(color);
+            group.appendChild(mesh);
+
+            // Append one teapot to the group with the normal material, the rest to the group with the scissor material
+            if (count === luckyWinnerTeapot) {
+              document.querySelector("#normalTeapotGroup").appendChild(group);
+            } else {
+              parent.appendChild(group);
+            }
+            count++;
+        }
+      }
+    }
+
+    // Sync the WebGL scissor area with the bouncing div's current position
+    var updateScissorArea = function() {
+      var xml3dRect = document.getElementById("xml3dElem").getBoundingClientRect();
+      var rect = document.getElementById("scissorSquare").getBoundingClientRect();
+
+      var top = rect.top - xml3dRect.top + rect.height;
+      top = xml3dRect.height - top; // Flip Y since WebGL's y=0 is at the bottom of the canvas rather than the top
+      var left = rect.left - xml3dRect.left;
+      var width = rect.width;
+      var height = rect.height;
+
+      var scissorArea = document.getElementById("scissorArea");
+      scissorArea.textContent = left+" "+top+" "+width+" "+height; // Update the material with the new scissor area
+      window.requestAnimationFrame(window.updateScissorArea);
+    };
+
+    window.requestAnimationFrame(updateScissorArea);
+  </script>
+</head>
+<body>
+<div id="overall">
+  <div id="content">
+
+    <xml3d id="xml3dElem" view="#cameraView">
+      <defs>
+        <!-- These properties are common to both materials, for efficiency and readability we can store them in a data element -->
+        <data id="sharedMaterialProperties">
+          <float name="ambientIntensity">0.25</float>
+          <float name="shininess">0.4</float>
+          <float3 name="specularColor">1 1 1</float3>
+        </data>
+
+        <!-- This material renders the teapots normally -->
+        <material id="normalMaterial" model="urn:xml3d:material:phong">
+          <data src="#sharedMaterialProperties"></data>
+        </material>
+
+        <!-- This material uses WebGL state changes to draw only into the scissor area -->
+        <material id="scissorMaterial" model="urn:xml3d:material:phong">
+          <data src="#sharedMaterialProperties"></data>
+          <string name="gl-scissorTest" id="scissorTest">true</string>
+          <string name="gl-scissor" id="scissorArea">400 300 300 250</string>
+        </material>
+      </defs>
+
+      <!-- Camera setup -->
+      <transform id="viewt" translation="40.829959869384766 -44.62016677856445 544.79052734375" rotation="-0.9721913933753967 -0.17376476526260376 0.15577614307403564 0.021462270990014076"></transform>
+      <view id="cameraView" transform="#viewt">
+        <float name="fovVertical">0.9</float>
+      </view>
+
+      <!-- Light setup, model defaults to directional -->
+      <light intensity="0.9"></light>
+
+      <!-- These two groups will hold our teapots and assign materials to them -->
+      <group id="normalTeapotGroup" material="#normalMaterial"></group>
+      <group id="scissorTeapotGroup" material="#scissorMaterial"></group>
+
+    </xml3d>
+
+    <!-- The bouncing scissor area div -->
+    <div id="traveler">
+        <div id="scissorSquare"></div>
+    </div>
+
+    <div class="description" style="background-color: rgba(255,255,255,0.95); padding: 5px;">
+      <p>In this example a single teapot is drawn normally while the rest use a material that enables WebGL scissor testing
+      to draw only in the area covered by the floating square. The scissor test area is synced with the square's position
+      using some simple Javascript.</p>
+      <div>
+        <button id="toggle">Toggle scissor test</button>
+      </div>
+      <div>Command:<br><code id="command">gl.enable(gl.SCISSOR_TEST);</code></div>
+    </div>
+
+  </div>
+</div>
+
+
+
+</body></html>
