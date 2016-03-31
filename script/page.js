@@ -51,6 +51,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
     {cat: "external", name: "OpenCTM Format", href: "examples/openctm/openctm.html",
         info: "Demonstrates extending supported formats, here using OpenCTM binary format"},
+    {cat: "external", name: "STL Format", href: "examples/stlformat/index.html",
+        info: "Demonstrates extending supported formats, here using the STL format"},
     {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.html",
         info: "Demonstrates the usage of external mesh data and shaders with XML files."},
     {cat: "external", name: "Blast Format", href: "examples/blast/index.html",
