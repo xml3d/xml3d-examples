@@ -164,6 +164,22 @@ function initPage(){
     breadcrumb.append($('<li><a href="../../index.html">XML3D Examples</a>'));
     inner.append(breadcrumb);
 
+    // Add a View Source button
+    var sourceButton = $('<button id="toggle" style="position: fixed; bottom: 10px; right: 20px;">View source</button>');
+    sourceButton.click(function() {
+        var fullPath = window.location.pathname;
+        var pieces = fullPath.split("/");
+        var relPath = "";
+        var ind = pieces.length-1;
+        do {
+            relPath = pieces[ind] + "/" + relPath;
+            ind--;
+        } while(ind > 0 && !pieces[ind].match("xml3d-examples"));
+
+        window.open("https://github.com/xml3d/xml3d-examples/blob/master/"+relPath);
+    });
+    inner.append(sourceButton);
+
     var content = $("#content");
     content.addClass("main-section");
     inner.append(content);
