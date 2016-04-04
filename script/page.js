@@ -165,7 +165,7 @@ function initPage(){
     inner.append(breadcrumb);
 
     // Add a View Source button
-    var sourceButton = $('<button id="toggle" style="position: fixed; bottom: 10px; right: 20px; z-index: 10;">View source</button>');
+    var sourceButton = $('<button style="position: fixed; bottom: 10px; right: 20px; z-index: 10;">View source</button>');
     sourceButton.click(function() {
         var fullPath = window.location.pathname;
         var pieces = fullPath.split("/");
