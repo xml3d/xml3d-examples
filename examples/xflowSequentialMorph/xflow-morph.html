@@ -12,13 +12,13 @@
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
-	<script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("defaultView");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
-			mode:"examine"
-		});
-	 });
+    <script type="text/javascript">
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("defaultView");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+            mode:"examine"
+        });
+     });
     </script>
   <title>XML3D Examples</title>
 </head>
@@ -32,12 +32,12 @@
       </div>
 
     <xml3d id="MyXml3d" class="xml3d" width="600px" height="400px">
-	  <group style="transform: translate3d(0px, 0px, 40px)">
+      <group style="transform: translate3d(0px, 0px, 40px)">
         <view id="defaultView" ></view>
-	  </group>
+      </group>
       <defs>
 
-        <!-- Shaders -->
+        <!-- Materials -->
 
         <material id="GroundShader" model="urn:xml3d:material:phong">
           <float name="transparency">0.5</float>
@@ -88,7 +88,7 @@
     </xml3d>
 
 
-    <!-- Java Script to animate scene -->
+    <!-- JavaScript to animate scene -->
     <script type="text/javascript">
       var shouldAnimate = false;
 

@@ -18,8 +18,8 @@ function init() {
 // the base for the PCA computation.
 function changeToFaceType(type) {
     changePCAMatrix(type);
-    document.getElementById("meanMeshData").setAttribute("src", "#meanPositions"+type);
-    document.getElementById("referenceData").setAttribute("src", "#meanPositions"+type);
+    document.getElementById("meanMeshData").setAttribute("src", "referencedata.xml#meanPositions"+type);
+    document.getElementById("referenceData").setAttribute("src", "referencedata.xml#meanPositions"+type);
 }
 
 // Resets all sliders to their default positions

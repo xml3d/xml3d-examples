@@ -15,49 +15,40 @@
 
     <!-- Camera Control: -->
     <script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("cameraShape1");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
-	 });
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("cameraShape1");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine"});
+     });
     </script>
 
 </head>
     <body>
         <div id="overall"><div id="content">
-            <!--<h1>External XML References</h1>-->
+
             <xml3d id="canvas" class="xml3d" view="#cameraShape1">
                 <defs>
-
-                    <transform id="t_prop" rotation="0.0 0.0 1.0 0.2617994" scale="1.0 1.0 1.0" translation="0.0 0.0 5.40413"></transform>
-                    <transform id="t_camera1" rotation="-0.5051031 0.83705676 0.21025412 0.92295426" scale="1.0 1.0 1.0" translation="16.4985 11.1548 18.486"></transform>
-
-                    
-
+                    <transform id="t_prop" rotation="0.0 0.0 1.0 0.2617994" translation="0.0 0.0 5.40413"></transform>
+                    <transform id="t_camera1" rotation="-0.5051031 0.83705676 0.21025412 0.92295426" translation="16.4985 11.1548 18.486"></transform>
                 </defs>
+
                 <group id="VisualSceneNode">
-                    <group id="plane">
-                        <group material="resource/plane.xml#shader_matte">
-                            <mesh id="blah" src="resource/plane.xml#mesh1" type="triangles"></mesh>
-                        </group>
-                        <group material="resource/plane.xml#shader_shine">
-                            <mesh src="resource/plane.xml#mesh2" type="triangles"></mesh>
-                        </group>
-                        <group id="prop" transform="#t_prop">
-                            <group material="resource/plane.xml#shader_shine">
-                                <mesh src="resource/plane.xml#mesh_prop" type="triangles"></mesh>
-                            </group>
-                        </group>
+                    <mesh id="blah" src="resource/plane.xml#mesh1" material="resource/plane.xml#shader_matte"></mesh>
+                    <group material="resource/plane.xml#shader_shine">
+                        <mesh src="resource/plane.xml#mesh2"></mesh>
+                        <mesh src="resource/plane.xml#mesh_prop" transform="#t_prop"></mesh>
                     </group>
+                </group>
 
-                    <group style="transform: rotate3d(1, 0, 0, -45deg)">
-                      <light model="urn:xml3d:light:directional">
-                        <float3 name="intensity">1.0 1.0 1.0</float3>
-                      </light>
-                    </group>
+                <group style="transform: rotate3d(1, 0, 0, -45deg)">
+                  <light model="urn:xml3d:light:directional">
+                    <float3 name="intensity">1.0 1.0 1.0</float3>
+                  </light>
+                </group>
 
-                    <group id="camera1" transform="#t_camera1">
-                        <view id="cameraShape1"><float name="fovVertical">0.66059315</float></view>
-                    </group>
+                <group id="camera1" transform="#t_camera1">
+                    <view id="cameraShape1">
+                        <float name="fovVertical">0.66059315</float>
+                    </view>
                 </group>
             </xml3d>
 
