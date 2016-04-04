@@ -32,34 +32,10 @@
                 <defs>
                     <transform id="t_spotLight1" rotation="0.0 1.0 0.0 0.37963513" translation="-9.05869 -1.965812 6.827833"></transform>
                     <transform id="t_directionalLight1" rotation="0.0 1.0 0.0 0.62446165"></transform>
-
-                    <material id="Kabel-fx" model="urn:xml3d:material:diffuse">
-                        <float3 name="emissiveColor">0.0 0.0 0.0</float3>
-                        <float name="ambientIntensity">0.1</float>
-                        <float3 name="diffuseColor">0.0 0.0 0.0</float3>
-                    </material>
-
-                    <material id="BodenMaterial-fx" model="urn:xml3d:material:phong">
-                        <float3 name="emissiveColor">0.0 0.0 0.0</float3>
-                        <texture name="diffuseTexture">
-                            <img src="../../resources/textures/wood.jpg">
-                        </texture>
-                        <float3 name="specularColor">0.8 0.8 0.8</float3>
-                        <float name="shininess">0.15625</float>
-                        <float name="ambientIntensity">0.2</float>
-                    </material>
-
-                    <material id="Metall-fx" model="urn:xml3d:material:phong">
-                        <float3 name="emissiveColor">0.0 0.0 0.0</float3>
-                        <float3 name="diffuseColor">0.712 0.712 0.712</float3>
-                        <float3 name="specularColor">0.78 0.78 0.78</float3>
-                        <float name="shininess">0.15625</float>
-                        <float name="ambientIntensity">0.1</float>
-                    </material>
                 </defs>
                 <group id="VisualSceneNode">
-                    <mesh material="#Kabel-fx" src="lamp.xml#Line09Shape" type="triangles"></mesh>
-                    <mesh material="#BodenMaterial-fx" src="basic.xml#BodenShape" type="triangles"></mesh>
+                    <mesh material="lamp.xml#Kabel-fx" src="lamp.xml#Line09Shape" type="triangles"></mesh>
+                    <mesh material="basic.xml#BodenMaterial-fx" src="basic.xml#BodenShape" type="triangles"></mesh>
                     <group id="spotLight1" transform="#t_spotLight1">
                         <view id="lightView">
                             <float name="fovVertical">1.2</float>
@@ -70,15 +46,15 @@
                             <float name="cutoffAngle">0.8</float>
                             <float name="softness">10</float>
                             <bool name="castShadow">true</bool>
-                            <float name="shadowBias">0.001</float>
+                            <float name="shadowBias">0.01</float>
                         </light>
                     </group>
                     <light model="urn:xml3d:light:directional" transform="#t_directionalLight1">
                         <float3 name="intensity">0.1 0.1 0.1</float3>
                     </light>
-                    <mesh material="#Metall-fx" src="lamp.xml#LampShape" type="triangles"></mesh>
+                    <mesh material="lamp.xml#Metall-fx" src="lamp.xml#LampShape" type="triangles"></mesh>
 
-                    <mesh type="triangles" style="transform: translate3d(-14px, 0px, 1px)" material="#Metall-fx">
+                    <mesh type="triangles" style="transform: translate3d(-14px, 0px, 1px)" material="lamp.xml#Metall-fx">
                         <data src="basic.xml#mesh_cube"></data>
                     </mesh>
                     <transform id="cameraTransform" translation="-26 -31 22" rotation="0.8242830634117126 -0.3122488260269165 -0.47229036688804626 1.0554853677749634"></transform>

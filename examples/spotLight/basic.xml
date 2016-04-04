@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xml3d xmlns="http://www.w3.org/1999/xhtml">
+    <material id="BodenMaterial-fx" model="urn:xml3d:material:phong">
+        <float3 name="emissiveColor">0.0 0.0 0.0</float3>
+        <texture name="diffuseTexture">
+            <img src="../../resources/textures/wood.jpg"/>
+        </texture>
+        <float3 name="specularColor">0.8 0.8 0.8</float3>
+        <float name="shininess">0.15625</float>
+        <float name="ambientIntensity">0.2</float>
+    </material>
 
    <data id="mesh_cube">
         <int name="index">0 1 2 2 3 0 4 7 5 5 7 6 8 9 10 10 11 8 12 14 13 14 12 15 16 17 18 18 19 16 20 22 21 22 20 23</int>
