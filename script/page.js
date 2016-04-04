@@ -63,6 +63,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.html",
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
+    {cat: "shader", name: "Custom Shader: SSS", href: "examples/shade-sss/index.html",
+        info: "Using a custom shader to create a simple subsurface scattering effect."},
     {cat: "shader", name: "Shader Overrides", href: "examples/shaderOverrides/index.html",
         info: "Demonstrates overriding of shader attributes in the mesh."},
     {cat: "shader", name: "WebGL State Changes", href: "examples/glstate/index.html",

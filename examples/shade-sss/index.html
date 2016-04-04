@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="en"><head>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/jquery-ui.css">
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+    <script type="text/javascript" src="../../script/shade-min.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+	<!-- The custom material shader that mimics subsurface scattering effects -->
+    <script type="text/javascript" src="scripts/sss_shader.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/getusermedia.bundle.js"></script>
+
+    <title>XML3D Examples</title>
+
+</head>
+<body>
+
+<div id="overall">
+    <div id="content">
+        <xml3d class="canvas" id="MyXml3d">
+           <defs id="mainDef">
+
+              <view id="Camera" transform="#cameraTransform"></view>
+
+               <transform id="cameraTransform" translation="-0.7707386016845703 -11.29746150970459 68.64503479003906"></transform>
+               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="0.7 0.7 0.7" translation="-10.117270 2.163989 -20.583234"></transform>
+              <transform id="t_bunny" rotation="1.000000 0.000000 0.000000 -1.57" scale="0.4 0.4 0.4" translation="3.212050 -18.881367 -0.632039"></transform>
+
+			   <!-- The material model is our custom material shader, which was registered automatically on load -->
+              <material id="m_translucent2" model="urn:xml3d:material:phong_sss">
+				  <float3 name="diffuseColor">1 1 1</float3>
+				  <float3 name="specularColor">1.000000 1.00000 1.00000</float3>
+				  <float name="shininess">1.5</float>
+				  <texture name="aoTexture">
+					 <img src="textures/lightmap.002.png"/>
+				  </texture>
+				  <float id="mDistortion" name="fLTDistortion">0.1</float> <!-- Custom uniform variables used in our shader -->
+				  <float id="mAmbient" name="fLTAmbient">0.25</float>
+				  <float id="mPower" name="iLTPower">4.0</float>
+				  <float id="mScale" name="fLTScale">3</float>
+              </material>
+
+              <material id="m_light" model="urn:xml3d:material:phong">
+               <float3 name="emissiveColor">
+                    1 1 1
+               </float3>
+               <float3 id="lightsourceColor" name="diffuseColor">
+                    1 1 1
+               </float3>
+              </material>
+
+             </defs>
+
+             <group material="#m_translucent2" transform="#t_bunny">
+             	<model src="meshes/bunny.xml#bunny" type="triangles"></model>
+             </group>
+
+             <group material="#m_light" transform="#t_Lamp">
+                 <light model="urn:xml3d:light:point">
+                    <float3 name="attenuation">1.5 0 0</float3>
+                    <float3 id="lightColor" name="intensity">1.0 0.3 0.3</float3>
+                  </light>
+                  <mesh src="meshes/simple.xml#sphere" type="triangles"></mesh>
+             </group>
+        </xml3d>
+
+        <div class="description">
+            A custom material using an ambient occlusion map of the object's interior to fake subsurface scattering effects. As
+            described by <a href="http://www.slideshare.net/colinbb/colin-barrebrisebois-gdc-2011-approximating-translucency-for-a-fast-cheap-and-convincing-subsurfacescattering-look-7170855">
+            Colin Barre-Brisebois at GDC 2011</a>.
+        </div>
+
+        <div class="controls">
+            <div style="width:40%;" >
+                <span>Distortion: </span><div id="slider_distortion"></div>
+                <span>Ambient: </span><div id="slider_ambient"></div>
+                <span>Power: </span><div id="slider_power"></div>
+                <span>Scale: </span><div id="slider_scale"></div>
+            </div>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+        var sss_translation = new XML3D.Vec3();
+        var color = new XML3D.Vec3();
+   
+        function animateLamp() {
+            var tlamp = document.getElementById("t_Lamp");
+            var now = Date.now() * 0.001;
+            sss_translation.x = Math.cos(now) * 20;
+            sss_translation.y = Math.sin(now*1.4) * 10;
+            sss_translation.z = Math.sin(now) * 20;
+            tlamp.translation = sss_translation;
+
+            color.x = 0.5+0.5*(0.6*Math.sin(now*0.6) + 0.4*Math.sin(0.29*now));
+            color.y = 0.5+0.5*(0.6*Math.sin(now*0.87) + 0.4*Math.sin(0.19*now));
+            color.z = 0.5+0.5*(0.6*Math.sin(now*0.335) + 0.4*Math.sin(0.12*now));
+
+            document.getElementById("lightColor").textContent = color.toDOMString();
+            window.requestAnimationFrame(animateLamp);
+        }
+        window.requestAnimationFrame(animateLamp);
+
+        $("#slider_distortion").slider({
+            min: 0,
+            max: 1.0,
+            step: 0.05,
+            value: 0.1,
+            slide: function(event, ui) {
+                document.getElementById("mDistortion").textContent = $(this).slider("value");
+            }
+        });
+        $("#slider_ambient").slider({
+            min: 0,
+            max: 1.0,
+            step: 0.05,
+            value: 0.25,
+            slide: function(event, ui) {
+                document.getElementById("mAmbient").textContent = $(this).slider("value");
+            }
+        });
+        $("#slider_power").slider({
+            min: 0,
+            max: 10.0,
+            step: 0.5,
+            value: 4.0,
+            slide: function(event, ui) {
+                document.getElementById("mPower").textContent = $(this).slider("value");
+            }
+        });
+        $("#slider_scale").slider({
+            min: 0,
+            max: 10.0,
+            step: 0.5,
+            value: 3.0,
+            slide: function(event, ui) {
+                document.getElementById("mScale").textContent = $(this).slider("value");
+            }
+
+        });
+
+        window.addEventListener("load", function() {
+            var cam = new XML3D.StandardCamera(document.getElementById("Camera"), {mode: "examine"});
+        });
+   </script>
+</div>
+
+
+</body></html>
