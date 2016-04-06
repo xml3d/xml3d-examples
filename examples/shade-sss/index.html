@@ -30,9 +30,9 @@
 
               <view id="Camera" transform="#cameraTransform"></view>
 
-               <transform id="cameraTransform" translation="-0.7707386016845703 -11.29746150970459 68.64503479003906"></transform>
-               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="0.7 0.7 0.7" translation="-10.117270 2.163989 -20.583234"></transform>
-              <transform id="t_bunny" rotation="1.000000 0.000000 0.000000 -1.57" scale="0.4 0.4 0.4" translation="3.212050 -18.881367 -0.632039"></transform>
+               <transform id="cameraTransform" translation="-4.08444881439209 6.596569538116455 68.64503479003906"></transform>
+               <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="0.7 0.7 0.7" translation="-10.117270 -10.163989 -20.583234"></transform>
+              <transform id="t_bunny" scale="0.4 0.4 0.4"></transform>
 
 			   <!-- The material model is our custom material shader, which was registered automatically on load -->
               <material id="m_translucent2" model="urn:xml3d:material:phong_sss">
@@ -96,7 +96,7 @@
             var tlamp = document.getElementById("t_Lamp");
             var now = Date.now() * 0.001;
             sss_translation.x = Math.cos(now) * 20;
-            sss_translation.y = Math.sin(now*1.4) * 10;
+            sss_translation.y = 10 + Math.sin(now*1.4) * 10;
             sss_translation.z = Math.sin(now) * 20;
             tlamp.translation = sss_translation;
 
