@@ -5,6 +5,7 @@ var CATEGORY_LIST = {
     css: { name: "CSS"},
     external : { name: "External References" },
     shader : { name: "Materials" },
+    webcomponents : { name: "Web Components" },
     xflow : { name: "Xflow" },
     ar : { name: "Augmented Reality"},
     ip : {name: "Image Processing"}
@@ -73,6 +74,9 @@ var EXAMPLE_LIST = [
         info: "Animated shader with shade.js."},
     {cat: "shader", name: "shade.js: Wireframe Rendering", href: "examples/shade-wireframe/index.html",
         info: "Wireframes with shade.js."},
+
+    {cat: "webcomponents", name: "Simple Component", href: "examples/simplecomp/index.html",
+        info: "Demonstrates a simple web component that creates a configurable teapot."},
 
 	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
