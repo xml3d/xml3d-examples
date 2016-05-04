@@ -77,6 +77,8 @@ var EXAMPLE_LIST = [
 
     {cat: "webcomponents", name: "Simple Component", href: "examples/simplecomp/index.html",
         info: "Demonstrates a simple web component that creates a configurable teapot."},
+    {cat: "webcomponents", name: "Bounding Box Component", href: "examples/bboxcomp/index.html",
+        info: "Creating a web component that shows the bounding box of another scene element."},
 
 	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
