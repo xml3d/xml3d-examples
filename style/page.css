@@ -170,6 +170,12 @@ span.info {
     border-radius: 5px;
 }
 
+.breadcrumbs {
+    position: absolute !important;
+    right: 0px !important;
+    z-index: 100;
+}
+
 /*.ribbon {*/
     /*position: absolute;*/
     /*top: 0;*/
