@@ -20,46 +20,49 @@
 
 <div id="overall">
     <div id="content">
-        <xml3d class="canvas" id="MyXml3d">
-            <navigation revolvearound="0 2 0"></navigation>
+        <xml3d id="MyXml3d">
             <defs>
+                 <!-- shade.js shader definition -->
                  <script id="screenMaterial" type="text/shade-javascript">
                      // Inspired by https://www.shadertoy.com/view/Xsl3zf
-function hash(n) {
-    return Math.fract(Math.sin(n)*43758.5453123);
-}
+                    function hash(n) {
+                        return Math.fract(Math.sin(n)*43758.5453123);
+                    }
 
-function shade(env) {
-    var time = env.time || 10.0;
-    var p = env.texcoord.xy().mul(2).sub(1);
+                    function shade(env) {
+                        var time = env.time || 10.0;
+                        var p = env.texcoord.xy().mul(2).sub(1);
 
-    var n = p.mul(0.75, 1.0);
+                        var n = p.mul(0.75, 1.0);
 
-  /*  if (Math.abs(p.y()) > .8) {// || Math.floor(env.texcoord.y()) % 3.0 > 0.0) {
-        return new Vec3(0);
-    }*/
+                      /*  if (Math.abs(p.y()) > .8) {// || Math.floor(env.texcoord.y()) % 3.0 > 0.0) {
+                            return new Vec3(0);
+                        }*/
 
-    var c = env.wt.sample2D(env.texcoord).xyz();
+                        var c = env.wt.sample2D(env.texcoord).xyz();
 
-    // flicker, grain, vignette, fade in
-    c = c.add(Math.sin(hash(time)) * 0.01);
-    c = c.add(hash((hash(n.x()) + n.y()) * time) * 0.4);
-    c = c.mul(Math.smoothstep(n.mul(0.18).length(), 0.8, 0.4));
-    c = c.mul(1.9);
-    c = c.mul(Math.smoothstep(0.001, 3.5, time));
+                        // flicker, grain, vignette, fade in
+                        c = c.add(Math.sin(hash(time)) * 0.01);
+                        c = c.add(hash((hash(n.x()) + n.y()) * time) * 0.4);
+                        c = c.mul(Math.smoothstep(n.mul(0.18).length(), 0.8, 0.4));
+                        c = c.mul(1.9);
+                        c = c.mul(Math.smoothstep(0.001, 3.5, time));
 
-    var s = c.dot(0.2126, 0.7152, 0.0722);
-    return Shade.diffuse(new Vec3(1.5 - hash(time) * 0.1).mul(s), env.normal, 0.1).phong(new Vec3(0.7), env.normal, 0.2);
-}
+                        var s = c.dot(0.2126, 0.7152, 0.0722);
+                        return Shade.diffuse(new Vec3(1.5 - hash(time) * 0.1).mul(s), env.normal, 0.1).phong(new Vec3(0.7), env.normal, 0.2);
+                    }
                 </script>
-                
+
+                <!-- Our material model is linked directly to the shade.js shader definition above -->
                 <material id="screenMaterialInstance" model="#screenMaterial">
                     <float name="time">20.0</float>
                     <texture name="wt" filter="linear">
                         <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay=""></video>
                     </texture>
                 </material>
+
             </defs>
+
             <group id="myScene">
                 <group id="VikendSpecijalTv_obj">
                     <group id="VikendSpecijal_TV" material="./materials.xml#mat_m3BlackPlastic">
@@ -78,11 +81,6 @@ function shade(env) {
                                 <data src="./meshes/76479c89-553d-42b7-b920-fa05155ce423.json"></data>
                             </mesh>
                         </group>
-                        <!--<group shader="#screenMaterialInstance">
-                            <mesh data-xr-id="b913e031-0720-4e13-8063-8f7d84295c07" data-xr-name="mesh 4">
-                                <data src="./meshes/b913e031-0720-4e13-8063-8f7d84295c07.json"></data>
-                            </mesh>
-                        </group>-->
                         <group material="./materials.xml#mat_m2Black">
                             <mesh data-xr-id="e95e4a2d-4258-4cae-b9cf-0e3e2dc7fe01" data-xr-name="mesh 5">
                                 <data src="./meshes/e95e4a2d-4258-4cae-b9cf-0e3e2dc7fe01.json"></data>

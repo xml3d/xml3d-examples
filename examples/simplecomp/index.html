@@ -1,0 +1,77 @@
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Shader Overrides</title>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+    <style>
+        #scaleInput,#colorInput {
+            display: inline !important;
+            width: 120px !important;
+            height: 1.5rem !important;
+        }
+    </style>
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
+    <script type="text/javascript">
+
+        // We need to register our teapot component with XML3D (and the browser itself) before we can use it
+        // This returns a Javascript Promise that will resolve when the component has been registered.
+        XML3D.registerComponent("teapot-component.html").then(function() {
+            var instance = document.createElement("xml3d-teapot");
+            document.querySelector("xml3d").appendChild(instance);
+        });
+
+        // Copy the value from the input field to the xml3d-teapot element, after some simple input checks.
+        function changeConfiguration(evt) {
+            var val = evt.target.value;
+            val = val.trim().split(" ");
+            if (val.length == 3 && !isNaN(val[0]) && !isNaN(val[1]) && !isNaN(val[2])) {
+                if (evt.target.id == "scaleInput") {
+                    document.querySelector("xml3d-teapot").setAttribute("scale", evt.target.value);
+                } else {
+                    document.querySelector("xml3d-teapot").setAttribute("color", evt.target.value);
+                }
+            }
+        }
+
+        function init() {
+            // The examinePoint is set to the center of the teapot, hardcoded in this case.
+            var cam = new XML3D.StandardCamera(document.querySelector("view"), {examinePoint: new XML3D.Vec3(3, 22, 0)});
+        }
+    </script>
+
+</head>
+<body>
+<div id="overall">
+    <div id="content">
+
+        <xml3d onload="init()">
+          <transform id="viewt" translation="-5.667846202850342 16.681501388549805 138.16665649414062"></transform>
+          <view transform="#viewt">
+            <float name="fovVertical">0.9</float>
+          </view>
+          <light intensity="0.8"></light>
+        </xml3d>
+
+        <div class="description">
+            This example demonstrates a simple <a href="https://developer.mozilla.org/en-US/docs/Web/Web_Components">web component</a> that provides a new <code>&lt;xml3d-teapot&gt;</code> element. The size and color of
+            the teapot can be set through attributes.
+        </div>
+
+        <code style="position: absolute; top: 60px; left: 260px;" >
+            &lt;xml3d-teapot scale="<input type="text" id="scaleInput" oninput="changeConfiguration(event)" value="1 1 1">" color="<input type="text" id="colorInput" oninput="changeConfiguration(event)" value="1 1 0">"&gt;&lt;xml3d-teapot/&gt;
+        </code>
+
+</div>
+</div>
+
+
+</body></html>

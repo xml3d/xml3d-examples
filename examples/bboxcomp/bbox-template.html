@@ -1,0 +1,21 @@
+<!--
+
+    This defines the template for a xml3d-boundingbox element. The element offers the attribute
+    'target' which takes an HTML ID for the element to generate the bounding box for, and 'color'
+    which takes a float3 value for the color of the bounding box. The component automatically
+    reacts to changes in either attribute, see boundingbox-component.js for more on this.
+
+ -->
+
+<template name="xml3d-boundingbox" target="" color="0.2 0.5 1.0">
+    <material id="bboxMaterial" model="urn:xml3d:material:flat">
+        <float3 name="diffuseColor">{{color}}</float3>
+    </material>
+
+    <mesh type="linestrips" material="#bboxMaterial">
+        <data compute="position, vertexCount = xflow.genLinesFromBBox(bbox)">
+            <float3 name="bbox">0 0 0 0 0 0</float3>
+        </data>
+    </mesh>
+</template>
+

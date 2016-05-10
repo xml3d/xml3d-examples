@@ -5,6 +5,7 @@ var CATEGORY_LIST = {
     css: { name: "CSS"},
     external : { name: "External References" },
     shader : { name: "Materials" },
+    webcomponents : { name: "Web Components" },
     xflow : { name: "Xflow" },
     ar : { name: "Augmented Reality"},
     ip : {name: "Image Processing"}
@@ -37,6 +38,8 @@ var EXAMPLE_LIST = [
 
     {cat: "css", name: "Transform", href: "examples/cssTransform/css-transform.html",
         info: "The CSS transform property applied to XML3D elements."},
+	{cat: "css", name: "Transitions", href: "examples/cssTransformAnim/index.html",
+		info: "Using CSS transitions on the 'transform' property to animate objects."},
     {cat: "css", name: "Display", href: "examples/cssDisplay/index.html",
         info: "The CSS display property applied to XML3D elements."},
 	{cat: "css", name: "z-index", href: "examples/zindex/index.html",
@@ -49,6 +52,8 @@ var EXAMPLE_LIST = [
         info: "Demonstrates extending supported formats, here using MeshLab's JSON format"},
     {cat: "external", name: "OpenCTM Format", href: "examples/openctm/openctm.html",
         info: "Demonstrates extending supported formats, here using OpenCTM binary format"},
+    {cat: "external", name: "STL Format", href: "examples/stlformat/index.html",
+        info: "Demonstrates extending supported formats, here using the STL format"},
     {cat: "external", name: "XML Format", href: "examples/externalXml/externalXml.html",
         info: "Demonstrates the usage of external mesh data and shaders with XML files."},
     {cat: "external", name: "Blast Format", href: "examples/blast/index.html",
@@ -59,12 +64,21 @@ var EXAMPLE_LIST = [
         info: "Demonstrates the usage of emmisive maps for the shading of a flame."},
     {cat: "shader", name: "Custom Shader: Eyelight", href: "examples/eyelight/eyelight.html",
         info: "Demonstrates the usage of custom shaders to implement an eyelight shader."},
+    {cat: "shader", name: "Custom Shader: SSS", href: "examples/shade-sss/index.html",
+        info: "Using a custom shader to create a simple subsurface scattering effect."},
     {cat: "shader", name: "Shader Overrides", href: "examples/shaderOverrides/index.html",
         info: "Demonstrates overriding of shader attributes in the mesh."},
-    {cat: "shader", name: "shade.js: Animated shader", href: "examples/shade-tv/index.html",
+    {cat: "shader", name: "WebGL State Changes", href: "examples/glstate/index.html",
+        info: "Using materials that can change the WebGL state on a per-object basis."},
+    {cat: "shader", name: "shade.js: Animated Shader", href: "examples/shade-tv/index.html",
         info: "Animated shader with shade.js."},
     {cat: "shader", name: "shade.js: Wireframe Rendering", href: "examples/shade-wireframe/index.html",
         info: "Wireframes with shade.js."},
+
+    {cat: "webcomponents", name: "Simple Component", href: "examples/simplecomp/index.html",
+        info: "Demonstrates a simple web component that creates a configurable teapot."},
+    {cat: "webcomponents", name: "Bounding Box Component", href: "examples/bboxcomp/index.html",
+        info: "Creating a web component that shows the bounding box of another scene element."},
 
 	{cat: "xflow", name: "Sequential Morphing", href: "examples/xflowSequentialMorph/xflow-morph.html",
         info: "Demonstrates mesh morphing with Xflow"},
@@ -157,6 +171,22 @@ function initPage(){
     var breadcrumb = $('<ul class="breadcrumbs right">');
     breadcrumb.append($('<li><a href="../../index.html">XML3D Examples</a>'));
     inner.append(breadcrumb);
+
+    // Add a View Source button
+    var sourceButton = $('<button style="position: fixed; bottom: 10px; right: 20px; z-index: 10;">View source</button>');
+    sourceButton.click(function() {
+        var fullPath = window.location.pathname;
+        var pieces = fullPath.split("/");
+        var relPath = "";
+        var ind = pieces.length-1;
+        do {
+            relPath = pieces[ind] + "/" + relPath;
+            ind--;
+        } while(ind > 0 && !pieces[ind].match("xml3d-examples"));
+
+        window.open("https://github.com/xml3d/xml3d-examples/blob/master/"+relPath);
+    });
+    inner.append(sourceButton);
 
     var content = $("#content");
     content.addClass("main-section");

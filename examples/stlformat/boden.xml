@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xml3d>
     <def>
         <material id="bodenMaterial" model="urn:xml3d:material:phong">

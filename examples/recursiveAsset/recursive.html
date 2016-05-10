@@ -11,14 +11,13 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d.js"></script>
-    <!--<script type="text/javascript" src="../../../xml3d.js/build/output/xml3d.js"></script>-->
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
 
     <script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("defaultView");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine", examinePoint: new XML3D.Vec3(0,0,-150), zoomSpeed: 80});
-	 });
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("defaultView");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {mode:"examine", examinePoint: new XML3D.Vec3(0,0,-150), zoomSpeed: 80});
+     });
     </script>
     <title>Team Fortress 2 Assets</title>
 </head>
@@ -26,10 +25,8 @@
 <div id="overall">
     <div id="content">
     <xml3d id="MyXml3d" class="xml3d" view="#defaultView">
-
         <defs id="mainDef">
           <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
-
 
           <material id="Material" model="urn:xml3d:material:phong">
             <float name="ambientIntensity">1</float>
@@ -38,16 +35,16 @@
             <float name="shininess">0.2</float>
           </material>
         </defs>
-		<group style="transform: translate3d(0px, 0px, 30px)">
-			<view id="defaultView"></view>
-		</group>
+
+        <group style="transform: translate3d(0px, 0px, 30px)">
+            <view id="defaultView"></view>
+        </group>
         
         <group transform="#t_Lamp">
           <light model="urn:xml3d:light:directional">
             <float3 name="intensity">0.75 0.75 0.75</float3>
           </light>
         </group>
-
 
         <!-- Sniper -->
         <model src="template.xml#skinnedCharacter" style="transform: translate3d(0,-50px,-150px)">
@@ -118,32 +115,30 @@
 </div>
 
 <script type="text/javascript">
-/* Run timer for wave animation */
-var mytime = 0;
-var lastTime = Date.now();
+    /* Run timer for wave animation */
+    var mytime = 0;
+    var lastTime = Date.now();
 
-var docAnims = {
-  "keySniper1" : {max: 3.375, off: 0, factor: 0.2},
-  "keySniper2" : {max: 3.375, off: 2, factor: 0.8},
-  "keySniper3" : {max: 3.375, off: 1, factor: 2},
-  "keySniper4" : {max: 3.375, off: 3, factor: 1.2},
-  "keySniper5" : {max: 3.375, off: 0.5, factor: 2}
-}
-var reqAniFrame = (window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame).bind(window);
+    var docAnims = {
+      "keySniper1" : {max: 3.375, off: 0, factor: 0.2},
+      "keySniper2" : {max: 3.375, off: 2, factor: 0.8},
+      "keySniper3" : {max: 3.375, off: 1, factor: 2},
+      "keySniper4" : {max: 3.375, off: 3, factor: 1.2},
+      "keySniper5" : {max: 3.375, off: 0.5, factor: 2}
+    };
 
-
-function updateAnim() {
-  var diff = Date.now() - lastTime;
-  lastTime = Date.now();
-  mytime += diff / 1200;
-  for(var id in docAnims){
-    var entry = docAnims[id];
-    var value = (mytime * entry.factor + entry.off) % entry.max;
-    $("." + id).text(value);
-  }
-  reqAniFrame(updateAnim);
-}
-reqAniFrame(updateAnim);
+    function updateAnim() {
+      var diff = Date.now() - lastTime;
+      lastTime = Date.now();
+      mytime += diff / 1200;
+      for(var id in docAnims){
+        var entry = docAnims[id];
+        var value = (mytime * entry.factor + entry.off) % entry.max;
+        $("." + id).text(value);
+      }
+        window.requestAnimationFrame(updateAnim);
+    }
+    window.requestAnimationFrame(updateAnim);
 </script>
 
 

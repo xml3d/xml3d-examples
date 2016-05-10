@@ -12,14 +12,14 @@
 
     <script type="text/javascript" src="../../script/page.js"></script>
     <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
-	<script type="text/javascript">
-	 window.addEventListener("load", function() {
-		var viewElem = document.getElementById("v_view");
-		window.DemoCamera = new XML3D.StandardCamera(viewElem, {
-			mode:"examine",
-			zoomSpeed: 2
-		});
-	 });
+    <script type="text/javascript">
+     window.addEventListener("load", function() {
+        var viewElem = document.getElementById("v_view");
+        window.DemoCamera = new XML3D.StandardCamera(viewElem, {
+            mode:"examine",
+            zoomSpeed: 2
+        });
+     });
     </script>
 
     <title>XML3D Examples</title>
@@ -29,111 +29,110 @@
 
 <div id="overall">
     <div id="content">
-        <xml3d class="canvas" id="MyXml3d" view="#v_view">
- <defs>
-  
-   <script id="wireframe-script" type="application/javascript">
-     function shade(env) {
-       var bc = env.barycentric;
-       var eps = 0.02;
+        <xml3d id="MyXml3d" view="#v_view">
+         <defs>
+           <script id="wireframe-script" type="application/javascript">
+             function shade(env) {
+               var bc = env.barycentric;
+               var eps = 0.02;
 
-       if (this.fwidth) {
-         var d = this.fwidth(bc);
-         var a = Math.smoothstep(new Vec3(0.0), d.mul(0.8), bc);
-         var s = Math.min(Math.min(a.x(), a.y()), a.z());
-         var color = Math.mix(env.lineColor || env.color.mul(0.2), env.color.mul(0.8), s);
-      } else {
-         if (bc.x() < eps || bc.y() < eps || bc.z() < eps) {
-           var color = env.color.mul(0.2);
-         } else {
-           var color =  env.color.mul(0.8);
-         }
-       }
-       return Shade.diffuse(color, env.normal);
-     }
+               if (this.fwidth) {
+                 var d = this.fwidth(bc);
+                 var a = Math.smoothstep(new Vec3(0.0), d.mul(0.8), bc);
+                 var s = Math.min(Math.min(a.x(), a.y()), a.z());
+                 var color = Math.mix(env.lineColor || env.color.mul(0.2), env.color.mul(0.8), s);
+              } else {
+                 if (bc.x() < eps || bc.y() < eps || bc.z() < eps) {
+                   var color = env.color.mul(0.2);
+                 } else {
+                   var color =  env.color.mul(0.8);
+                 }
+               }
+               return Shade.diffuse(color, env.normal);
+             }
+           </script>
 
-   </script>
-   <material id="wireframe" model="#wireframe-script">
-     <float3 name="color">0.8 0.2 0.0</float3>
-   </material>
- </defs>
- <transform id="cameraTransform" translation="-0.26174119114875793 -0.4131242036819458 0.3497615456581116" rotation="0.8535322546958923 -0.5148301720619202 -0.08020252734422684 1.0157639980316162"></transform>
- <view id="v_view" transform="#cameraTransform"></view>
- <group id="root" style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,-0.000000,1.000000,0.000000,0.000000,-0.000000,-0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000);" material="#wireframe">
-  <group id="Cylinder.001" style="transform:matrix3d(-0.000001,-1.000000,0.000000,0.000000,1.000000,-0.000001,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-003.xml#Cylinder-003"></model>
-  </group>
-  <group id="Bolt.007" style="transform:matrix3d(0.000000,1.000000,-0.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-001.xml#Bolt-001"></model>
-  </group>
-  <group id="Bolt.003" style="transform:matrix3d(0.866025,-0.500001,-0.000000,0.000000,0.500001,0.866025,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
-  </group>
-  <group id="Bolt.002" style="transform:matrix3d(0.866026,0.499999,-0.000000,0.000000,-0.499999,0.866026,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
-  </group>
-  <group id="Bolt.001" style="transform:matrix3d(0.000000,1.000000,-0.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
-  </group>
-  <group id="Bolt.000" style="transform:matrix3d(-0.866025,0.500000,0.000000,0.000000,-0.500000,-0.866025,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
-  </group>
-  <group id="Bolt.008" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-002.xml#Bolt-002"></model>
-  </group>
-  <group id="Bolt.006" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-001.xml#Bolt-001"></model>
-  </group>
-  <group id="Bolt.005" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
-  </group>
-  <group id="Bolt.004" style="transform:matrix3d(-0.866025,-0.500000,0.000000,0.000000,0.500000,-0.866025,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
-  </group>
-  <group id="Cylinder.011" style="transform:matrix3d(1.000000,-0.000000,-0.000000,0.000000,0.000000,1.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-003.xml#Cylinder-003"></model>
-  </group>
-  <group id="BezierCircle" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/BezierCircle.xml#BezierCircle"></model>
-  </group>
-  <group id="Cube.001" style="transform:matrix3d(-0.019520,-0.000000,-0.000000,0.000000,0.000000,0.000000,-0.019520,0.000000,0.000000,-0.019520,-0.000000,0.000000,-0.000000,-0.001087,0.125064,1.000000);">
-   <model src="../../resources/assets/valve/Cube-001.xml#Cube-001"></model>
-  </group>
-  <group id="Cube" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cube.xml#Cube"></model>
-  </group>
-  <group id="Cylinder.007" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-006.xml#Cylinder-006"></model>
-  </group>
-  <group id="Cylinder.006" style="transform:matrix3d(0.000000,-0.285907,0.000000,0.000000,0.285907,0.000000,-0.000000,0.000000,0.000000,0.000000,0.285907,0.000000,-0.000027,-0.001085,0.080432,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-005.xml#Cylinder-005"></model>
-  </group>
-  <group id="Cylinder.003" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-002.xml#Cylinder-002"></model>
-  </group>
-  <group id="Cylinder.005" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-004.xml#Cylinder-004"></model>
-  </group>
-  <group id="Cylinder.002" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder-001.xml#Cylinder-001"></model>
-  </group>
-  <group id="Cylinder" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
-   <model src="../../resources/assets/valve/Cylinder.xml#Cylinder"></model>
-  </group>
- </group>
- <group id="Camera" style="transform:matrix3d(0.750886,0.660299,-0.013256,0.000000,-0.376736,0.444734,0.812577,0.000000,0.542439,-0.605159,0.582703,0.000000,0.209763,-0.239010,0.307413,1.000000);">
-  <group id="Sun" style="transform:matrix3d(0.657595,0.631199,0.411287,0.000000,-0.075421,0.598342,-0.797683,0.000000,-0.749587,0.493533,0.441072,0.000000,-21.785021,9.059651,19.221407,1.000000);">
-    <light model="urn:xml3d:light:directional" compute="intensity = xflow.blenderSun(color, energy)">
-      <float3 name="color">1.0000 0.9406 0.7264</float3>
-      <float name="energy">2.0000</float>
-    </light>
-  </group>
- </group>
- <!--<group id="GROUND" class="layer-10">
-  <model src="../../resources/assets/valve/Plane.xml#Plane"></model>
- </group>-->
-            <navigation speed="0.25"></navigation>
-</xml3d>
+           <material id="wireframe" model="#wireframe-script">
+             <float3 name="color">0.8 0.2 0.0</float3>
+           </material>
+         </defs>
+
+         <transform id="cameraTransform" translation="-0.26174119114875793 -0.4131242036819458 0.3497615456581116" rotation="0.8535322546958923 -0.5148301720619202 -0.08020252734422684 1.0157639980316162"></transform>
+         <view id="v_view" transform="#cameraTransform"></view>
+
+         <group id="root" style="transform:matrix3d(1.000000,0.000000,0.000000,0.000000,-0.000000,1.000000,0.000000,0.000000,-0.000000,-0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,1.000000);" material="#wireframe">
+          <group id="Cylinder.001" style="transform:matrix3d(-0.000001,-1.000000,0.000000,0.000000,1.000000,-0.000001,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-003.xml#Cylinder-003"></model>
+          </group>
+          <group id="Bolt.007" style="transform:matrix3d(0.000000,1.000000,-0.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-001.xml#Bolt-001"></model>
+          </group>
+          <group id="Bolt.003" style="transform:matrix3d(0.866025,-0.500001,-0.000000,0.000000,0.500001,0.866025,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
+          </group>
+          <group id="Bolt.002" style="transform:matrix3d(0.866026,0.499999,-0.000000,0.000000,-0.499999,0.866026,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
+          </group>
+          <group id="Bolt.001" style="transform:matrix3d(0.000000,1.000000,-0.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
+          </group>
+          <group id="Bolt.000" style="transform:matrix3d(-0.866025,0.500000,0.000000,0.000000,-0.500000,-0.866025,0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
+          </group>
+          <group id="Bolt.008" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-002.xml#Bolt-002"></model>
+          </group>
+          <group id="Bolt.006" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-001.xml#Bolt-001"></model>
+          </group>
+          <group id="Bolt.005" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
+          </group>
+          <group id="Bolt.004" style="transform:matrix3d(-0.866025,-0.500000,0.000000,0.000000,0.500000,-0.866025,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Bolt-003.xml#Bolt-003"></model>
+          </group>
+          <group id="Cylinder.011" style="transform:matrix3d(1.000000,-0.000000,-0.000000,0.000000,0.000000,1.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-003.xml#Cylinder-003"></model>
+          </group>
+          <group id="BezierCircle" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/BezierCircle.xml#BezierCircle"></model>
+          </group>
+          <group id="Cube.001" style="transform:matrix3d(-0.019520,-0.000000,-0.000000,0.000000,0.000000,0.000000,-0.019520,0.000000,0.000000,-0.019520,-0.000000,0.000000,-0.000000,-0.001087,0.125064,1.000000);">
+           <model src="../../resources/assets/valve/Cube-001.xml#Cube-001"></model>
+          </group>
+          <group id="Cube" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cube.xml#Cube"></model>
+          </group>
+          <group id="Cylinder.007" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-006.xml#Cylinder-006"></model>
+          </group>
+          <group id="Cylinder.006" style="transform:matrix3d(0.000000,-0.285907,0.000000,0.000000,0.285907,0.000000,-0.000000,0.000000,0.000000,0.000000,0.285907,0.000000,-0.000027,-0.001085,0.080432,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-005.xml#Cylinder-005"></model>
+          </group>
+          <group id="Cylinder.003" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-002.xml#Cylinder-002"></model>
+          </group>
+          <group id="Cylinder.005" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-004.xml#Cylinder-004"></model>
+          </group>
+          <group id="Cylinder.002" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder-001.xml#Cylinder-001"></model>
+          </group>
+          <group id="Cylinder" style="transform:matrix3d(0.000000,-1.000000,-0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,0.000000,1.000000,0.000000,-0.000000,0.000000,0.000000,1.000000);">
+           <model src="../../resources/assets/valve/Cylinder.xml#Cylinder"></model>
+          </group>
+         </group>
+
+         <group id="Camera" style="transform:matrix3d(0.750886,0.660299,-0.013256,0.000000,-0.376736,0.444734,0.812577,0.000000,0.542439,-0.605159,0.582703,0.000000,0.209763,-0.239010,0.307413,1.000000);">
+          <group id="Sun" style="transform:matrix3d(0.657595,0.631199,0.411287,0.000000,-0.075421,0.598342,-0.797683,0.000000,-0.749587,0.493533,0.441072,0.000000,-21.785021,9.059651,19.221407,1.000000);">
+            <light model="urn:xml3d:light:directional" compute="intensity = xflow.blenderSun(color, energy)">
+              <float3 name="color">1.0000 0.9406 0.7264</float3>
+              <float name="energy">2.0000</float>
+            </light>
+          </group>
+         </group>
+
+        </xml3d>
 
         <div class="description">
             Wireframe rendering using barycentric coordinates and shade.js. <a href="http://www.blendswap.com/blends/view/75675">Stop Valve model</a> by <a href="http://www.blendswap.com/user/shivraj">shivraj</a> released under <a href="http://creativecommons.org/publicdomain/zero/1.0/">CC0 license</a> and exported from <a href="https://github.com/ksons/xml3d-blender-exporter">Blender</a>.

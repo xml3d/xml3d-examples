@@ -1,0 +1,119 @@
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Shader Overrides</title>
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
+    <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
+
+    <script type="text/javascript" src="../../script/vendor/modernizr.js"></script>
+    <script type="text/javascript" src="../../script/vendor/jquery.js"></script>
+    <script type="text/javascript" src="../../script/foundation.min.js"></script>
+
+    <script type="text/javascript" src="../../script/page.js"></script>
+    <script type="text/javascript" src="../../script/xml3d.js"></script>
+    <script type="text/javascript" src="../../script/xml3d-camera.js"></script>
+
+    <!-- The Javascript files used to define our bounding box web component -->
+    <script type="text/javascript" src="genLinesFromBBox.js"></script>
+    <script type="text/javascript" src="boundingbox-component.js"></script>
+
+    <script type="text/javascript">
+        //Note: The HTML template for the component can be found in /bbox-template.html
+
+
+        // Wait for all components to finish loading before creating instances of them
+        // This is just one way to do it. Each component (in this case only 1) inserts its Promise into this
+        // global array. How you wait for your own components to load is up to you!
+        Promise.all(XML3D.Components).then(function() {
+            var bboxElement = document.createElement("xml3d-boundingbox");
+            document.querySelector("xml3d").appendChild(bboxElement);
+
+            document.querySelector("#teapotGroup").addEventListener("click", function(evt) {
+                // Set the target of the boundingbox web component to the target of the click event
+                document.querySelector("xml3d-boundingbox").showBBoxFor(evt.target);
+            });
+        });
+
+        function init() {
+            // If the mouse moves between mousedown and mouseup, don't treat it as a click. This prevents accidental
+            // clicking during camera movement
+            XML3D.options.setValue("renderer-movement-aware-click-handler", true);
+            var camera = new XML3D.StandardCamera(document.querySelector("view"), {zoomSpeed: 300});
+
+            var parent = document.querySelector("#teapotGroup");
+            for (var x = 0; x < 3; x++) {
+                for (var y = 0; y < 3; y++) {
+                    for (var z = 0; z < 3; z++) {
+                        var group = document.createElement("group");
+                        var transform3d = genRandomTransform(x, y, z);
+                        group.setAttribute("style", transform3d);
+
+                        parent.appendChild(group);
+                        var mesh = document.createElement("mesh");
+                        mesh.setAttribute("src", "../../resources/meshes/teapot.json");
+                        var color = document.createElement("float3");
+                        color.setAttribute("name", "diffuseColor");
+                        color.textContent = "" + (x*0.111) + " " + (y*0.111) + " " + (z*0.111);
+                        mesh.appendChild(color);
+                        group.appendChild(mesh);
+                    }
+                }
+            }
+        }
+
+        function genRandomTransform(x, y, z) {
+            var dx = (2 - Math.random()*5) * 300;
+            var dy = (2 - Math.random()*4) * 300;
+            var dz = (2 - Math.random()*4) * 300;
+            var s = 1 + Math.random() * 2;
+            var axis = new XML3D.Vec3(Math.random(), Math.random(), Math.random());
+            axis = axis.normalize();
+            var a = Math.random() * Math.PI;
+
+            var transform3d = "transform: ";
+            transform3d += "translate3d("+dx+"px, "+dy+"px, "+dz+"px) ";
+            transform3d += "scale3d("+s+", "+s+", "+s+") ";
+            transform3d += "rotate3d("+axis.x+", "+axis.y+", "+axis.z+", "+a+"rad)";
+
+            return transform3d;
+        }
+
+    </script>
+
+</head>
+<body>
+
+<div id="overall">
+    <div id="content">
+
+        <xml3d onload="init()">
+            <material id="teapotMaterial" model="urn:xml3d:material:phong">
+                <float name="shininess">0.9</float>
+            </material>
+            <light model="urn:xml3d:light:directional">
+                <float3 name="attenuation">1 0 0</float3>
+                <float3 name="intensity">3 3 3</float3>
+            </light>
+            <transform id="viewt" translation="-353.3551330566406 10.461485862731934 1917.010009765625"></transform>
+            <view transform="#viewt">
+                <float name="fovVertical">0.9</float>
+            </view>
+
+            <group id="teapotGroup" material="#teapotMaterial">
+
+            </group>
+        </xml3d>
+
+        <div class="description">
+            <p>This example demonstrates a web component that draws the bounding box of any XML3D scene element. Click on
+            a teapot to see its bounding box.</p>
+
+            <p>This example is explained in more detail in
+                <a href="https://github.com/xml3d/xml3d.js/wiki/Drawing-Bounding-Boxes-with-a-Web-Component/">a tutorial on the XML3D Github wiki.</a></p>
+        </div>
+
+</div>
+</div>
+
+
+</body></html>

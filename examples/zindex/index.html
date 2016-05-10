@@ -32,17 +32,17 @@
                     <float3 name="specularColor">1 1 1</float3>
                 </material>
             </defs>
-			<transform id="cameraTransform" translation="17.659738540649414 26.47715950012207 -0.61077880859375" rotation="-0.6812469363212585 0.7313166260719299 0.03189466521143913 0.03224170580506325"></transform>
-			<view transform="#cameraTransform"></view>
+            <transform id="cameraTransform" translation="17.659738540649414 26.47715950012207 -0.61077880859375" rotation="-0.6812469363212585 0.7313166260719299 0.03189466521143913 0.03224170580506325"></transform>
+            <view transform="#cameraTransform"></view>
             <light intensity="0.9"></light>
             <group material="#baseShader">
-			
-			</group>
+
+            </group>
         </xml3d>
 
         <div class="description">
             Use the CSS z-index property to control the render order of objects in the scene. There are 20 teapots with 
-			z-indices ranging from 0 to 19. The z-index of the green teapot can be controlled with the buttons.
+            z-indices ranging from 0 to 19. The z-index of the green teapot can be controlled with the buttons.
 
             <div>
                 <button id="inc">Increment z-index</button>
@@ -55,61 +55,61 @@
         <script>
             function createInstances(parent) {
                 // make a line of transforms and put a teapot instance on each one
-				for (var z = 0; z < 20; z++) {
-					var transform3d = "transform: translate3d(0px, 0px, ";
-					transform3d += (z * -80 - 50) + "px);";
+                for (var z = 0; z < 20; z++) {
+                    var transform3d = "transform: translate3d(0px, 0px, ";
+                    transform3d += (z * -80 - 50) + "px);";
 
-					//parent.appendChild(group);
-					var colorText = "" + (z * 0.05) + " " + 0 + " 0.5";
-					var mesh = $("<mesh>");
-					mesh.attr("style", transform3d);
-					mesh.css("z-index", z);
-					var data = $("<data>");
-					data.attr("src", "../../resources/meshes/teapot.json");
-					var color = $("<float3>");
-					color.attr("name", "diffuseColor");
+                    //parent.appendChild(group);
+                    var colorText = "" + (z * 0.05) + " " + 0 + " 0.5";
+                    var mesh = $("<mesh>");
+                    mesh.attr("style", transform3d);
+                    mesh.css("z-index", z);
+                    var data = $("<data>");
+                    data.attr("src", "../../resources/meshes/teapot.json");
+                    var color = $("<float3>");
+                    color.attr("name", "diffuseColor");
 
-					if (z === 10) {
-						mesh.attr("id", "targetMesh");
-						colorText = "0.1 0.9 0.1";
-						invColorText = "1 1 1";
-					} 
-					
-					color.text(colorText);
-					
-					mesh.on("mouseover", function(col) {
-						this.querySelector("float3").textContent = col;
-					}.bind(mesh[0], "1 1 1"));
-					
-					mesh.on("mouseout", function(col) {
-						this.querySelector("float3").textContent = col;
-					}.bind(mesh[0], colorText));	
+                    if (z === 10) {
+                        mesh.attr("id", "targetMesh");
+                        colorText = "0.1 0.9 0.1";
+                        invColorText = "1 1 1";
+                    }
 
-					mesh.append(data);
-					mesh.append(color);
-					parent.append(mesh);
-				}
+                    color.text(colorText);
+
+                    mesh.on("mouseover", function(col) {
+                        this.querySelector("float3").textContent = col;
+                    }.bind(mesh[0], "1 1 1"));
+
+                    mesh.on("mouseout", function(col) {
+                        this.querySelector("float3").textContent = col;
+                    }.bind(mesh[0], colorText));
+
+                    mesh.append(data);
+                    mesh.append(color);
+                    parent.append(mesh);
+                }
             }
-			
+
             createInstances($("group"));
 
             var command = $("#command");
-			var zi = 10;
-			command.text("z-index: "+zi);
+            var zi = 10;
+            command.text("z-index: "+zi);
 
             $("#inc").button().click(function () {
                 $("#targetMesh").css("z-index", ++zi);
                 command.text("z-index: "+zi)
             });
-			
+
             $("#dec").button().click(function () {
                 $("#targetMesh").css("z-index", --zi);
                 command.text("z-index: "+zi)
             });
-			
-			function initCamera() {
-				var camera = new XML3D.StandardCamera($("view")[0], {mode:"examine", examinePoint: new XML3D.Vec3(0,0,-750), zoomSpeed: 200});
-			}
+
+            function initCamera() {
+                new XML3D.StandardCamera($("view")[0], {mode:"examine", examinePoint: new XML3D.Vec3(0,0,-750), zoomSpeed: 200});
+            }
 
         </script>
     </div>

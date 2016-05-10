@@ -19,7 +19,8 @@
      window.addEventListener("load", function() {
         var viewElem = document.getElementById("defaultView");
         window.DemoCamera = new XML3D.StandardCamera(viewElem, {
-            mode:"examine"
+            mode:"examine",
+            examinePoint: new XML3D.Vec3(10, 5, 0)
         });
      });
     </script>
@@ -33,30 +34,22 @@
 
         <xml3d id="MyXml3d" class="xml3d" view="#defaultView">
             <defs id="mainDef">
+                <transform id="t_camera" translation="3.855771064758301 -2.7199013233184814 0.3088184893131256" rotation="0.8891506195068359 -0.3086833357810974 -0.33782514929771423 1.608294129371643"></transform>
+                <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" translation="4.076245 1.005454 5.903862"></transform>
 
-            <transform id="t_Lamp" rotation="0.205942 0.331517 0.920698 1.926274" scale="1.000000 1.000000 1.000000" translation="4.076245 1.005454 5.903862"></transform>
-
-            
-
-
-            <material id="Material" model="urn:xml3d:material:phong">
-              <float name="ambientIntensity">0.1</float>
-              <float3 name="diffuseColor">1 1 1</float3>
-              <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
-              <float name="shininess">0.2</float>
-              <texture name="diffuseTexture">
-                <img src="raf22031.jpg">
-              </texture>
-            </material>
-
-            <transform id="t_camera" translation="6.984260559082031 -6.632504940032959 2.6888844966888428" rotation="0.8151383399963379 0.3461745083332062 0.4644489884376526 1.5028139300481638"></transform>
-
+                <material id="Material" model="urn:xml3d:material:phong">
+                  <float name="ambientIntensity">0.1</float>
+                  <float3 name="specularColor">0.500000 0.500000 0.500000</float3>
+                  <float name="shininess">0.2</float>
+                  <texture name="diffuseTexture">
+                    <img src="raf22031.jpg">
+                  </texture>
+                </material>
             </defs>
 
-            <group id="viewGroup" transform="#t_camera">
-              <view id="defaultView"></view>
-            </group>
-            <group material="#Material">
+            <view id="defaultView" transform="#t_camera"></view>
+
+            <group material="#Material" style="transform: translate3d(10px, 5px, 0)">
               <mesh id="car" src="./raf22031.ctm" type="triangles"></mesh>
             </group>
 

@@ -1,0 +1,76 @@
+/* keyframes definition for WebKit browsers */
+
+@-webkit-keyframes travel {
+  from { left: 0;     }
+  to   { left: 1900px; }
+}
+
+@-webkit-keyframes bounce {
+  from, to  {
+    bottom: 300px;
+    -webkit-animation-timing-function: ease-out;
+  }
+  50% {
+    bottom: 1200px;
+    -webkit-animation-timing-function: ease-in;
+  }
+}
+
+/* keyframes definition for other browsers */
+
+@keyframes travel {
+  from { left: 0;     }
+  to   { left: 1900px; }
+}
+
+@keyframes bounce {
+  from, to  {
+    bottom: 300px;
+    animation-timing-function: ease-out;
+  }
+  50% {
+    bottom: 1200px;
+    animation-timing-function: ease-in;
+  }
+}
+
+/* styles for the stage and animated elements */
+
+#traveler {
+  position: absolute;
+  width: 20px;
+  height: 240px;
+
+  -webkit-animation-name: travel;
+  -webkit-animation-timing-function: linear;
+  -webkit-animation-iteration-count: infinite;
+  -webkit-animation-direction: alternate;
+  -webkit-animation-duration: 4.8s;
+
+  animation-name: travel;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-duration: 4.8s;
+}
+
+
+#scissorSquare {
+  border: 4px solid black;
+  border-radius: 4px;
+  background-color: rgba(220,220,255,0.3);
+  width: 250px;
+  height: 250px;
+  position: absolute;
+  z-index: 100;
+
+  -webkit-animation-name: bounce, spin;
+  -webkit-animation-iteration-count: infinite;
+  -webkit-animation-duration: 4.2s;
+
+  animation-name: bounce, spin;
+  animation-iteration-count: infinite;
+  animation-duration: 4.2s;
+
+  box-shadow: 10px 10px 5px #333;
+}

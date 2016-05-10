@@ -1,0 +1,17 @@
+<!-- The template for our configurable teapot. It allows color and scale to be set from outside. -->
+<template name="xml3d-teapot" color="1 1 0" scale="1 1 1">
+    <material id="baseShader" model="urn:xml3d:material:phong">
+        <float3 name="diffuseColor">{{color}}</float3>
+        <float name="ambientIntensity">0.25</float>
+        <float3 name="emissiveColor">0 0 0</float3>
+        <float name="shininess">0.4</float>
+        <float3 name="specularColor">1 1 1</float3>
+    </material>
+
+    <!-- Computes a 4x4 transform matrix out of the given inputs (in this case just a scale) -->
+    <data id="t_teapot" compute="transform = xflow.createTransform()">
+        <float3 name="scale">{{scale}}</float3>
+    </data>
+    <mesh transform="#t_teapot" material="#baseShader" src="../../resources/meshes/teapot.json"></mesh>
+</template>
+

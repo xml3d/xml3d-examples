@@ -27,8 +27,8 @@
       </defs>
       <transform id="viewt" translation="3 0 10"></transform>
       <view transform="#viewt">
-		<float name="fovVertical">0.9</float>
-	  </view>
+        <float name="fovVertical">0.9</float>
+      </view>
       <light intensity="0.9"></light>
       <group material="#baseShader"></group>
   </xml3d>
@@ -40,7 +40,7 @@
 
   <script>
       function createInstances(parent, shape) {
-          // make a grid of transforms and put a sphere instance on each one
+          // make a grid of transforms and put a teapot instance on each one
           for (var x = 0; x < 5; x++) {
               for (var y = 0; y < 5; y++) {
                   for (var z = 0; z < 5; z++) {
@@ -73,7 +73,7 @@
       var fd = null, lastTime = Date.now(), dir = new XML3D.Vec3(), clock = 0;
       var viewt = document.getElementById("viewt");
 
-
+      // Updates the camera's direction
       var update = function() {
           var now = Date.now();
           var elapsed = (now - lastTime) / 750.0;
@@ -83,7 +83,7 @@
           dir.z = Math.cos(clock * 0.3) * 1000;
           setCameraDirection(dir);
           lastTime = now;
-      }
+      };
 
       var setCameraDirection = function(dir) {
         dir = dir.normalize();
@@ -96,7 +96,7 @@
 
         var q = XML3D.Quat.fromBasis(baseX, baseY, baseZ);
         viewt.rotation = XML3D.AxisAngle.fromQuat(q);
-      }
+      };
 
       var init = function(evt) {
           if(!fd) {
@@ -104,12 +104,12 @@
               xml3d.addEventListener("framedrawn", update);
               update();
           }
-      }
+      };
 
       var def =  document.querySelector("defs"),
           group = document.querySelector("group");
 
-      createInstances(group) ;
+      createInstances(group);
   </script>
 </div>
 </div>
