@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head>
     <meta charset="utf-8">
-    <title>Shader Overrides</title>
+    <title>Bounding box component</title>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
@@ -59,6 +59,10 @@
                     }
                 }
             }
+
+            if (!document.registerElement) {
+                $("#supportWarning").html("Sorry, your browser does not support Web Components! See the <a href='http://jonrimmer.github.io/are-we-componentized-yet/'>web component compatibility table</a> for more information.");
+            }
         }
 
         function genRandomTransform(x, y, z) {
@@ -110,6 +114,8 @@
 
             <p>This example is explained in more detail in
                 <a href="https://github.com/xml3d/xml3d.js/wiki/Drawing-Bounding-Boxes-with-a-Web-Component/">a tutorial on the XML3D Github wiki.</a></p>
+
+            <p id="supportWarning" style="color: red; margin-top: 10px;"></p>
         </div>
 
 </div>

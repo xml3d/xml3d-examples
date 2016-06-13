@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head>
     <meta charset="utf-8">
-    <title>Shader Overrides</title>
+    <title>Simple web component</title>
     <link rel="stylesheet" type="text/css" media="all" href="../../style/normalize.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/foundation.css">
     <link rel="stylesheet" type="text/css" media="all" href="../../style/page.css">
@@ -45,6 +45,10 @@
         function init() {
             // The examinePoint is set to the center of the teapot, hardcoded in this case.
             var cam = new XML3D.StandardCamera(document.querySelector("view"), {examinePoint: new XML3D.Vec3(3, 22, 0)});
+
+            if (!document.registerElement) {
+                $("#supportWarning").html("Sorry, your browser does not support Web Components! See the <a href='http://jonrimmer.github.io/are-we-componentized-yet/'>web component compatibility table</a> for more information.");
+            }
         }
     </script>
 
@@ -64,6 +68,8 @@
         <div class="description">
             This example demonstrates a simple <a href="https://developer.mozilla.org/en-US/docs/Web/Web_Components">web component</a> that provides a new <code>&lt;xml3d-teapot&gt;</code> element. The size and color of
             the teapot can be set through attributes.
+
+            <p id="supportWarning" style="color: red; margin-top: 10px;"></p>
         </div>
 
         <code style="position: absolute; top: 60px; left: 260px;" >

@@ -57,7 +57,7 @@
                 <material id="screenMaterialInstance" model="#screenMaterial">
                     <float name="time">20.0</float>
                     <texture name="wt" filter="linear">
-                        <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay=""></video>
+                        <video id="webcam" src="../../resources/videos/nescafe.mp4" autoplay="" muted></video>
                     </texture>
                 </material>
 
@@ -119,7 +119,10 @@
         </xml3d>
 
         <div class="description">
-            Animated shader using shade.js. The great <a href="http://www.blendswap.com/blends/view/21874">TV</a> is modeled in Blender by <a href="http://www.blendswap.com/user/vAonom">Dejan Petrovic</a> and released under Creative Commons Attribution 3.0.
+            Animated shader using shade.js. The shader takes a video stream and a uniform time variable as input and generates a static
+            effect that is added to the normal phong shading.
+
+            <p>The great <a href="http://www.blendswap.com/blends/view/21874">TV</a> is modeled in Blender by <a href="http://www.blendswap.com/user/vAonom">Dejan Petrovic</a> and released under Creative Commons Attribution 3.0.</p>
             <div id="fail" style="color: #e00"></div>
         </div>
 
