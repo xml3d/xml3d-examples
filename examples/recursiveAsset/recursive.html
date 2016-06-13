@@ -49,36 +49,42 @@
         <!-- Sniper -->
         <model src="template.xml#skinnedCharacter" style="transform: translate3d(0,-50px,-150px)">
             <!-- Configuring the current pose -->
-            <assetdata name="config">
-                <float class="keySniper1" name="animKey">0.0</float>
-            </assetdata>
+
             <!-- Select the Character Mesh -->
-            <asset name="character" src="asset/sniper.xml#asset"></asset>
+            <asset name="character" src="asset/sniper.xml#asset">
+                <assetdata name="config">
+                    <float class="keySniper1" name="animKey">0.0</float>
+                </assetdata>
+            </asset>
             <!-- Select the Hat mesh with transformations for adjustments -->
 
             <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
-                <assetdata name="config">
-                    <float class="keySniper2" name="animKey">0.0</float>
-                </assetdata>
-                <asset name="character" src="asset/sniper.xml#asset"></asset>
+                <asset name="character" src="asset/sniper.xml#asset">
+                    <assetdata name="config">
+                        <float class="keySniper2" name="animKey">0.0</float>
+                    </assetdata>
+                </asset>
 
                 <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
-                    <assetdata name="config">
-                        <float class="keySniper3" name="animKey">0.0</float>
-                    </assetdata>
-                    <asset name="character" src="asset/sniper.xml#asset"></asset>
+                    <asset name="character" src="asset/sniper.xml#asset">
+                        <assetdata name="config">
+                            <float class="keySniper3" name="animKey">0.0</float>
+                        </assetdata>
+                    </asset>
 
                      <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
-                        <assetdata name="config">
-                            <float class="keySniper4" name="animKey">0.0</float>
-                        </assetdata>
-                        <asset name="character" src="asset/sniper.xml#asset"></asset>
+                        <asset name="character" src="asset/sniper.xml#asset">
+                            <assetdata name="config">
+                                <float class="keySniper4" name="animKey">0.0</float>
+                            </assetdata>
+                        </asset>
 
                         <asset name="hat" src="template.xml#skinnedCharacter" style="transform: translateY(1px) scale3d(0.3,0.3,0.3)  ">
-                            <assetdata name="config">
-                                <float class="keySniper5" name="animKey">0.0</float>
-                            </assetdata>
-                            <asset name="character" src="asset/sniper.xml#asset"></asset>
+                            <asset name="character" src="asset/sniper.xml#asset">
+                                <assetdata name="config">
+                                    <float class="keySniper5" name="animKey">0.0</float>
+                                </assetdata>
+                            </asset>
                         </asset>
 
                     </asset>
@@ -88,17 +94,19 @@
             </asset>
 
             <asset name="leftArm" src="template.xml#skinnedCharacter" style="transform: rotateX(90deg) translateY(3px) scale3d(0.1,0.1,0.1) ">
-                <assetdata name="config">
-                    <float class="keySniper2" name="animKey">0.0</float>
-                </assetdata>
-                <asset name="character" src="asset/sniper.xml#asset"></asset>
+                <asset name="character" src="asset/sniper.xml#asset">
+                    <assetdata name="config">
+                        <float class="keySniper2" name="animKey">0.0</float>
+                    </assetdata>
+                </asset>
             </asset>
 
             <asset name="rightArm" src="template.xml#skinnedCharacter" style="transform: rotateX(90deg) translateY(3px) scale3d(0.1,0.1,0.1) ">
-                <assetdata name="config">
-                    <float class="keySniper3" name="animKey">0.0</float>
-                </assetdata>
-                <asset name="character" src="asset/sniper.xml#asset"></asset>
+                <asset name="character" src="asset/sniper.xml#asset">
+                    <assetdata name="config">
+                        <float class="keySniper3" name="animKey">0.0</float>
+                    </assetdata>
+                </asset>
             </asset>
 
         </model>

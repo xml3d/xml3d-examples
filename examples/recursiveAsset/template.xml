@@ -36,20 +36,21 @@
 
     <asset id="skinnedCharacter" >
 
-        <assetdata name="config" >
-            <float name="animKey" >0</float>
-             <!--
-                May include:
 
-                float3 translation
-                float4 rotation
-             -->
-        </assetdata>
 
         <asset name="character" >
+            <assetdata name="config" >
+                <float name="animKey" >0</float>
+                <!--
+                   May include:
+
+                   float3 translation
+                   float4 rotation
+                -->
+            </assetdata>
             <assetdata  name="boneXform"
                         compute="dataflow['#transformDF']"
-                        includes="bones, defaultAnim, parent.config" >
+                        includes="bones, defaultAnim, config" >
 
             </assetdata>
             <assetdata  name="base"
